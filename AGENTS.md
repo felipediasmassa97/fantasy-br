@@ -44,12 +44,12 @@ Infrastructure is managed with Terraform.
 
 The dbt project is located in `src/dbt/`. All commands must be run from that directory.
 
-- To verify connection: `cd src/dbt && uv run dbt debug --profiles-dir .`
-- To load seeds: `uv run dbt seed --profiles-dir .`
-- To run all models: `uv run dbt run --profiles-dir .`
-- To run a specific model: `uv run dbt run --profiles-dir . --select <model_name>`
-- To run tests: `uv run dbt test --profiles-dir .`
-- To full refresh: `uv run dbt run --profiles-dir . --full-refresh`
+- To verify connection: `cd src/dbt && uv run dbt debug`
+- To load seeds: `uv run dbt seed`
+- To run all models: `uv run dbt run`
+- To run a specific model: `uv run dbt run --select <model_name>`
+- To run tests: `uv run dbt test`
+- To full refresh: `uv run dbt run --full-refresh`
 
 ### Testing
 

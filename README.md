@@ -26,7 +26,7 @@ cd src/dbt
 gcloud auth application-default login
 
 # Verify connection
-uv run dbt debug --profiles-dir .
+uv run dbt debug
 ```
 
 ### Running dbt
@@ -35,23 +35,23 @@ uv run dbt debug --profiles-dir .
 cd src/dbt
 
 # Load seed data
-uv run dbt seed --profiles-dir .
+uv run dbt seed
 
 # Run all models
-uv run dbt run --profiles-dir .
+uv run dbt run
 
 # Run specific model
-uv run dbt run --profiles-dir . --select model_name
+uv run dbt run --select model_name
 
 # Run tests
-uv run dbt test --profiles-dir .
+uv run dbt test
 
 # Generate documentation
-uv run dbt docs generate --profiles-dir .
-uv run dbt docs serve --profiles-dir .
+uv run dbt docs generate
+uv run dbt docs serve
 
 # Full refresh (rebuild tables)
-uv run dbt run --profiles-dir . --full-refresh
+uv run dbt run --full-refresh
 ```
 
 ### Profiles
@@ -62,7 +62,7 @@ uv run dbt run --profiles-dir . --full-refresh
 To use a specific profile:
 
 ```bash
-uv run dbt run --profiles-dir . --target dev
+uv run dbt run --target dev
 ```
 
 ## Development
