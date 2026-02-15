@@ -45,22 +45,23 @@ jobs:
 
       - name: Extract and load players
         run: |
-          jq -c '.atletas[]' market.json > players_all.jsonl
+          YEAR=$(date +%Y)
+          jq -c --arg temporada "$YEAR" '.atletas[] + {temporada: ($temporada | tonumber)}' market.json > players_all.jsonl
           API_COUNT=$(wc -l < players_all.jsonl | tr -d ' ')
 
           # Check if table exists
           if bq show "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_players" > /dev/null 2>&1; then
 
-            # Table exists, get existing atleta_id + rodada_id combinations
+            # Table exists, get existing season + player ID + round ID combinations
             bq query --use_legacy_sql=false --format=csv --max_rows=100000 \
-              "SELECT DISTINCT CONCAT(CAST(atleta_id AS STRING), '_', CAST(rodada_id AS STRING)) as key 
+              "SELECT DISTINCT CONCAT(CAST(temporada AS STRING), '_', CAST(atleta_id AS STRING), '_', CAST(rodada_id AS STRING)) as key 
                FROM \`${GCP_PROJECT_ID}.${BQ_DATASET_ID}.raw_players\`" \
               | tail -n +2 > existing_keys.txt
             
             # Filter out existing combinations
             # This is done locally to avoid billing requirement on BigQuery for the filtering step
             jq -c --slurpfile keys <(jq -R -s 'split("\n") | map(select(length > 0))' existing_keys.txt) \
-              'select(("\(.atleta_id)_\(.rodada_id)" | IN($keys[0][])) | not)' \
+              'select(("\(.temporada)_\(.atleta_id)_\(.rodada_id)" | IN($keys[0][])) | not)' \
               players_all.jsonl > players_new.jsonl
 
           # Table does not exist, all players are new
