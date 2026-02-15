@@ -1,0 +1,48 @@
+version: 2
+
+models:
+  - name: stg_players
+    description: Staged players data with English column names
+    columns:
+      - name: season
+        description: Season year
+      - name: round_id
+        description: Round number in the season
+      - name: id
+        description: Unique identifier
+      - name: name
+        description: Display name
+      - name: club_id
+        description: Foreign key to stg_clubs
+      - name: position_id
+        description: Foreign key to stg_positions
+      - name: pts_round
+        description: Points scored in this round
+      - name: pts_avg
+        description: Average points per match played
+      - name: has_played
+        description: Whether player entered the field this round
+      - name: matches_played
+        description: Number of matches played in the season
+      - name: scout
+        description: Detailed scout statistics (nested record)
+
+  - name: stg_clubs
+    description: Staged clubs data with English column names
+    columns:
+      - name: id
+        description: Unique identifier
+      - name: abbreviation
+        description: 3-letter abbreviation
+      - name: name
+        description: Display name
+
+  - name: stg_positions
+    description: Staged positions data with English column names
+    columns:
+      - name: id
+        description: Unique identifier
+      - name: abbreviation
+        description: 2-letter abbreviation
+      - name: name
+        description: Display name in Portuguese
