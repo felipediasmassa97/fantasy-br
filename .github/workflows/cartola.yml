@@ -93,10 +93,3 @@ jobs:
           bq load --source_format=NEWLINE_DELIMITED_JSON --autodetect --replace \
             "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_positions" positions.jsonl
           echo "Loaded $(wc -l < positions.jsonl) positions"
-
-      - name: Extract and load status
-        run: |
-          jq -c '.status[]' market.json > status.jsonl
-          bq load --source_format=NEWLINE_DELIMITED_JSON --autodetect --replace \
-            "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_status" status.jsonl
-          echo "Loaded $(wc -l < status.jsonl) status"
