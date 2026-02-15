@@ -13,3 +13,4 @@ select
     jogos_num as matches_played,
     scout
 from {{ source('cartola', 'raw_players') }}
+where posicao_id != 6  -- exclude head coaches

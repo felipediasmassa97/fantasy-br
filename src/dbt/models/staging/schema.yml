@@ -46,3 +46,21 @@ models:
         description: 2-letter abbreviation
       - name: name
         description: Display name in Portuguese
+
+  - name: stg_matches
+    description: Staged matches data with English column names
+    columns:
+      - name: season
+        description: Season year
+      - name: round_id
+        description: Round number in the season
+      - name: match_id
+        description: Unique identifier
+      - name: club_home_id
+        description: Foreign key to stg_clubs for home club
+      - name: club_away_id
+        description: Foreign key to stg_clubs for away club
+      - name: club_home_name
+        description: Home club name
+      - name: club_away_name
+        description: Away club name

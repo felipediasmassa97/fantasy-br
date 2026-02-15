@@ -11,7 +11,5 @@ sources:
         description: Raw clubs (teams) data from Cartola Market API
       - name: raw_positions
         description: Raw positions data from Cartola Market API
-      - name: raw_status
-        description: Raw status data from Cartola Market API
       - name: raw_matches
         description: Raw matches data from Cartola API
