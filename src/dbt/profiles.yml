@@ -1,0 +1,18 @@
+fantasy_br:
+  target: local
+  outputs:
+    local:
+      type: bigquery
+      method: oauth
+      project: fantasy-br
+      dataset: fdmdev_fantasy_br
+      location: US
+      threads: 4
+    dev:
+      type: bigquery
+      method: service-account
+      project: fantasy-br
+      dataset: fdmdev_fantasy_br
+      location: US
+      threads: 4
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"

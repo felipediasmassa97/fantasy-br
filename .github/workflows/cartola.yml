@@ -1,0 +1,61 @@
+name: Load Cartola Data
+
+on:
+  # fixit readd
+  # schedule:
+  #   # Run daily at 10:00 UTC (during Cartola market hours)
+  #   - cron: "0 10 * * *"
+  workflow_dispatch:
+
+env:
+  GCP_PROJECT_ID: fantasy-br
+  BQ_DATASET_ID: fdmdev_fantasy_br
+
+jobs:
+  load-data:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Fetch Cartola API data
+        run: |
+          curl -s "https://api.cartolafc.globo.com/atletas/mercado" -o market.json
+          echo "Downloaded $(wc -c < market.json) bytes"
+
+      - name: Extract and load players
+        run: |
+          jq -c '.players[]' market.json > players.jsonl
+          bq load --source_format=NEWLINE_DELIMITED_JSON --autodetect --replace \
+            "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_players" players.jsonl
+          echo "Loaded $(wc -l < players.jsonl) players"
+
+      - name: Extract and load clubs
+        run: |
+          jq -c '.clubs[]' market.json > clubs.jsonl
+          bq load --source_format=NEWLINE_DELIMITED_JSON --autodetect --replace \
+            "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_clubs" clubs.jsonl
+          echo "Loaded $(wc -l < clubs.jsonl) clubs"
+
+      - name: Extract and load positions
+        run: |
+          jq -c '.positions[]' market.json > positions.jsonl
+          bq load --source_format=NEWLINE_DELIMITED_JSON --autodetect --replace \
+            "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_positions" positions.jsonl
+          echo "Loaded $(wc -l < positions.jsonl) positions"
+
+      - name: Extract and load status
+        run: |
+          jq -c '.status[]' market.json > status.jsonl
+          bq load --source_format=NEWLINE_DELIMITED_JSON --autodetect --replace \
+            "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_status" status.jsonl
+          echo "Loaded $(wc -l < status.jsonl) status"

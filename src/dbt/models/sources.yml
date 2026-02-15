@@ -1,0 +1,15 @@
+version: 2
+
+sources:
+  - name: cartola
+    description: Raw data from Cartola API
+    schema: fdmdev_fantasy_br
+    tables:
+      - name: raw_players
+        description: Raw players data from Cartola Market API
+      - name: raw_clubs
+        description: Raw clubs (teams) data from Cartola Market API
+      - name: raw_positions
+        description: Raw positions data from Cartola Market API
+      - name: raw_status
+        description: Raw status data from Cartola Market API
