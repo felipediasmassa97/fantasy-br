@@ -40,26 +40,26 @@ jobs:
 
       - name: Fetch Cartola API data
         run: |
-          curl -s "https://api.cartolafc.globo.com/atletas/mercado" -o market.json
+          curl -sL "https://api.cartolafc.globo.com/atletas/mercado" -o market.json
           echo "Downloaded $(wc -c < market.json) bytes"
 
       - name: Extract and load players
         run: |
-          jq -c '.players[]' market.json > players.jsonl
+          jq -c '.atletas[]' market.json > players.jsonl
           bq load --source_format=NEWLINE_DELIMITED_JSON --autodetect --replace \
             "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_players" players.jsonl
           echo "Loaded $(wc -l < players.jsonl) players"
 
       - name: Extract and load clubs
         run: |
-          jq -c '.clubs[]' market.json > clubs.jsonl
+          jq -c '.clubes[]' market.json > clubs.jsonl
           bq load --source_format=NEWLINE_DELIMITED_JSON --autodetect --replace \
             "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_clubs" clubs.jsonl
           echo "Loaded $(wc -l < clubs.jsonl) clubs"
 
       - name: Extract and load positions
         run: |
-          jq -c '.positions[]' market.json > positions.jsonl
+          jq -c '.posicoes[]' market.json > positions.jsonl
           bq load --source_format=NEWLINE_DELIMITED_JSON --autodetect --replace \
             "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_positions" positions.jsonl
           echo "Loaded $(wc -l < positions.jsonl) positions"
