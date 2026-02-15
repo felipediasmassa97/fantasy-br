@@ -99,38 +99,24 @@ jobs:
 
       - name: Extract and load matches
         run: |
-          curl -sL "https://api.cartolafc.globo.com/partidas" -o matches.json
           YEAR=$(date +%Y)
-          ROUND=$(jq '.rodada' matches.json)
 
-          # Add season and round_id to each match
-          jq -c --arg temporada "$YEAR" --arg rodada "$ROUND" \
-            '.partidas[] + {temporada: ($temporada | tonumber), rodada_id: ($rodada | tonumber)}' \
-            matches.json > matches_all.jsonl
+          # Get current round number from the main partidas endpoint
+          CURRENT_ROUND=$(curl -sL "https://api.cartolafc.globo.com/partidas" | jq '.rodada')
+          echo "Current round: ${CURRENT_ROUND}"
 
-          API_COUNT=$(wc -l < matches_all.jsonl | tr -d ' ')
+          # Fetch all rounds from 1 to current
+          > matches_all.jsonl
+          for round in $(seq 1 $CURRENT_ROUND); do
+            curl -sL "https://api.cartolafc.globo.com/partidas/${round}" | \
+              jq -c --argjson temporada "$YEAR" --argjson rodada "$round" \
+              '.partidas[] + {temporada: $temporada, rodada_id: $rodada}' >> matches_all.jsonl
+          done
 
-          # Check if table exists and filter duplicates
-          if bq show "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_matches" > /dev/null 2>&1; then
-            bq query --use_legacy_sql=false --format=csv --max_rows=10000 \
-              "SELECT DISTINCT CONCAT(CAST(temporada AS STRING), '_', CAST(rodada_id AS STRING), '_', CAST(partida_id AS STRING)) as key 
-               FROM \`${GCP_PROJECT_ID}.${BQ_DATASET_ID}.raw_matches\`" \
-              | tail -n +2 > existing_match_keys.txt
-            
-            jq -c --slurpfile keys <(jq -R -s 'split("\n") | map(select(length > 0))' existing_match_keys.txt) \
-              'select(("\(.temporada)_\(.rodada_id)_\(.partida_id)" | IN($keys[0][])) | not)' \
-              matches_all.jsonl > matches_new.jsonl
-          else
-            cp matches_all.jsonl matches_new.jsonl
-          fi
+          TOTAL_COUNT=$(wc -l < matches_all.jsonl | tr -d ' ')
+          echo "Fetched ${TOTAL_COUNT} matches across ${CURRENT_ROUND} rounds"
 
-          NEW_COUNT=$(wc -l < matches_new.jsonl | tr -d ' ')
-
-          if [ "$NEW_COUNT" -gt 0 ]; then
-            bq load --source_format=NEWLINE_DELIMITED_JSON --autodetect \
-              --schema_update_option=ALLOW_FIELD_ADDITION \
-              "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_matches" matches_new.jsonl
-            echo "API returned ${API_COUNT} matches for round ${RODADA}, inserted ${NEW_COUNT} new rows"
-          else
-            echo "API returned ${API_COUNT} matches for round ${RODADA}, no new rows to insert"
-          fi
+          # Replace all data in raw_matches
+          bq load --source_format=NEWLINE_DELIMITED_JSON --autodetect --replace \
+            "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_matches" matches_all.jsonl
+          echo "Replaced raw_matches with ${TOTAL_COUNT} rows"
