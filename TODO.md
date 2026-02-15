@@ -1,6 +1,7 @@
 # To-Dos
 
 - Data loading
+  - Load matches (to aggregate by home or away)
 
 - Data transformation
   - Remove head coaches
