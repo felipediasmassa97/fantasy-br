@@ -1,10 +1,9 @@
 name: Load Cartola Data
 
 on:
-  # fixit readd
-  # schedule:
-  #   # Run daily at 10:00 UTC (during Cartola market hours)
-  #   - cron: "0 10 * * *"
+  schedule:
+    # Run daily at 03:00 UTC
+    - cron: "0 3 * * *"
   workflow_dispatch:
     inputs:
       environment:
@@ -26,8 +25,12 @@ jobs:
       contents: read
       id-token: write
 
+    strategy:
+      matrix:
+        environment: ${{ github.event_name == 'schedule' && fromJSON('["dev", "demo", "prod"]') || fromJSON(format('["{0}"]', inputs.environment)) }}
+
     env:
-      BQ_DATASET_ID: fdm${{ inputs.environment }}_fantasy_br
+      BQ_DATASET_ID: fdm${{ matrix.environment }}_fantasy_br
 
     steps:
       - name: Authenticate to Google Cloud
