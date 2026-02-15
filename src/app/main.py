@@ -11,12 +11,10 @@ DATASET_ID = "fdmdev_fantasy_br"
 @st.cache_resource
 def get_client() -> bigquery.Client:
     """Get BigQuery client."""
-    if "gcp_service_account" in st.secrets:
-        credentials = service_account.Credentials.from_service_account_info(
-            st.secrets["gcp_service_account"],
-        )
-        return bigquery.Client(project=PROJECT_ID, credentials=credentials)
-    return bigquery.Client(project=PROJECT_ID)
+    credentials = service_account.Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+    )
+    return bigquery.Client(project=PROJECT_ID, credentials=credentials)
 
 
 @st.cache_data(ttl=300)
@@ -26,7 +24,7 @@ def load_data(view_name: str) -> list[dict]:
     query = f"""
         SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.{view_name}`
         ORDER BY pts_avg DESC
-    """
+    """  # noqa: S608
     return [dict(row) for row in client.query(query).result()]
 
 
@@ -47,9 +45,37 @@ def main() -> None:
     with st.spinner("Loading data..."):
         data = load_data(view_name)
 
-    st.subheader(f"Players ({len(data)} total)")
+    # Extract unique values for dropdowns
+    clubs = sorted({row["club"] for row in data if row.get("club")})
+    positions = sorted({row["position"] for row in data if row.get("position")})
+
+    # Post-filters
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        name_filter = st.text_input("Player Name", placeholder="Search by name...")
+    with col2:
+        club_filter = st.selectbox("Club", options=["All", *clubs])
+    with col3:
+        position_filter = st.selectbox("Position", options=["All", *positions])
+
+    # Apply filters
+    filtered_data = data
+    if name_filter:
+        filtered_data = [
+            row
+            for row in filtered_data
+            if name_filter.lower() in row.get("name", "").lower()
+        ]
+    if club_filter != "All":
+        filtered_data = [row for row in filtered_data if row.get("club") == club_filter]
+    if position_filter != "All":
+        filtered_data = [
+            row for row in filtered_data if row.get("position") == position_filter
+        ]
+
+    st.subheader(f"Players ({len(filtered_data)} of {len(data)})")
     st.dataframe(
-        data,
+        filtered_data,
         use_container_width=True,
         hide_index=True,
         column_config={
