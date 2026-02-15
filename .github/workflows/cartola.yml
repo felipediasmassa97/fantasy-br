@@ -46,9 +46,38 @@ jobs:
       - name: Extract and load players
         run: |
           jq -c '.atletas[]' market.json > players.jsonl
+
+          # Load to staging table
           bq load --source_format=NEWLINE_DELIMITED_JSON --autodetect --replace \
-            "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_players" players.jsonl
-          echo "Loaded $(wc -l < players.jsonl) players"
+            "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.stg_raw_players" players.jsonl
+
+          # Create target table if not exists (copy schema from staging)
+          bq show "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_players" > /dev/null 2>&1 || \
+            bq cp "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.stg_raw_players" \
+                  "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_players"
+
+          # Count rows before merge
+          BEFORE=$(bq query --use_legacy_sql=false --format=csv \
+            "SELECT COUNT(*) FROM \`${GCP_PROJECT_ID}.${BQ_DATASET_ID}.raw_players\`" | tail -1)
+
+          # Merge only new player-round combinations
+          bq query --use_legacy_sql=false "
+            MERGE \`${GCP_PROJECT_ID}.${BQ_DATASET_ID}.raw_players\` T
+            USING \`${GCP_PROJECT_ID}.${BQ_DATASET_ID}.stg_raw_players\` S
+            ON T.atleta_id = S.atleta_id AND T.rodada_id = S.rodada_id
+            WHEN NOT MATCHED THEN
+              INSERT ROW
+          "
+
+          # Count rows after merge
+          AFTER=$(bq query --use_legacy_sql=false --format=csv \
+            "SELECT COUNT(*) FROM \`${GCP_PROJECT_ID}.${BQ_DATASET_ID}.raw_players\`" | tail -1)
+
+          # Drop staging table
+          bq rm -f "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.stg_raw_players"
+
+          INSERTED=$((AFTER - BEFORE))
+          echo "API returned $(wc -l < players.jsonl | tr -d ' ') players, inserted ${INSERTED} new rows (total: ${AFTER})"
 
       - name: Extract and load clubs
         run: |
