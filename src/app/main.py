@@ -2,6 +2,7 @@
 
 import streamlit as st
 from google.cloud import bigquery
+from google.oauth2 import service_account
 
 PROJECT_ID = "fantasy-br"
 DATASET_ID = "fdmdev_fantasy_br"
@@ -10,6 +11,11 @@ DATASET_ID = "fdmdev_fantasy_br"
 @st.cache_resource
 def get_client() -> bigquery.Client:
     """Get BigQuery client."""
+    if "gcp_service_account" in st.secrets:
+        credentials = service_account.Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"],
+        )
+        return bigquery.Client(project=PROJECT_ID, credentials=credentials)
     return bigquery.Client(project=PROJECT_ID)
 
 
