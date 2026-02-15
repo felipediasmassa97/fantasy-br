@@ -6,10 +6,18 @@ on:
   #   # Run daily at 10:00 UTC (during Cartola market hours)
   #   - cron: "0 10 * * *"
   workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy to"
+        required: true
+        type: choice
+        options:
+          - dev
+          - demo
+          - prod
 
 env:
   GCP_PROJECT_ID: fantasy-br
-  BQ_DATASET_ID: fdmdev_fantasy_br
 
 jobs:
   load-data:
@@ -17,6 +25,9 @@ jobs:
     permissions:
       contents: read
       id-token: write
+
+    env:
+      BQ_DATASET_ID: fdm${{ inputs.environment }}_fantasy_br
 
     steps:
       - name: Authenticate to Google Cloud
