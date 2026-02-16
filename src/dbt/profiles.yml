@@ -15,4 +15,20 @@ fantasy_br:
       dataset: fdmdev_fantasy_br
       location: US
       threads: 4
-      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
+      keyfile: "{{ env_var('DBT_BIGQUERY_KEYFILE') }}"
+    demo:
+      type: bigquery
+      method: service-account
+      project: fantasy-br
+      dataset: fdmdemo_fantasy_br
+      location: US
+      threads: 4
+      keyfile: "{{ env_var('DBT_BIGQUERY_KEYFILE') }}"
+    prod:
+      type: bigquery
+      method: service-account
+      project: fantasy-br
+      dataset: fdmprod_fantasy_br
+      location: US
+      threads: 4
+      keyfile: "{{ env_var('DBT_BIGQUERY_KEYFILE') }}"
