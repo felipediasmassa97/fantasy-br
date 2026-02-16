@@ -2,6 +2,8 @@
 
 - Data loading
   - [x] Load matches (to aggregate by home or away)
+  - [x] Run dbt project daily in the schedule
+  - [ ] Manage terraform state in cloud (not local)
 
 - Data transformation
   - [x] Remove head coaches
@@ -42,6 +44,7 @@
     - [ ] Show scouts for away games
 
 - Review files and documentation (pyproject.toml, README.md, ...)
+  - Use Copilot to write AGENTS.md and README.md
 
 - Data validation
   - Last played

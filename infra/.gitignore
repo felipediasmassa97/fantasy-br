@@ -5,9 +5,7 @@
 *.tfstate
 *.tfstate.*
 
-# Exception: track state files in state/ directory
-!state/
-!state/*.tfstate
+state/
 
 # Crash log files
 crash.log

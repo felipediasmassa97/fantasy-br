@@ -8,8 +8,8 @@ terraform {
     }
   }
 
-  backend "local" {
-    # path configured at init time: -backend-config="path=state/{env}.tfstate"
+  backend "gcs" {
+    # bucket configured at init time: -backend-config="bucket=fantasy-br-tfstate-{env}"
   }
 }
 
