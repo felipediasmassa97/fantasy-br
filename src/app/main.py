@@ -35,7 +35,6 @@ def main() -> None:
 
     filter_options = {
         "Last Match": "kpi_last_1",
-        "Last 2 Matches": "kpi_last_2",  # fixit delete
         "Last 5 Matches": "kpi_last_5",
         "Last 3 Home Matches": "kpi_last_3_home",
         "Last 3 Away Matches": "kpi_last_3_away",
