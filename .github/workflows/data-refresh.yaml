@@ -123,7 +123,7 @@ jobs:
   run-dbt-dev:
     needs: load-data
     if: ${{ github.event_name == 'schedule' || inputs.environment == 'dev' }}
-    uses: ./.github/workflows/reusable-dbt-run.yml
+    uses: ./.github/workflows/reusable-dbt-run.yaml
     with:
       environment: dev
     secrets:
@@ -132,7 +132,7 @@ jobs:
   run-dbt-demo:
     needs: load-data
     if: ${{ github.event_name == 'schedule' || inputs.environment == 'demo' }}
-    uses: ./.github/workflows/reusable-dbt-run.yml
+    uses: ./.github/workflows/reusable-dbt-run.yaml
     with:
       environment: demo
     secrets:
@@ -141,7 +141,7 @@ jobs:
   run-dbt-prod:
     needs: load-data
     if: ${{ github.event_name == 'schedule' || inputs.environment == 'prod' }}
-    uses: ./.github/workflows/reusable-dbt-run.yml
+    uses: ./.github/workflows/reusable-dbt-run.yaml
     with:
       environment: prod
     secrets:

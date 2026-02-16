@@ -5,12 +5,9 @@ on:
     branches:
       - main
 
-permissions:
-  contents: write
-
 jobs:
   infra-dev:
-    uses: ./.github/workflows/reusable-infra-deploy.yml
+    uses: ./.github/workflows/reusable-infra-deploy.yaml
     with:
       environment: dev
     secrets:
@@ -18,7 +15,7 @@ jobs:
 
   dbt-dev:
     needs: infra-dev
-    uses: ./.github/workflows/reusable-dbt-run.yml
+    uses: ./.github/workflows/reusable-dbt-run.yaml
     with:
       environment: dev
     secrets:
@@ -26,7 +23,7 @@ jobs:
 
   infra-demo:
     needs: dbt-dev
-    uses: ./.github/workflows/reusable-infra-deploy.yml
+    uses: ./.github/workflows/reusable-infra-deploy.yaml
     with:
       environment: demo
     secrets:
@@ -34,7 +31,7 @@ jobs:
 
   dbt-demo:
     needs: infra-demo
-    uses: ./.github/workflows/reusable-dbt-run.yml
+    uses: ./.github/workflows/reusable-dbt-run.yaml
     with:
       environment: demo
     secrets:
@@ -42,7 +39,7 @@ jobs:
 
   infra-prod:
     needs: dbt-demo
-    uses: ./.github/workflows/reusable-infra-deploy.yml
+    uses: ./.github/workflows/reusable-infra-deploy.yaml
     with:
       environment: prod
     secrets:
@@ -50,7 +47,7 @@ jobs:
 
   dbt-prod:
     needs: infra-prod
-    uses: ./.github/workflows/reusable-dbt-run.yml
+    uses: ./.github/workflows/reusable-dbt-run.yaml
     with:
       environment: prod
     secrets:

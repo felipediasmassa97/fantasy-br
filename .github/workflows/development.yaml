@@ -4,12 +4,9 @@ on:
   push:
     branches-ignore: [main]
 
-permissions:
-  contents: write
-
 jobs:
   infra-dev:
-    uses: ./.github/workflows/reusable-infra-deploy.yml
+    uses: ./.github/workflows/reusable-infra-deploy.yaml
     with:
       environment: dev
     secrets:
@@ -17,7 +14,7 @@ jobs:
 
   dbt-dev:
     needs: infra-dev
-    uses: ./.github/workflows/reusable-dbt-run.yml
+    uses: ./.github/workflows/reusable-dbt-run.yaml
     with:
       environment: dev
     secrets:
