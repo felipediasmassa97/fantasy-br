@@ -1,31 +1,49 @@
 {{ config(materialized='view') }}
 
-with ranked_matches as (
+with player_away_rounds as (
     select
         id,
         name,
         club,
         position,
         round_id,
-        pts_round,
-        row_number() over (partition by id order by round_id desc) as match_rank
+        has_played,
+        row_number() over (partition by id order by round_id desc) as round_rank
     from {{ ref('int_players') }}
-    where season = 2026 and has_played = true and is_home = false
+    where season = 2026 and is_home = false
 ),
 
 latest_info as (
     select id, name, club, position
-    from ranked_matches
-    where match_rank = 1
+    from player_away_rounds
+    where round_rank = 1
 ),
 
-aggregated as (
+availability_calc as (
     select
         id,
-        count(*) as matches_counted,
+        countif(has_played = true) as matches_counted,
+        countif(has_played = true) / count(*) as availability
+    from player_away_rounds
+    where round_rank <= 3
+    group by id
+),
+
+last_3_away_played as (
+    select
+        id,
+        pts_round,
+        row_number() over (partition by id order by round_id desc) as played_rank
+    from {{ ref('int_players') }}
+    where season = 2026 and is_home = false and has_played = true
+),
+
+pts_calc as (
+    select
+        id,
         avg(pts_round) as pts_avg
-    from ranked_matches
-    where match_rank <= 3
+    from last_3_away_played
+    where played_rank <= 3
     group by id
 )
 
@@ -35,6 +53,8 @@ select
     l.club,
     l.position,
     a.matches_counted,
-    a.pts_avg
-from aggregated a
+    p.pts_avg,
+    a.availability
+from availability_calc a
 join latest_info l on a.id = l.id
+left join pts_calc p on a.id = p.id
