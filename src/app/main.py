@@ -76,6 +76,11 @@ def main() -> None:
             row for row in filtered_data if row.get("position") == position_filter
         ]
 
+    # Convert availability to percentage
+    for row in filtered_data:
+        if row.get("availability") is not None:
+            row["availability"] = row["availability"] * 100
+
     st.subheader(f"Players ({len(filtered_data)} of {len(data)})")
     st.dataframe(
         filtered_data,
@@ -88,7 +93,10 @@ def main() -> None:
             "position": st.column_config.TextColumn("Position"),
             "matches_counted": st.column_config.NumberColumn("Matches", format="%d"),
             "pts_avg": st.column_config.NumberColumn("Avg Points", format="%.2f"),
-            "availability": st.column_config.NumberColumn("Availability", format=".0%"),
+            "availability": st.column_config.NumberColumn(
+                "Availability %",
+                format="%.0f",
+            ),
         },
     )
 
