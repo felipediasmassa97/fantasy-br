@@ -10,7 +10,7 @@ with ranked_matches as (
         pts_round,
         row_number() over (partition by id order by round_id desc) as match_rank
     from {{ ref('int_players') }}
-    where season = 2025
+    where season = 2025 and has_played = true
 ),
 
 latest_info as (

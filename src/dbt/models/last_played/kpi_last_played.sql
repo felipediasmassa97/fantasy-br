@@ -11,7 +11,7 @@ select
     p.name,
     p.club,
     p.position,
-    p.round_id,
+    1 as matches_counted,
     p.pts_round as pts_avg
 from {{ ref('int_players') }} p
 cross join last_round lr
