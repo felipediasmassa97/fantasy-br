@@ -66,4 +66,3 @@ select
 from availability_calc a
 join latest_info l on a.id = l.id
 left join pts_calc p on a.id = p.id
-join latest_info l on a.id = l.id

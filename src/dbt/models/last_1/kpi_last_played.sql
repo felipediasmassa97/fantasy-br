@@ -32,8 +32,8 @@ select
     s.name,
     s.club,
     s.position,
-    cast(s.has_played as int64) as matches_counted,
+    if(s.has_played, 1, 0) as matches_counted,
     lp.pts_round as pts_avg,
-    cast(s.has_played as float64) as availability
+    if(s.has_played, 1.0, 0.0) as availability
 from last_round_status s
 left join last_played_points lp on s.id = lp.id and lp.rn = 1
