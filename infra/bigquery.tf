@@ -8,9 +8,6 @@ resource "google_bigquery_dataset" "fantasy_br" {
     project     = "fantasy-br"
   }
 
-  # Free tier: No expiration on tables by default
-  # default_table_expiration_ms = null
-
   # Access control - project-level defaults
   access {
     role          = "OWNER"
