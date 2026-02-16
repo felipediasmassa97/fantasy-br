@@ -95,7 +95,7 @@ def main() -> None:
             "pts_avg": st.column_config.NumberColumn("Avg Points", format="%.2f"),
             "availability": st.column_config.NumberColumn(
                 "Availability %",
-                format="%.0f",
+                format="%.1f",
             ),
         },
     )
