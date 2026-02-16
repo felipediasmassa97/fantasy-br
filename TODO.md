@@ -1,42 +1,44 @@
 # To-Dos
 
 - Data loading
-  - Load matches (to aggregate by home or away)
+  - [x] Load matches (to aggregate by home or away)
 
 - Data transformation
-  - Remove head coaches
+  - [x] Remove head coaches
 
 - Streamlit app
+  - [x] Add other filters
+  - [ ] Improve UI/UX
 
 - KPIs
   - Scope
-    - Last played match
-    - Last 5 played matches
-    - Last 3 played home matches
-    - Last 3 played away matches
-    - This season
-    - Last season
+    - [x] Last played match
+    - [x] Last 5 played matches
+    - [x] Last 3 played home matches
+    - [x] Last 3 played away matches
+    - [x] This season
+    - [x] Last season
   - Indicator
-    - Points average
-    - Points average without G/A
-    - Availability (played matches against total team matches in filter - this is not only for played matches)
-    - Z-score average position
-    - DVS position
-    - ADP position
-    - Z-score average w/o G/A position
-    - DVS w/o G/A position
-    - ADP wo G/A position
-    - Z-score average general
-    - DVS general
-    - ADP general
-    - Z-score average w/o G/A general
-    - DVS w/o G/A general
-    - ADP w/o G/A general
-    - All stats individually (goals, assists, fouls, offsides, ...)
+    - [ ] Points average
+    - [ ] Points average without G/A
+    - [ ] Availability (played matches against total team matches in filter - this is not only for played matches)
+    - [ ] Z-score average position
+    - [ ] DVS position
+    - [ ] ADP position
+    - [ ] Z-score average w/o G/A position
+    - [ ] DVS w/o G/A position
+    - [ ] ADP wo G/A position
+    - [ ] Z-score average general
+    - [ ] DVS general
+    - [ ] ADP general
+    - [ ] Z-score average w/o G/A general
+    - [ ] DVS w/o G/A general
+    - [ ] ADP w/o G/A general
+    - [ ] All stats individually (goals, assists, fouls, offsides, ...)
   - Scouts
-    - Show scouts when selecting player (not in dataframe, but in detailed view)
-    - Show scouts overall
-    - Show scouts for home games
-    - Show scouts for away games
+    - [ ] Show scouts when selecting player (not in dataframe, but in detailed view)
+    - [ ] Show scouts overall
+    - [ ] Show scouts for home games
+    - [ ] Show scouts for away games
 
 - Review files and documentation (pyproject.toml, README.md, ...)

@@ -34,9 +34,12 @@ def main() -> None:
     st.title("Fantasy BR - Player Statistics")
 
     filter_options = {
-        "Last Played (Current Season)": "kpi_last_played",
-        "Last 5 Played (Current Season)": "kpi_last_5_played",
-        "Last Season (2025)": "kpi_last_season",
+        "Last Match": "kpi_last_played",
+        "Last 5 Matches": "kpi_last_5_played",
+        "Last 3 Home Matches": "kpi_last_3_home",
+        "Last 3 Away Matches": "kpi_last_3_away",
+        "This Season": "kpi_this_season",
+        "Last Season": "kpi_last_season",
     }
 
     selected_filter = st.selectbox("Select Filter", options=list(filter_options.keys()))
@@ -83,10 +86,9 @@ def main() -> None:
             "name": st.column_config.TextColumn("Name"),
             "club": st.column_config.TextColumn("Club"),
             "position": st.column_config.TextColumn("Position"),
-            "pts_avg": st.column_config.NumberColumn("Avg Points", format="%.2f"),
-            "pts_round": st.column_config.NumberColumn("Round Points", format="%.2f"),
-            "round_id": st.column_config.NumberColumn("Round", format="%d"),
             "matches_counted": st.column_config.NumberColumn("Matches", format="%d"),
+            "pts_avg": st.column_config.NumberColumn("Avg Points", format="%.2f"),
+            "availability": st.column_config.NumberColumn("Availability", format=".0%"),
         },
     )
 
