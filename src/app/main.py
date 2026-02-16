@@ -34,8 +34,9 @@ def main() -> None:
     st.title("Fantasy BR - Player Statistics")
 
     filter_options = {
-        "Last Match": "kpi_last_played",
-        "Last 5 Matches": "kpi_last_5_played",
+        "Last Match": "kpi_last",
+        "Last 2 Matches": "kpi_last_2",  # fixit delete
+        "Last 5 Matches": "kpi_last_5",
         "Last 3 Home Matches": "kpi_last_3_home",
         "Last 3 Away Matches": "kpi_last_3_away",
         "This Season": "kpi_this_season",
