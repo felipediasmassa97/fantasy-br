@@ -19,7 +19,7 @@ jobs:
   deploy-infra:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
 
     steps:
       - name: Checkout code
@@ -33,26 +33,12 @@ jobs:
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Create Terraform state bucket if not exists
-        env:
-          TF_STATE_BUCKET: fantasy-br-terraform-state-${{ inputs.environment }}
-        run: |
-          if ! gcloud storage buckets describe gs://${{ env.TF_STATE_BUCKET }} --project=${{ env.GCP_PROJECT }} > /dev/null 2>&1; then
-            echo "Creating Terraform state bucket for ${{ inputs.environment }}..."
-            gcloud storage buckets create gs://${{ env.TF_STATE_BUCKET }} \
-              --location=US \
-              --project=${{ env.GCP_PROJECT }} \
-              --uniform-bucket-level-access
-          else
-            echo "Terraform state bucket already exists"
-          fi
-
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
 
       - name: Terraform Init
         working-directory: infra
-        run: terraform init -backend-config="bucket=fantasy-br-terraform-state-${{ inputs.environment }}"
+        run: terraform init -backend-config="path=state/${{ inputs.environment }}.tfstate"
 
       - name: Import existing BigQuery dataset if needed
         working-directory: infra
@@ -79,3 +65,15 @@ jobs:
       - name: Terraform Apply
         working-directory: infra
         run: terraform apply -auto-approve -var-file=envs/${{ inputs.environment }}.tfvars
+
+      - name: Commit Terraform state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add infra/state/
+          if git diff --staged --quiet; then
+            echo "No state changes to commit"
+          else
+            git commit -m "Update Terraform state for ${{ inputs.environment }}"
+            git push
+          fi

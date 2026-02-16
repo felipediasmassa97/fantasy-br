@@ -8,8 +8,8 @@ terraform {
     }
   }
 
-  backend "gcs" {
-    prefix = "terraform/state"
+  backend "local" {
+    # path configured at init time: -backend-config="path=state/{env}.tfstate"
   }
 }
 
