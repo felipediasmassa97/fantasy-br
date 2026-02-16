@@ -5,155 +5,50 @@ on:
     branches:
       - main
 
-env:
-  GCP_PROJECT_ID: fantasy-br
-
 jobs:
-  deploy-dev:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    environment: dev
+  infra-dev:
+    uses: ./.github/workflows/reusable-infra-deploy.yml
+    with:
+      environment: dev
+    secrets:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  dbt-dev:
+    needs: infra-dev
+    uses: ./.github/workflows/reusable-dbt-run.yml
+    with:
+      environment: dev
+    secrets:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+  infra-demo:
+    needs: dbt-dev
+    uses: ./.github/workflows/reusable-infra-deploy.yml
+    with:
+      environment: demo
+    secrets:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+  dbt-demo:
+    needs: infra-demo
+    uses: ./.github/workflows/reusable-dbt-run.yml
+    with:
+      environment: demo
+    secrets:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
+  infra-prod:
+    needs: dbt-demo
+    uses: ./.github/workflows/reusable-infra-deploy.yml
+    with:
+      environment: prod
+    secrets:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Terraform Init
-        working-directory: infra
-        run: terraform init
-
-      - name: Terraform Apply
-        working-directory: infra
-        run: terraform apply -auto-approve -var-file=envs/dev.tfvars
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-
-      - name: Install dependencies
-        run: uv sync
-
-      - name: Run dbt
-        working-directory: src/dbt
-        env:
-          DBT_BIGQUERY_KEYFILE: ${{ github.workspace }}/gcp-key.json
-        run: |
-          echo '${{ secrets.GCP_SA_KEY }}' > ${{ github.workspace }}/gcp-key.json
-          uv run dbt run --target dev
-
-  deploy-demo:
-    needs: deploy-dev
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    environment: demo
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Terraform Init
-        working-directory: infra
-        run: terraform init
-
-      - name: Terraform Apply
-        working-directory: infra
-        run: terraform apply -auto-approve -var-file=envs/demo.tfvars
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-
-      - name: Install dependencies
-        run: uv sync
-
-      - name: Run dbt
-        working-directory: src/dbt
-        env:
-          DBT_BIGQUERY_KEYFILE: ${{ github.workspace }}/gcp-key.json
-        run: |
-          echo '${{ secrets.GCP_SA_KEY }}' > ${{ github.workspace }}/gcp-key.json
-          uv run dbt run --target demo
-
-  deploy-prod:
-    needs: deploy-demo
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    environment: prod
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Terraform Init
-        working-directory: infra
-        run: terraform init
-
-      - name: Terraform Apply
-        working-directory: infra
-        run: terraform apply -auto-approve -var-file=envs/prod.tfvars
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-
-      - name: Install dependencies
-        run: uv sync
-
-      - name: Run dbt
-        working-directory: src/dbt
-        env:
-          DBT_BIGQUERY_KEYFILE: ${{ github.workspace }}/gcp-key.json
-        run: |
-          echo '${{ secrets.GCP_SA_KEY }}' > ${{ github.workspace }}/gcp-key.json
-          uv run dbt run --target prod
+  dbt-prod:
+    needs: infra-prod
+    uses: ./.github/workflows/reusable-dbt-run.yml
+    with:
+      environment: prod
+    secrets:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
