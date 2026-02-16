@@ -42,3 +42,35 @@
     - [ ] Show scouts for away games
 
 - Review files and documentation (pyproject.toml, README.md, ...)
+
+- Data validation
+  - Last played
+    - [x] Average points
+    - [x] Availability
+    - [ ] Average points w/o G/A
+    - [ ] ...
+  - Last 5 played
+    - [x] Average points
+    - [x] Availability
+    - [ ] Average points w/o G/A
+    - [ ] ...
+  - Last 3 home
+    - [x] Average points
+    - [x] Availability
+    - [ ] Average points w/o G/A
+    - [ ] ...
+  - Last 3 away
+    - [x] Average points
+    - [x] Availability
+    - [ ] Average points w/o G/A
+    - [ ] ...
+  - This season
+    - [x] Average points
+    - [x] Availability
+    - [ ] Average points w/o G/A
+    - [ ] ...
+  - Last season
+    - [x] Average points
+    - [x] Availability
+    - [ ] Average points w/o G/A
+    - [ ] ...

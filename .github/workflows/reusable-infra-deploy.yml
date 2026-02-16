@@ -52,7 +52,7 @@ jobs:
               echo "Importing dataset into Terraform state..."
               terraform import -var-file=envs/${{ inputs.environment }}.tfvars \
                 google_bigquery_dataset.fantasy_br \
-                "${{ env.GCP_PROJECT }}:${DATASET_ID}"
+                "projects/${{ env.GCP_PROJECT }}/datasets/${DATASET_ID}"
             else
               echo "Dataset already in Terraform state"
             fi
