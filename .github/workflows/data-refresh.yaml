@@ -1,4 +1,4 @@
-name: Load Cartola Data
+name: Daily Data Pipeline
 
 on:
   schedule:
@@ -23,7 +23,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write
 
     strategy:
       matrix:
@@ -120,3 +119,30 @@ jobs:
           bq load --source_format=NEWLINE_DELIMITED_JSON --autodetect --replace \
             "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_matches" matches_all.jsonl
           echo "Replaced raw_matches with ${TOTAL_COUNT} rows"
+
+  run-dbt-dev:
+    needs: load-data
+    if: ${{ github.event_name == 'schedule' || inputs.environment == 'dev' }}
+    uses: ./.github/workflows/reusable-dbt-run.yml
+    with:
+      environment: dev
+    secrets:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+
+  run-dbt-demo:
+    needs: load-data
+    if: ${{ github.event_name == 'schedule' || inputs.environment == 'demo' }}
+    uses: ./.github/workflows/reusable-dbt-run.yml
+    with:
+      environment: demo
+    secrets:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+
+  run-dbt-prod:
+    needs: load-data
+    if: ${{ github.event_name == 'schedule' || inputs.environment == 'prod' }}
+    uses: ./.github/workflows/reusable-dbt-run.yml
+    with:
+      environment: prod
+    secrets:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
