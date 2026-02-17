@@ -3,7 +3,8 @@
 - Data loading
   - [x] Load matches (to aggregate by home or away)
   - [x] Run dbt project daily in the schedule
-  - [ ] Manage terraform state in cloud (not local)
+  - [x] Manage terraform state in cloud (not local)
+  - [x] Add seeds for legacy data
 
 - Data transformation
   - [x] Remove head coaches
