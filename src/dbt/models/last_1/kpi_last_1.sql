@@ -45,18 +45,21 @@ player_pts as (
 with_z_score as (
     select
         *,
-        {{ z_score('pts_avg') }} as z_score
+        {{ z_score_general('pts_avg') }} as z_score_gen,
+        {{ z_score_position('pts_avg', 'position') }} as z_score_pos
     from player_pts
 ),
 
 with_dvs as (
     select
         *,
-        {{ dvs('z_score', 'availability') }} as dvs
+        {{ dvs('z_score_gen', 'availability') }} as dvs_gen,
+        {{ dvs('z_score_pos', 'availability') }} as dvs_pos
     from with_z_score
 )
 
 select
     *,
-    row_number() over (order by dvs desc nulls last) as adp
+    row_number() over (order by dvs_gen desc nulls last) as adp_gen,
+    row_number() over (partition by position order by dvs_pos desc nulls last) as adp_pos
 from with_dvs

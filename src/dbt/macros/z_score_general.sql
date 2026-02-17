@@ -1,4 +1,4 @@
-{% macro z_score(pts_avg_column, top_n=200) %}
+{% macro z_score_general(pts_avg_column, top_n=200) %}
 ({{ pts_avg_column }} - (
     select avg(top.pts_avg)
     from (
