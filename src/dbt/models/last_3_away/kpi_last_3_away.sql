@@ -47,17 +47,38 @@ pts_calc as (
     from last_3_away_played
     where played_rank <= 3
     group by id
+),
+
+player_pts as (
+    select
+        a.id,
+        l.name,
+        l.club,
+        l.position,
+        a.matches_counted,
+        p.pts_avg,
+        p.base_avg,
+        a.availability
+    from availability_calc a
+    join latest_info l on a.id = l.id
+    left join pts_calc p on a.id = p.id
+),
+
+with_z_score as (
+    select
+        *,
+        {{ z_score('pts_avg') }} as z_score
+    from player_pts
+),
+
+with_dvs as (
+    select
+        *,
+        {{ dvs('z_score', 'availability') }} as dvs
+    from with_z_score
 )
 
 select
-    a.id,
-    l.name,
-    l.club,
-    l.position,
-    a.matches_counted,
-    p.pts_avg,
-    p.base_avg,
-    a.availability
-from availability_calc a
-join latest_info l on a.id = l.id
-left join pts_calc p on a.id = p.id
+    *,
+    row_number() over (order by dvs desc nulls last) as adp
+from with_dvs

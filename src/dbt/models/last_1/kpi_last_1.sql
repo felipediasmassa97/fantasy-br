@@ -26,16 +26,37 @@ last_played_stats as (
         row_number() over (partition by id order by round_id desc) as rn
     from {{ ref('int_players') }}
     where season = 2026 and has_played = true
+),
+
+player_pts as (
+    select
+        s.id,
+        s.name,
+        s.club,
+        s.position,
+        if(s.has_played, 1, 0) as matches_counted,
+        lp.pts_round as pts_avg,
+        lp.base_round as base_avg,
+        if(s.has_played, 1.0, 0.0) as availability
+    from last_round_status s
+    left join last_played_stats lp on s.id = lp.id and lp.rn = 1
+),
+
+with_z_score as (
+    select
+        *,
+        {{ z_score('pts_avg') }} as z_score
+    from player_pts
+),
+
+with_dvs as (
+    select
+        *,
+        {{ dvs('z_score', 'availability') }} as dvs
+    from with_z_score
 )
 
 select
-    s.id,
-    s.name,
-    s.club,
-    s.position,
-    if(s.has_played, 1, 0) as matches_counted,
-    lp.pts_round as pts_avg,
-    lp.base_round as base_avg,
-    if(s.has_played, 1.0, 0.0) as availability
-from last_round_status s
-left join last_played_stats lp on s.id = lp.id and lp.rn = 1
+    *,
+    row_number() over (order by dvs desc nulls last) as adp
+from with_dvs

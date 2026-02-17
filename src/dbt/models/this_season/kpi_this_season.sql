@@ -21,25 +21,36 @@ latest_info as (
     where match_rank = 1
 ),
 
-aggregated as (
+player_pts as (
     select
-        id,
-        countif(has_played = true) as matches_counted,
-        avg(if(has_played, pts_round, null)) as pts_avg,
-        avg(if(has_played, base_round, null)) as base_avg,
-        countif(has_played = true) / count(*) as availability
-    from ranked_matches
-    group by id
+        r.id,
+        l.name,
+        l.club,
+        l.position,
+        countif(r.has_played = true) as matches_counted,
+        avg(if(r.has_played, r.pts_round, null)) as pts_avg,
+        avg(if(r.has_played, r.base_round, null)) as base_avg,
+        countif(r.has_played = true) / count(*) as availability
+    from ranked_matches r
+    join latest_info l on r.id = l.id
+    group by r.id, l.name, l.club, l.position
+),
+
+with_z_score as (
+    select
+        *,
+        {{ z_score('pts_avg') }} as z_score
+    from player_pts
+),
+
+with_dvs as (
+    select
+        *,
+        {{ dvs('z_score', 'availability') }} as dvs
+    from with_z_score
 )
 
 select
-    a.id,
-    l.name,
-    l.club,
-    l.position,
-    a.matches_counted,
-    a.pts_avg,
-    a.base_avg,
-    a.availability
-from aggregated a
-join latest_info l on a.id = l.id
+    *,
+    row_number() over (order by dvs desc nulls last) as adp
+from with_dvs
