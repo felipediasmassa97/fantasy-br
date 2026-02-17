@@ -22,21 +22,21 @@
     - [x] This season
     - [x] Last season
   - Indicator
-    - [ ] Points average
-    - [ ] Points average without G/A
-    - [ ] Availability (played matches against total team matches in filter - this is not only for played matches)
-    - [ ] Z-score average position
-    - [ ] DVS position
-    - [ ] ADP position
-    - [ ] Z-score average w/o G/A position
-    - [ ] DVS w/o G/A position
-    - [ ] ADP wo G/A position
-    - [ ] Z-score average general
-    - [ ] DVS general
-    - [ ] ADP general
-    - [ ] Z-score average w/o G/A general
-    - [ ] DVS w/o G/A general
-    - [ ] ADP w/o G/A general
+    - [x] Points average
+    - [x] Points average without G/A
+    - [x] Availability (played matches against total team matches in filter - this is not only for played matches)
+    - [x] Z-score average position
+    - [x] DVS position
+    - [x] ADP position
+    - [x] Z-score average w/o G/A position
+    - [x] DVS w/o G/A position
+    - [x] ADP wo G/A position
+    - [x] Z-score average general
+    - [x] DVS general
+    - [x] ADP general
+    - [x] Z-score average w/o G/A general
+    - [x] DVS w/o G/A general
+    - [x] ADP w/o G/A general
     - [ ] All stats individually (goals, assists, fouls, offsides, ...)
   - Scouts
     - [ ] Show scouts when selecting player (not in dataframe, but in detailed view)
