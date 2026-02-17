@@ -49,28 +49,27 @@ Cartola FC is Brazil's most popular fantasy football game based on the Brasileir
 
 ### Scout Fields (Scoring Actions)
 
-| Code | Description          | Portuguese              |
-| ---- | -------------------- | ----------------------- |
-| G    | Goals scored         | Gols                    |
-| A    | Assists              | Assistências            |
-| SG   | Clean sheet          | Sem Gols (defesa)       |
-| DE   | Saves (inside area)  | Defesas                 |
-| DS   | Saves (outside area) | Defesas fora área       |
-| GC   | Goals conceded       | Gols contra             |
-| CV   | Red card             | Cartão vermelho         |
-| CA   | Yellow card          | Cartão amarelo          |
-| FC   | Fouls committed      | Faltas cometidas        |
-| FS   | Fouls suffered       | Faltas sofridas         |
-| FD   | Tackles won          | Finalizações defendidas |
-| FF   | Shots off target     | Finalizações fora       |
-| FT   | Shots on target      | Finalizações no gol     |
-| DP   | Penalties saved      | Defesa de pênalti       |
-| GS   | Penalty goals scored | Gol de pênalti          |
-| PC   | Penalty missed       | Pênalti perdido         |
-| I    | Impediments          | Impedimentos            |
-| PP   | Passes intercepted   | Passes perdidos         |
-| PS   | Penalty suffered     | Pênalti sofrido         |
-| V    | Victories            | Vitórias                |
+| Code | Description (EN)                 | Description (PT)       | Points |
+| ---- | -------------------------------- | ---------------------- | ------ |
+| G    | Goal scored                      | Gols                   | + 8.0  |
+| A    | Assist                           | Assistências           | + 5.0  |
+| FT   | Shot on post                     | Finalização na trave   | + 3.0  |
+| FD   | Shot defended                    | Finalização defendidas | + 1.2  |
+| FF   | Shot off target                  | Finalização para fora  | + 0.8  |
+| PS   | Penalty suffered                 | Pênalti sofrido        | + 1.0  |
+| FS   | Foul suffered                    | Falta sofridas         | + 0.5  |
+| I    | Offside                          | Impedimento            | - 0.1  |
+| PP   | Penalty missed                   | Pênalti perdido        | - 4.0  |
+| DS   | Tackle succeeded                 | Desarme                | + 1.5  |
+| FC   | Foul committed                   | Faltas cometida        | - 0.3  |
+| PC   | Penalty committed                | Pênalti cometido       | - 1.0  |
+| CA   | Yellow card                      | Cartão amarelo         | - 1.0  |
+| CV   | Red card                         | Cartão vermelho        | - 3.0  |
+| GC   | Own goal                         | Gol contra             | - 3.0  |
+| SG   | Clean sheet (only GK, CB and FB) | Saldo de gols          | + 5.0  |
+| DE   | Save (only GK)                   | Defesa                 | + 1.3  |
+| DP   | Penalty saved (only GK)          | Defesa de pênalti      | + 7.0  |
+| GS   | Goal against (only GK)           | Gol sofrido            | - 1.0  |
 
 ### Position IDs
 

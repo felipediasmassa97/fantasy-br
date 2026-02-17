@@ -1,0 +1,20 @@
+code,description_en,description_pt,points
+G,Goal scored,Gols,8.0
+A,Assist,Assistências,5.0
+FT,Shot on post,Finalização na trave,3.0
+FD,Shot defended,Finalização defendidas,1.2
+FF,Shot off target,Finalização para fora,0.8
+PS,Penalty suffered,Pênalti sofrido,1.0
+FS,Foul suffered,Falta sofridas,0.5
+I,Offside,Impedimento,-0.1
+PP,Penalty missed,Pênalti perdido,-4.0
+DS,Tackle succeeded,Desarme,1.5
+FC,Foul committed,Faltas cometida,-0.3
+PC,Penalty committed,Pênalti cometido,-1.0
+CA,Yellow card,Cartão amarelo,-1.0
+CV,Red card,Cartão vermelho,-3.0
+GC,Own goal,Gol contra,-3.0
+SG,Clean sheet,Saldo de gols,5.0
+DE,Save,Defesa,1.3
+DP,Penalty saved,Defesa de pênalti,7.0
+GS,Goal against,Gol sofrido,-1.0
