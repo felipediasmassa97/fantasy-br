@@ -1,36 +1,26 @@
-{% macro z_score_position(pts_avg_column, position_column) %}
-{# Position-specific top N: GK=10, FB/CB=20, MD/AT=30 #}
-({{ pts_avg_column }} - (
-    select avg(top.pts_avg)
-    from (
-        select 
-            pts_avg,
-            row_number() over (order by pts_avg desc) as rn,
-            case 
-                when player_pts.{{ position_column }} = 'GK' then 10
-                when player_pts.{{ position_column }} in ('FB', 'CB') then 20
-                else 30
-            end as pos_limit
-        from player_pts pp
-        where pp.{{ position_column }} = player_pts.{{ position_column }}
-            and pp.{{ pts_avg_column }} is not null
-    ) top
-    where top.rn <= top.pos_limit
-)) / nullif((
-    select stddev(top.pts_avg)
-    from (
-        select 
-            pts_avg,
-            row_number() over (order by pts_avg desc) as rn,
-            case 
-                when player_pts.{{ position_column }} = 'GK' then 10
-                when player_pts.{{ position_column }} in ('FB', 'CB') then 20
-                else 30
-            end as pos_limit
-        from player_pts pp
-        where pp.{{ position_column }} = player_pts.{{ position_column }}
-            and pp.{{ pts_avg_column }} is not null
-    ) top
-    where top.rn <= top.pos_limit
-), 0)
+{% macro position_stats_cte(pts_column) %}
+{# Compute position stats for top N players per position: GK=10, FB/CB=20, MD/AT=30 #}
+select
+    position,
+    avg({{ pts_column }}) as pos_avg,
+    stddev({{ pts_column }}) as pos_std
+from (
+    select
+        position,
+        {{ pts_column }},
+        row_number() over (partition by position order by {{ pts_column }} desc) as rn,
+        case 
+            when position = 'GK' then 10
+            when position in ('FB', 'CB') then 20
+            else 30
+        end as pos_limit
+    from player_pts
+    where {{ pts_column }} is not null
+)
+where rn <= pos_limit
+group by position
+{% endmacro %}
+
+{% macro z_score_position(value_column, stats_alias) %}
+({{ value_column }} - {{ stats_alias }}.pos_avg) / nullif({{ stats_alias }}.pos_std, 0)
 {% endmacro %}

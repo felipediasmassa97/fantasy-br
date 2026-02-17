@@ -1,21 +1,17 @@
-{% macro z_score_general(pts_avg_column, top_n=200) %}
-({{ pts_avg_column }} - (
-    select avg(top.pts_avg)
-    from (
-        select {{ pts_avg_column }} as pts_avg
-        from player_pts
-        where {{ pts_avg_column }} is not null
-        order by {{ pts_avg_column }} desc
-        limit {{ top_n }}
-    ) top
-)) / nullif((
-    select stddev(top.pts_avg)
-    from (
-        select {{ pts_avg_column }} as pts_avg
-        from player_pts
-        where {{ pts_avg_column }} is not null
-        order by {{ pts_avg_column }} desc
-        limit {{ top_n }}
-    ) top
-), 0)
+{% macro general_stats_cte(pts_column, top_n=200) %}
+{# Compute overall stats for top N players #}
+select
+    avg({{ pts_column }}) as gen_avg,
+    stddev({{ pts_column }}) as gen_std
+from (
+    select {{ pts_column }}
+    from player_pts
+    where {{ pts_column }} is not null
+    order by {{ pts_column }} desc
+    limit {{ top_n }}
+)
+{% endmacro %}
+
+{% macro z_score_general(value_column, stats_alias) %}
+({{ value_column }} - {{ stats_alias }}.gen_avg) / nullif({{ stats_alias }}.gen_std, 0)
 {% endmacro %}

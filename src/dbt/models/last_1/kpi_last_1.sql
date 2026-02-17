@@ -42,14 +42,34 @@ player_pts as (
     left join last_played_stats lp on s.id = lp.id and lp.rn = 1
 ),
 
+position_stats_avg as (
+    {{ position_stats_cte('pts_avg') }}
+),
+
+position_stats_base as (
+    {{ position_stats_cte('base_avg') }}
+),
+
+general_stats_avg as (
+    {{ general_stats_cte('pts_avg') }}
+),
+
+general_stats_base as (
+    {{ general_stats_cte('base_avg') }}
+),
+
 with_z_score as (
     select
-        *,
-        {{ z_score_general('pts_avg') }} as z_score_gen_avg,
-        {{ z_score_general('base_avg') }} as z_score_gen_base,
-        {{ z_score_position('pts_avg', 'position') }} as z_score_pos_avg,
-        {{ z_score_position('base_avg', 'position') }} as z_score_pos_base
-    from player_pts
+        p.*,
+        {{ z_score_general('p.pts_avg', 'gsa') }} as z_score_gen_avg,
+        {{ z_score_general('p.base_avg', 'gsb') }} as z_score_gen_base,
+        {{ z_score_position('p.pts_avg', 'psa') }} as z_score_pos_avg,
+        {{ z_score_position('p.base_avg', 'psb') }} as z_score_pos_base
+    from player_pts p
+    left join position_stats_avg psa on p.position = psa.position
+    left join position_stats_base psb on p.position = psb.position
+    cross join general_stats_avg gsa
+    cross join general_stats_base gsb
 ),
 
 with_dvs as (
