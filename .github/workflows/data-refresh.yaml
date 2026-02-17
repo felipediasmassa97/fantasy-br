@@ -52,12 +52,12 @@ jobs:
           API_COUNT=$(wc -l < players_all.jsonl | tr -d ' ')
 
           # Check if table exists
-          if bq show "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_players" > /dev/null 2>&1; then
+          if bq show "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_players_etl" > /dev/null 2>&1; then
 
             # Table exists, get existing season + player ID + round ID combinations
             bq query --use_legacy_sql=false --format=csv --max_rows=100000 \
               "SELECT DISTINCT CONCAT(CAST(temporada AS STRING), '_', CAST(atleta_id AS STRING), '_', CAST(rodada_id AS STRING)) as key 
-               FROM \`${GCP_PROJECT_ID}.${BQ_DATASET_ID}.raw_players\`" \
+               FROM \`${GCP_PROJECT_ID}.${BQ_DATASET_ID}.raw_players_etl\`" \
               | tail -n +2 > existing_keys.txt
             
             # Filter out existing combinations
@@ -76,7 +76,7 @@ jobs:
           if [ "$NEW_COUNT" -gt 0 ]; then
             bq load --source_format=NEWLINE_DELIMITED_JSON --autodetect \
               --schema_update_option=ALLOW_FIELD_ADDITION \
-              "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_players" players_new.jsonl
+              "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_players_etl" players_new.jsonl
             echo "API returned ${API_COUNT} players, inserted ${NEW_COUNT} new rows"
           else
             echo "API returned ${API_COUNT} players, no new rows to insert"
@@ -123,7 +123,7 @@ jobs:
   run-dbt-dev:
     needs: load-data
     if: ${{ github.event_name == 'schedule' || inputs.environment == 'dev' }}
-    uses: ./.github/workflows/reusable-dbt-run.yaml
+    uses: ./.github/workflows/reusable-dbt-build.yaml
     with:
       environment: dev
     secrets:
@@ -132,7 +132,7 @@ jobs:
   run-dbt-demo:
     needs: load-data
     if: ${{ github.event_name == 'schedule' || inputs.environment == 'demo' }}
-    uses: ./.github/workflows/reusable-dbt-run.yaml
+    uses: ./.github/workflows/reusable-dbt-build.yaml
     with:
       environment: demo
     secrets:
@@ -141,7 +141,7 @@ jobs:
   run-dbt-prod:
     needs: load-data
     if: ${{ github.event_name == 'schedule' || inputs.environment == 'prod' }}
-    uses: ./.github/workflows/reusable-dbt-run.yaml
+    uses: ./.github/workflows/reusable-dbt-build.yaml
     with:
       environment: prod
     secrets:

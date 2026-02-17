@@ -15,7 +15,7 @@ jobs:
 
   dbt-dev:
     needs: infra-dev
-    uses: ./.github/workflows/reusable-dbt-run.yaml
+    uses: ./.github/workflows/reusable-dbt-build.yaml
     with:
       environment: dev
     secrets:
@@ -31,7 +31,7 @@ jobs:
 
   dbt-demo:
     needs: infra-demo
-    uses: ./.github/workflows/reusable-dbt-run.yaml
+    uses: ./.github/workflows/reusable-dbt-build.yaml
     with:
       environment: demo
     secrets:
@@ -47,7 +47,7 @@ jobs:
 
   dbt-prod:
     needs: infra-prod
-    uses: ./.github/workflows/reusable-dbt-run.yaml
+    uses: ./.github/workflows/reusable-dbt-build.yaml
     with:
       environment: prod
     secrets:

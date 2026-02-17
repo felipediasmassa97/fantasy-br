@@ -110,7 +110,7 @@ fantasy-br/
 
 ### Staging
 
-- **stg_players**: Unified view combining raw_players (API) + seed data (2025/2026)
+- **stg_players**: Unified view combining raw_players_etl (API) + seed data (2025/2026)
 
 ### KPI Views
 

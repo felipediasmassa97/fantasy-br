@@ -86,14 +86,14 @@ Cartola FC is Brazil's most popular fantasy football game based on the Brasileir
 
 ### Raw Layer
 
-- **raw_players**: Loaded daily from Cartola API (nested `scout` STRUCT)
+- **raw_players_etl**: Loaded daily from Cartola API (nested `scout` STRUCT)
 
 ### Staging Layer
 
 - **stg_players**: Unified view combining:
-  - raw_players (API data)
-  - players_2025 seed (historical)
-  - players_2026 seed (historical)
+  - raw_players_etl (API data)
+  - raw_players_legacy_2025 seed (historical)
+  - raw_players_legacy_2026 seed (historical)
   - Reconstructs nested `scout` STRUCT from flat seed columns
 
 ### KPI Models
@@ -205,7 +205,7 @@ This combines CSVs from `legacy/{year}/` into dbt seeds at `src/dbt/seeds/`.
 ### Reusable Workflows
 
 - `reusable-infra-deploy.yaml`: Creates GCS bucket + Terraform apply
-- `reusable-dbt-run.yaml`: Seeds + dbt run
+- `reusable-dbt-build.yaml`: Seeds + dbt build
 
 ## Common Tasks
 

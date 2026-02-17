@@ -1,6 +1,6 @@
 {{ config(materialized='view') }}
 
-with raw_players as (
+with raw_players_etl as (
     select
         temporada as season,
         rodada_id as round_id,
@@ -13,10 +13,10 @@ with raw_players as (
         entrou_em_campo as has_played,
         jogos_num as matches_played,
         scout
-    from {{ source('cartola', 'raw_players') }}
+    from {{ source('cartola', 'raw_players_etl') }}
 ),
 
-seed_2025 as (
+raw_players_legacy_2025 as (
     select
         temporada as season,
         rodada_id as round_id,
@@ -50,10 +50,10 @@ seed_2025 as (
             cast(PS as int64) as PS,
             cast(V as int64) as V
         ) as scout
-    from {{ ref('players_2025') }}
+    from {{ ref('raw_players_legacy_2025') }}
 ),
 
-seed_2026 as (
+raw_players_legacy_2026 as (
     select
         temporada as season,
         rodada_id as round_id,
@@ -87,15 +87,15 @@ seed_2026 as (
             cast(PS as int64) as PS,
             cast(V as int64) as V
         ) as scout
-    from {{ ref('players_2026') }}
+    from {{ ref('raw_players_legacy_2026') }}
 ),
 
 unioned as (
-    select * from raw_players
+    select * from raw_players_etl
     union all
-    select * from seed_2025
+    select * from raw_players_legacy_2025
     union all
-    select * from seed_2026
+    select * from raw_players_legacy_2026
 )
 
 select *
