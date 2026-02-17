@@ -1,6 +1,19 @@
 {{ config(materialized='view') }}
 
-with last_round as (
+with scout_points as (
+    select code, points
+    from {{ ref('scout_points') }}
+),
+
+goal_points as (
+    select points from scout_points where code = 'G'
+),
+
+assist_points as (
+    select points from scout_points where code = 'A'
+),
+
+last_round as (
     select max(round_id) as max_round_id
     from {{ ref('int_players') }}
     where season = 2026
@@ -51,7 +64,9 @@ select
     s.position,
     if(s.has_played, 1, 0) as matches_counted,
     lp.pts_round as pts_avg,
-    lp.pts_round - (lp.goals_round * 8.0) - (lp.assists_round * 5.0) as base_avg,
+    lp.pts_round - (lp.goals_round * gp.points) - (lp.assists_round * ap.points) as base_avg,
     if(s.has_played, 1.0, 0.0) as availability
 from last_round_status s
 left join last_played_stats lp on s.id = lp.id and lp.rn = 1
+cross join goal_points gp
+cross join assist_points ap
