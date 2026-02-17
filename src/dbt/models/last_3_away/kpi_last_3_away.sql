@@ -33,6 +33,7 @@ last_3_away_played as (
     select
         id,
         pts_round,
+        base_round,
         row_number() over (partition by id order by round_id desc) as played_rank
     from {{ ref('int_players') }}
     where season = 2026 and is_home = false and has_played = true
@@ -41,7 +42,8 @@ last_3_away_played as (
 pts_calc as (
     select
         id,
-        avg(pts_round) as pts_avg
+        avg(pts_round) as pts_avg,
+        avg(base_round) as base_avg
     from last_3_away_played
     where played_rank <= 3
     group by id
@@ -54,6 +56,7 @@ select
     l.position,
     a.matches_counted,
     p.pts_avg,
+    p.base_avg,
     a.availability
 from availability_calc a
 join latest_info l on a.id = l.id

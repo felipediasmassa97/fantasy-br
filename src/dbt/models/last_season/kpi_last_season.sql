@@ -8,6 +8,7 @@ with ranked_matches as (
         position,
         round_id,
         pts_round,
+        base_round,
         has_played,
         row_number() over (partition by id order by round_id desc) as match_rank
     from {{ ref('int_players') }}
@@ -25,6 +26,7 @@ aggregated as (
         id,
         countif(has_played = true) as matches_counted,
         avg(if(has_played, pts_round, null)) as pts_avg,
+        avg(if(has_played, base_round, null)) as base_avg,
         countif(has_played = true) / count(*) as availability
     from ranked_matches
     group by id
@@ -37,6 +39,7 @@ select
     l.position,
     a.matches_counted,
     a.pts_avg,
+    a.base_avg,
     a.availability
 from aggregated a
 join latest_info l on a.id = l.id
