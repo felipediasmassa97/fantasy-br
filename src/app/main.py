@@ -1,5 +1,6 @@
 """Streamlit app for Fantasy BR player statistics."""
 
+import pandas as pd
 import streamlit as st
 from google.cloud import bigquery
 from google.oauth2 import service_account
@@ -65,38 +66,90 @@ def format_zscore(val: float | None) -> str:
     return f"{val:+.2f}"
 
 
+def color_zscore_dvs(val: float | None) -> str:
+    """Return background color for z-score and DVS values."""
+    if pd.isna(val) or val is None:
+        return ""
+    # Clamp value between -3 and 3 for color intensity
+    clamped = max(-3, min(3, val))
+    intensity = abs(clamped) / 3
+    if val > 0:
+        # Soft green gradient: light (200,230,200) to medium (120,180,120)
+        r = int(200 - 80 * intensity)
+        g = int(230 - 50 * intensity)
+        b = int(200 - 80 * intensity)
+    else:
+        # Soft red gradient: light (240,200,200) to medium (220,140,140)
+        r = int(240 - 20 * intensity)
+        g = int(200 - 60 * intensity)
+        b = int(200 - 60 * intensity)
+    return f"background-color: rgba({r},{g},{b},0.6)"
+
+
+def style_dataframe(
+    df: pd.DataFrame,
+    zscore_dvs_cols: list[str],
+) -> "pd.io.formats.style.Styler":
+    """Apply styling to dataframe with color-coded z-score and DVS columns."""
+    styler = df.style
+    for col in zscore_dvs_cols:
+        if col in df.columns:
+            styler = styler.map(color_zscore_dvs, subset=[col])
+    return styler
+
+
 def render_rankings_tab(data: list[dict]) -> None:
     """Render rankings overview tab."""
     st.subheader("ADP Rankings Comparison")
 
     col_config = {
-        "name": st.column_config.TextColumn("Player", width="medium"),
-        "position": st.column_config.TextColumn("Position", width="small"),
-        "club": st.column_config.TextColumn("Club", width="small"),
-        "pts_avg": st.column_config.NumberColumn("Pts (Avg)", format="%+.1f"),
+        "name": st.column_config.TextColumn(
+            "Player",
+            width="medium",
+        ),
+        "position": st.column_config.TextColumn(
+            "Position",
+            width="small",
+        ),
+        "club": st.column_config.TextColumn(
+            "Club",
+            width="small",
+        ),
+        "pts_avg": st.column_config.NumberColumn(
+            "Pts (Avg)", width="small", format="%+.1f"
+        ),
         "adp_pos_avg": st.column_config.NumberColumn(
             "Pos/Avg",
+            width="small",
             format="%d",
             help="Position ranking by average points",
         ),
         "adp_gen_avg": st.column_config.NumberColumn(
             "Gen/Avg",
+            width="small",
             format="%d",
             help="General ranking by average points",
         ),
-        "base_avg": st.column_config.NumberColumn("Pts (Base)", format="%+.1f"),
+        "base_avg": st.column_config.NumberColumn(
+            "Pts (Base)",
+            width="small",
+            format="%+.1f",
+        ),
         "adp_pos_base": st.column_config.NumberColumn(
             "Pos/Base",
+            width="small",
             format="%d",
             help="Position ranking by base average",
         ),
         "adp_gen_base": st.column_config.NumberColumn(
             "Gen/Base",
+            width="small",
             format="%d",
             help="General ranking by base average",
         ),
         "availability": st.column_config.ProgressColumn(
             "Availability",
+            width="small",
             format="%.0f%%",
             min_value=0,
             max_value=100,
@@ -142,12 +195,33 @@ def render_details_tab(data: list[dict]) -> None:
 
     if is_general:
         col_config = {
-            "adp_gen_avg": st.column_config.NumberColumn("Rank (Avg)", format="%d"),
-            "adp_gen_base": st.column_config.NumberColumn("Rank (Base)", format="%d"),
-            "name": st.column_config.TextColumn("Player", width="medium"),
-            "position": st.column_config.TextColumn("Position", width="small"),
-            "club": st.column_config.TextColumn("Club", width="small"),
-            "matches_counted": st.column_config.NumberColumn("Matches", format="%d"),
+            "adp_gen_avg": st.column_config.NumberColumn(
+                "Rank (Avg)",
+                width="small",
+                format="%d",
+            ),
+            "adp_gen_base": st.column_config.NumberColumn(
+                "Rank (Base)",
+                width="small",
+                format="%d",
+            ),
+            "name": st.column_config.TextColumn(
+                "Player",
+                width="medium",
+            ),
+            "position": st.column_config.TextColumn(
+                "Position",
+                width="small",
+            ),
+            "club": st.column_config.TextColumn(
+                "Club",
+                width="small",
+            ),
+            "matches_counted": st.column_config.NumberColumn(
+                "Matches",
+                width="small",
+                format="%d",
+            ),
             "availability": st.column_config.ProgressColumn(
                 "Availability",
                 width="small",
@@ -155,13 +229,34 @@ def render_details_tab(data: list[dict]) -> None:
                 min_value=0,
                 max_value=100,
             ),
-            "pts_avg": st.column_config.NumberColumn("Pts (Avg)", format="%+.2f"),
-            "dvs_gen_avg": st.column_config.NumberColumn("DVS (Avg)", format="%+.2f"),
-            "z_score_gen_avg": st.column_config.NumberColumn("Z (Avg)", format="%+.2f"),
-            "base_avg": st.column_config.NumberColumn("Pts (Base)", format="%+.2f"),
-            "dvs_gen_base": st.column_config.NumberColumn("DVS (Base)", format="%+.2f"),
+            "pts_avg": st.column_config.NumberColumn(
+                "Pts (Avg)",
+                width="small",
+                format="%+.2f",
+            ),
+            "dvs_gen_avg": st.column_config.NumberColumn(
+                "DVS (Avg)",
+                width="small",
+                format="%+.2f",
+            ),
+            "z_score_gen_avg": st.column_config.NumberColumn(
+                "Z (Avg)",
+                width="small",
+                format="%+.2f",
+            ),
+            "base_avg": st.column_config.NumberColumn(
+                "Pts (Base)",
+                width="small",
+                format="%+.2f",
+            ),
+            "dvs_gen_base": st.column_config.NumberColumn(
+                "DVS (Base)",
+                width="small",
+                format="%+.2f",
+            ),
             "z_score_gen_base": st.column_config.NumberColumn(
                 "Z (Base)",
+                width="small",
                 format="%+.2f",
             ),
         }
@@ -182,12 +277,33 @@ def render_details_tab(data: list[dict]) -> None:
         ]
     else:
         col_config = {
-            "adp_pos_avg": st.column_config.NumberColumn("Rank (Avg)", format="%d"),
-            "adp_pos_base": st.column_config.NumberColumn("Rank (Base)", format="%d"),
-            "name": st.column_config.TextColumn("Player", width="medium"),
-            "position": st.column_config.TextColumn("Position", width="small"),
-            "club": st.column_config.TextColumn("Club", width="small"),
-            "matches_counted": st.column_config.NumberColumn("Matches", format="%d"),
+            "adp_pos_avg": st.column_config.NumberColumn(
+                "Rank (Avg)",
+                width="small",
+                format="%d",
+            ),
+            "adp_pos_base": st.column_config.NumberColumn(
+                "Rank (Base)",
+                width="small",
+                format="%d",
+            ),
+            "name": st.column_config.TextColumn(
+                "Player",
+                width="medium",
+            ),
+            "position": st.column_config.TextColumn(
+                "Position",
+                width="small",
+            ),
+            "club": st.column_config.TextColumn(
+                "Club",
+                width="small",
+            ),
+            "matches_counted": st.column_config.NumberColumn(
+                "Matches",
+                width="small",
+                format="%d",
+            ),
             "availability": st.column_config.ProgressColumn(
                 "Availability",
                 width="small",
@@ -195,13 +311,34 @@ def render_details_tab(data: list[dict]) -> None:
                 min_value=0,
                 max_value=100,
             ),
-            "pts_avg": st.column_config.NumberColumn("Pts (Avg)", format="%+.2f"),
-            "dvs_pos_avg": st.column_config.NumberColumn("DVS (Avg)", format="%+.2f"),
-            "z_score_pos_avg": st.column_config.NumberColumn("Z (Avg)", format="%+.2f"),
-            "base_avg": st.column_config.NumberColumn("Pts (Base)", format="%+.2f"),
-            "dvs_pos_base": st.column_config.NumberColumn("DVS (Base)", format="%+.2f"),
+            "pts_avg": st.column_config.NumberColumn(
+                "Pts (Avg)",
+                width="small",
+                format="%+.2f",
+            ),
+            "dvs_pos_avg": st.column_config.NumberColumn(
+                "DVS (Avg)",
+                width="small",
+                format="%+.2f",
+            ),
+            "z_score_pos_avg": st.column_config.NumberColumn(
+                "Z (Avg)",
+                width="small",
+                format="%+.2f",
+            ),
+            "base_avg": st.column_config.NumberColumn(
+                "Pts (Base)",
+                width="small",
+                format="%+.2f",
+            ),
+            "dvs_pos_base": st.column_config.NumberColumn(
+                "DVS (Base)",
+                width="small",
+                format="%+.2f",
+            ),
             "z_score_pos_base": st.column_config.NumberColumn(
                 "Z (Base)",
+                width="small",
                 format="%+.2f",
             ),
         }
@@ -222,9 +359,38 @@ def render_details_tab(data: list[dict]) -> None:
         ]
 
     display_data = [{k: row.get(k) for k in display_cols} for row in data]
+    df = pd.DataFrame(display_data)
+
+    # Columns to apply color styling
+    if is_general:
+        zscore_dvs_cols = [
+            "dvs_gen_avg",
+            "z_score_gen_avg",
+            "dvs_gen_base",
+            "z_score_gen_base",
+        ]
+    else:
+        zscore_dvs_cols = [
+            "dvs_pos_avg",
+            "z_score_pos_avg",
+            "dvs_pos_base",
+            "z_score_pos_base",
+        ]
+
+    styled_df = style_dataframe(df, zscore_dvs_cols)
+    styled_df = styled_df.format(
+        {
+            col: "{:+.2f}"
+            for col in [*zscore_dvs_cols, "pts_avg", "base_avg"]
+            if col in df.columns
+        },
+    )
 
     st.dataframe(
-        display_data, width="stretch", hide_index=True, column_config=col_config
+        styled_df,
+        width="stretch",
+        hide_index=True,
+        column_config=col_config,
     )
 
 
