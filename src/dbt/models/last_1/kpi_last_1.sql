@@ -23,6 +23,9 @@ last_played_stats as (
         id,
         pts_round,
         base_round,
+        scout_G, scout_A, scout_FT, scout_FD, scout_FF, scout_FS, scout_PS,
+        scout_DS, scout_SG, scout_DE, scout_DP,
+        scout_FC, scout_PC, scout_CA, scout_CV, scout_GC, scout_GS, scout_I, scout_PP,
         row_number() over (partition by id order by round_id desc) as rn
     from {{ ref('int_players') }}
     where season = 2026 and has_played = true
@@ -37,7 +40,29 @@ player_pts as (
         if(s.has_played, 1, 0) as matches_counted,
         lp.pts_round as pts_avg,
         lp.base_round as base_avg,
-        if(s.has_played, 1.0, 0.0) as availability
+        if(s.has_played, 1.0, 0.0) as availability,
+        -- Offensive scouts
+        lp.scout_G as avg_G,
+        lp.scout_A as avg_A,
+        lp.scout_FT as avg_FT,
+        lp.scout_FD as avg_FD,
+        lp.scout_FF as avg_FF,
+        lp.scout_FS as avg_FS,
+        lp.scout_PS as avg_PS,
+        -- Defensive scouts
+        lp.scout_DS as avg_DS,
+        lp.scout_SG as avg_SG,
+        lp.scout_DE as avg_DE,
+        lp.scout_DP as avg_DP,
+        -- Negative scouts
+        lp.scout_FC as avg_FC,
+        lp.scout_PC as avg_PC,
+        lp.scout_CA as avg_CA,
+        lp.scout_CV as avg_CV,
+        lp.scout_GC as avg_GC,
+        lp.scout_GS as avg_GS,
+        lp.scout_I as avg_I,
+        lp.scout_PP as avg_PP
     from last_round_status s
     left join last_played_stats lp on s.id = lp.id and lp.rn = 1
 ),
