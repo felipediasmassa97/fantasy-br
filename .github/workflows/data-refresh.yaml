@@ -25,8 +25,8 @@ jobs:
       contents: read
 
     strategy:
+      fail-fast: false
       matrix:
-        fail-fast: false
         environment: ${{ github.event_name == 'schedule' && fromJSON('["dev", "demo", "prod"]') || fromJSON(format('["{0}"]', inputs.environment)) }}
 
     env:
