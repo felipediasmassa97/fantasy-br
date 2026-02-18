@@ -17,6 +17,11 @@ TIME_PERIODS = {
     "Last Season": "kpi_last_season",
 }
 
+# Scout groupings by code
+SCOUTS_OFFENSIVE_CODES = ["G", "A", "FT", "FD", "FF", "FS", "PS"]
+SCOUTS_DEFENSIVE_CODES = ["DS", "SG", "DE", "DP"]
+SCOUTS_NEGATIVE_CODES = ["FC", "PC", "CA", "CV", "GC", "GS", "I", "PP"]
+
 
 @st.cache_resource
 def get_client() -> bigquery.Client:
@@ -36,6 +41,42 @@ def load_data(view_name: str) -> list[dict]:
         ORDER BY adp_gen_avg ASC NULLS LAST
     """  # noqa: S608
     return [dict(row) for row in client.query(query).result()]
+
+
+@st.cache_data(ttl=3600)
+def load_scout_points() -> dict[str, tuple[str, float]]:
+    """Load scout points from BigQuery."""
+    client = get_client()
+    query = f"""
+        SELECT code, description_en, points
+        FROM `{PROJECT_ID}.{DATASET_ID}.scout_points`
+    """  # noqa: S608
+    return {
+        row["code"]: (row["description_en"], float(row["points"]))
+        for row in client.query(query).result()
+    }
+
+
+def get_scout_groups(
+    scout_points: dict[str, tuple[str, float]],
+) -> tuple[list[tuple[str, str, float]], ...]:
+    """Build scout groups from loaded scout_points data."""
+    offensive = [
+        (f"avg_{code}", scout_points[code][0], scout_points[code][1])
+        for code in SCOUTS_OFFENSIVE_CODES
+        if code in scout_points
+    ]
+    defensive = [
+        (f"avg_{code}", scout_points[code][0], scout_points[code][1])
+        for code in SCOUTS_DEFENSIVE_CODES
+        if code in scout_points
+    ]
+    negative = [
+        (f"avg_{code}", scout_points[code][0], scout_points[code][1])
+        for code in SCOUTS_NEGATIVE_CODES
+        if code in scout_points
+    ]
+    return offensive, defensive, negative
 
 
 def filter_data(
@@ -176,8 +217,12 @@ def render_rankings_tab(data: list[dict]) -> None:
     )
 
 
-def render_details_tab(data: list[dict]) -> None:
+def render_details_tab(
+    data: list[dict],
+    scout_groups: tuple[list[tuple[str, str, float]], ...],
+) -> None:
     """Render detailed metrics tab."""
+    scouts_offensive, scouts_defensive, scouts_negative = scout_groups
     help_text = (
         "General compares against top 200 players overall. "
         "Position-based compares against top players in same position."
@@ -377,25 +422,66 @@ def render_details_tab(data: list[dict]) -> None:
             "z_score_pos_base",
         ]
 
-    styled_df = style_dataframe(df, zscore_dvs_cols)
+    # Add index column for selection tracking
+    df_with_idx = df.copy()
+    df_with_idx.insert(0, "_idx", range(len(df_with_idx)))
+
+    styled_df = style_dataframe(df_with_idx, zscore_dvs_cols)
     styled_df = styled_df.format(
         {
             col: "{:+.2f}"
             for col in [*zscore_dvs_cols, "pts_avg", "base_avg"]
-            if col in df.columns
+            if col in df_with_idx.columns
         },
     )
 
-    st.dataframe(
+    event = st.dataframe(
         styled_df,
         width="stretch",
         hide_index=True,
-        column_config=col_config,
+        column_config={"_idx": None, **col_config},
+        selection_mode="single-row",
+        on_select="rerun",
     )
 
+    # Player scout breakdown based on dataframe selection
+    selected_rows = event.selection.rows
+    if selected_rows:
+        selected_idx = selected_rows[0]
+        player = data[selected_idx]
+        st.subheader(f"Scout Breakdown: {player['name']}")
+        st.caption(f"{player['position']} | {player['club']}")
 
-def render_comparison_tab(data: list[dict]) -> None:
+        for group_name, scouts in [
+            ("Offensive", scouts_offensive),
+            ("Defensive", scouts_defensive),
+            ("Negative", scouts_negative),
+        ]:
+            cols = st.columns([1.5, 1, 1])
+            cols[0].markdown(f"**{group_name}**")
+            cols[1].markdown("**Count**")
+            cols[2].markdown("**Points**")
+
+            for key, desc, pts in scouts:
+                code = key.replace("avg_", "")
+                val = player.get(key)
+                cols = st.columns([1.5, 1, 1])
+                cols[0].markdown(f"{code} :gray[{desc}]")
+                if val is not None:
+                    cols[1].write(f"{val:.2f}")
+                    cols[2].write(f"{val * pts:+.2f}")
+                else:
+                    cols[1].write("-")
+                    cols[2].write("-")
+            st.divider()
+
+
+def render_comparison_tab(
+    data: list[dict],
+    scout_groups: tuple[list[tuple[str, str, float]], ...],
+) -> None:
     """Render player comparison tab."""
+    scouts_offensive, scouts_defensive, scouts_negative = scout_groups
     st.subheader("Player Comparison")
 
     selected = st.multiselect(
@@ -410,28 +496,44 @@ def render_comparison_tab(data: list[dict]) -> None:
         st.info("Select players above to compare their metrics side-by-side.")
         return
 
-    metrics = [
-        ("Points (Avg)", "pts_avg", "%+.2f"),
-        ("Points (Base)", "base_avg", "%+.2f"),
-        ("Matches", "matches_counted", "%d"),
-        ("Availability", "availability", "%.0f%%"),
-        ("", None, None),
-        ("Position Rankings", None, None),
-        ("ADP (Avg)", "adp_pos_avg", "%d"),
-        ("DVS (Avg)", "dvs_pos_avg", "%+.2f"),
-        ("Z-Score (Avg)", "z_score_pos_avg", "%+.2f"),
-        ("ADP (Base)", "adp_pos_base", "%d"),
-        ("DVS (Base)", "dvs_pos_base", "%+.2f"),
-        ("Z-Score (Base)", "z_score_pos_base", "%+.2f"),
-        ("", None, None),
-        ("General Rankings", None, None),
-        ("ADP (Avg)", "adp_gen_avg", "%d"),
-        ("DVS (Avg)", "dvs_gen_avg", "%+.2f"),
-        ("Z-Score (Avg)", "z_score_gen_avg", "%+.2f"),
-        ("ADP (Base)", "adp_gen_base", "%d"),
-        ("DVS (Base)", "dvs_gen_base", "%+.2f"),
-        ("Z-Score (Base)", "z_score_gen_base", "%+.2f"),
+    # Build metrics list including scouts
+    metrics: list[tuple[str, str | None, str | None, str | None, float | None]] = [
+        ("Points (Avg)", "pts_avg", "%+.2f", None, None),
+        ("Points (Base)", "base_avg", "%+.2f", None, None),
+        ("Matches", "matches_counted", "%d", None, None),
+        ("Availability", "availability", "%.0f%%", None, None),
+        ("", None, None, None, None),
+        ("Position Rankings", None, None, None, None),
+        ("ADP (Avg)", "adp_pos_avg", "%d", None, None),
+        ("DVS (Avg)", "dvs_pos_avg", "%+.2f", None, None),
+        ("Z-Score (Avg)", "z_score_pos_avg", "%+.2f", None, None),
+        ("ADP (Base)", "adp_pos_base", "%d", None, None),
+        ("DVS (Base)", "dvs_pos_base", "%+.2f", None, None),
+        ("Z-Score (Base)", "z_score_pos_base", "%+.2f", None, None),
+        ("", None, None, None, None),
+        ("General Rankings", None, None, None, None),
+        ("ADP (Avg)", "adp_gen_avg", "%d", None, None),
+        ("DVS (Avg)", "dvs_gen_avg", "%+.2f", None, None),
+        ("Z-Score (Avg)", "z_score_gen_avg", "%+.2f", None, None),
+        ("ADP (Base)", "adp_gen_base", "%d", None, None),
+        ("DVS (Base)", "dvs_gen_base", "%+.2f", None, None),
+        ("Z-Score (Base)", "z_score_gen_base", "%+.2f", None, None),
+        ("", None, None, None, None),
+        ("Scouts: Offensive", None, None, None, None),
     ]
+    for key, desc, pts in scouts_offensive:
+        code = key.replace("avg_", "")
+        metrics.append((code, key, None, f"{desc} ({pts:+.1f} pts)", pts))
+    metrics.append(("", None, None, None, None))
+    metrics.append(("Scouts: Defensive", None, None, None, None))
+    for key, desc, pts in scouts_defensive:
+        code = key.replace("avg_", "")
+        metrics.append((code, key, None, f"{desc} ({pts:+.1f} pts)", pts))
+    metrics.append(("", None, None, None, None))
+    metrics.append(("Scouts: Negative", None, None, None, None))
+    for key, desc, pts in scouts_negative:
+        code = key.replace("avg_", "")
+        metrics.append((code, key, None, f"{desc} ({pts:+.1f} pts)", pts))
 
     cols = st.columns([1.5] + [1] * len(selected))
     cols[0].markdown("**Metric**")
@@ -439,7 +541,7 @@ def render_comparison_tab(data: list[dict]) -> None:
         cols[i + 1].markdown(f"**{player['name']}**")
         cols[i + 1].caption(f"{player['position']} | {player['club']}")
 
-    for label, key, fmt in metrics:
+    for label, key, fmt, tooltip, scout_pts in metrics:
         if key is None:
             if label:
                 cols = st.columns([1.5] + [1] * len(selected))
@@ -452,15 +554,20 @@ def render_comparison_tab(data: list[dict]) -> None:
             continue
 
         cols = st.columns([1.5] + [1] * len(selected))
-        cols[0].write(label)
+        display_label = f"{label} :gray[{tooltip}]" if tooltip else label
+        cols[0].markdown(display_label)
         for i, player in enumerate(selected):
             val = player.get(key)
             if val is None:
                 cols[i + 1].write("-")
-            elif "%" in fmt:
+            elif scout_pts is not None:
+                # Scout metric: show points (count)
+                pts_val = val * scout_pts
+                cols[i + 1].write(f"{pts_val:+.1f} pts ({val:.2f})")
+            elif fmt and "%" in fmt:
                 cols[i + 1].write(fmt % val)
             else:
-                cols[i + 1].write(fmt % val)
+                cols[i + 1].write(fmt % val if fmt else str(val))
 
 
 def main() -> None:
@@ -484,6 +591,8 @@ def main() -> None:
 
         with st.spinner("Loading data..."):
             data = load_data(view_name)
+            scout_points = load_scout_points()
+            scout_groups = get_scout_groups(scout_points)
 
         # Convert availability to percentage
         for row in data:
@@ -510,10 +619,10 @@ def main() -> None:
         render_rankings_tab(filtered_data)
 
     with tab2:
-        render_details_tab(filtered_data)
+        render_details_tab(filtered_data, scout_groups)
 
     with tab3:
-        render_comparison_tab(filtered_data)
+        render_comparison_tab(filtered_data, scout_groups)
 
 
 if __name__ == "__main__":
