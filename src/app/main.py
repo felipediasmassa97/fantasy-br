@@ -68,36 +68,35 @@ def format_zscore(val: float | None) -> str:
 def render_rankings_tab(data: list[dict]) -> None:
     """Render rankings overview tab."""
     st.subheader("ADP Rankings Comparison")
-    st.caption("Compare player rankings across different metrics and scopes")
 
     col_config = {
         "name": st.column_config.TextColumn("Player", width="medium"),
+        "position": st.column_config.TextColumn("Position", width="small"),
         "club": st.column_config.TextColumn("Club", width="small"),
-        "position": st.column_config.TextColumn("Pos", width="small"),
+        "pts_avg": st.column_config.NumberColumn("Pts (Avg)", format="%.1f"),
+        "adp_pos_avg": st.column_config.NumberColumn(
+            "Pos/Avg",
+            format="%d",
+            help="Position ranking by average points",
+        ),
         "adp_gen_avg": st.column_config.NumberColumn(
             "Gen/Avg",
             format="%d",
             help="General ranking by average points",
+        ),
+        "base_avg": st.column_config.NumberColumn("Pts (Base)", format="%.1f"),
+        "adp_pos_base": st.column_config.NumberColumn(
+            "Pos/Base",
+            format="%d",
+            help="Position ranking by base average",
         ),
         "adp_gen_base": st.column_config.NumberColumn(
             "Gen/Base",
             format="%d",
             help="General ranking by base average",
         ),
-        "adp_pos_avg": st.column_config.NumberColumn(
-            "Pos/Avg",
-            format="%d",
-            help="Position ranking by average points",
-        ),
-        "adp_pos_base": st.column_config.NumberColumn(
-            "Pos/Base",
-            format="%d",
-            help="Position ranking by base average",
-        ),
-        "pts_avg": st.column_config.NumberColumn("Pts Avg", format="%.1f"),
-        "base_avg": st.column_config.NumberColumn("Base Avg", format="%.1f"),
         "availability": st.column_config.ProgressColumn(
-            "Avail",
+            "Availability",
             format="%.0f%%",
             min_value=0,
             max_value=100,
@@ -106,24 +105,21 @@ def render_rankings_tab(data: list[dict]) -> None:
 
     display_cols = [
         "name",
-        "club",
         "position",
-        "adp_gen_avg",
-        "adp_gen_base",
-        "adp_pos_avg",
-        "adp_pos_base",
+        "club",
         "pts_avg",
+        "adp_pos_avg",
+        "adp_gen_avg",
         "base_avg",
+        "adp_pos_base",
+        "adp_gen_base",
         "availability",
     ]
 
     display_data = [{k: row.get(k) for k in display_cols} for row in data]
 
     st.dataframe(
-        display_data,
-        use_container_width=True,
-        hide_index=True,
-        column_config=col_config,
+        display_data, width="stretch", hide_index=True, column_config=col_config
     )
 
 
@@ -135,101 +131,98 @@ def render_details_tab(data: list[dict]) -> None:
     )
     scope = st.radio(
         "Metric Scope",
-        ["General (Top 200)", "Position-based"],
+        ["Position-based", "General"],
         horizontal=True,
         help=help_text,
     )
 
     is_general = "General" in scope
 
-    st.subheader("Average Points Metrics" if is_general else "Position Metrics")
+    st.subheader("General Metrics" if is_general else "Position Metrics")
 
     if is_general:
         col_config = {
             "adp_gen_avg": st.column_config.NumberColumn("Rank (Avg)", format="%d"),
             "adp_gen_base": st.column_config.NumberColumn("Rank (Base)", format="%d"),
             "name": st.column_config.TextColumn("Player", width="medium"),
-            "club": st.column_config.TextColumn("Club", width="small"),
             "position": st.column_config.TextColumn("Pos", width="small"),
-            "dvs_gen_avg": st.column_config.NumberColumn("DVS (Avg)", format="%.2f"),
-            "dvs_gen_base": st.column_config.NumberColumn("DVS (Base)", format="%.2f"),
-            "z_score_gen_avg": st.column_config.NumberColumn("Z (Avg)", format="%+.2f"),
-            "z_score_gen_base": st.column_config.NumberColumn(
-                "Z (Base)",
-                format="%+.2f",
-            ),
-            "pts_avg": st.column_config.NumberColumn("Pts Avg", format="%.1f"),
-            "base_avg": st.column_config.NumberColumn("Base Avg", format="%.1f"),
+            "club": st.column_config.TextColumn("Club", width="small"),
             "matches_counted": st.column_config.NumberColumn("Matches", format="%d"),
             "availability": st.column_config.ProgressColumn(
-                "Avail",
+                "Availability",
                 format="%.0f%%",
                 min_value=0,
                 max_value=100,
+            ),
+            "pts_avg": st.column_config.NumberColumn("Pts (Avg)", format="%.1f"),
+            "dvs_gen_avg": st.column_config.NumberColumn("DVS (Avg)", format="%.2f"),
+            "z_score_gen_avg": st.column_config.NumberColumn("Z (Avg)", format="%+.2f"),
+            "base_avg": st.column_config.NumberColumn("Pts (Base)", format="%.1f"),
+            "dvs_gen_base": st.column_config.NumberColumn("DVS (Base)", format="%.2f"),
+            "z_score_gen_base": st.column_config.NumberColumn(
+                "Z (Base)",
+                format="%+.2f",
             ),
         }
         display_cols = [
             "adp_gen_avg",
             "adp_gen_base",
             "name",
-            "club",
             "position",
-            "dvs_gen_avg",
-            "dvs_gen_base",
-            "z_score_gen_avg",
-            "z_score_gen_base",
-            "pts_avg",
-            "base_avg",
+            "club",
             "matches_counted",
             "availability",
+            "pts_avg",
+            "dvs_gen_avg",
+            "z_score_gen_avg",
+            "base_avg",
+            "dvs_gen_base",
+            "z_score_gen_base",
         ]
     else:
         col_config = {
             "adp_pos_avg": st.column_config.NumberColumn("Rank (Avg)", format="%d"),
             "adp_pos_base": st.column_config.NumberColumn("Rank (Base)", format="%d"),
             "name": st.column_config.TextColumn("Player", width="medium"),
-            "club": st.column_config.TextColumn("Club", width="small"),
             "position": st.column_config.TextColumn("Pos", width="small"),
-            "dvs_pos_avg": st.column_config.NumberColumn("DVS (Avg)", format="%.2f"),
-            "dvs_pos_base": st.column_config.NumberColumn("DVS (Base)", format="%.2f"),
-            "z_score_pos_avg": st.column_config.NumberColumn("Z (Avg)", format="%+.2f"),
-            "z_score_pos_base": st.column_config.NumberColumn(
-                "Z (Base)",
-                format="%+.2f",
-            ),
-            "pts_avg": st.column_config.NumberColumn("Pts Avg", format="%.1f"),
-            "base_avg": st.column_config.NumberColumn("Base Avg", format="%.1f"),
+            "club": st.column_config.TextColumn("Club", width="small"),
             "matches_counted": st.column_config.NumberColumn("Matches", format="%d"),
             "availability": st.column_config.ProgressColumn(
-                "Avail",
+                "Availability",
                 format="%.0f%%",
                 min_value=0,
                 max_value=100,
+            ),
+            "pts_avg": st.column_config.NumberColumn("Pts (Avg)", format="%.1f"),
+            "dvs_pos_avg": st.column_config.NumberColumn("DVS (Avg)", format="%.2f"),
+            "z_score_pos_avg": st.column_config.NumberColumn("Z (Avg)", format="%+.2f"),
+            "base_avg": st.column_config.NumberColumn("Pts (Base)", format="%.1f"),
+            "dvs_pos_base": st.column_config.NumberColumn("DVS (Base)", format="%.2f"),
+            "z_score_pos_base": st.column_config.NumberColumn(
+                "Z (Base)",
+                format="%+.2f",
             ),
         }
         display_cols = [
             "adp_pos_avg",
             "adp_pos_base",
             "name",
-            "club",
             "position",
-            "dvs_pos_avg",
-            "dvs_pos_base",
-            "z_score_pos_avg",
-            "z_score_pos_base",
-            "pts_avg",
-            "base_avg",
+            "club",
             "matches_counted",
             "availability",
+            "pts_avg",
+            "dvs_pos_avg",
+            "z_score_pos_avg",
+            "base_avg",
+            "dvs_pos_base",
+            "z_score_pos_base",
         ]
 
     display_data = [{k: row.get(k) for k in display_cols} for row in data]
 
     st.dataframe(
-        display_data,
-        use_container_width=True,
-        hide_index=True,
-        column_config=col_config,
+        display_data, width="stretch", hide_index=True, column_config=col_config
     )
 
 
@@ -237,11 +230,10 @@ def render_comparison_tab(data: list[dict]) -> None:
     """Render player comparison tab."""
     st.subheader("Player Comparison")
 
-    player_names = [row["name"] for row in data if row.get("name")]
-
     selected = st.multiselect(
         "Select players to compare (up to 5)",
-        options=player_names,
+        options=sorted(data, key=lambda x: x["name"]),
+        format_func=lambda x: f"{x['name']} ({x['position']} - {x['club']})",
         max_selections=5,
         placeholder="Search and select players...",
     )
@@ -253,26 +245,26 @@ def render_comparison_tab(data: list[dict]) -> None:
     selected_data = [row for row in data if row.get("name") in selected]
 
     metrics = [
-        ("Points Average", "pts_avg", "%.1f"),
-        ("Base Average", "base_avg", "%.1f"),
-        ("Availability", "availability", "%.0f%%"),
+        ("Points (Avg)", "pts_avg", "%.1f"),
+        ("Points (Base)", "base_avg", "%.1f"),
         ("Matches", "matches_counted", "%d"),
-        ("", None, None),
-        ("General Rankings", None, None),
-        ("ADP (Avg)", "adp_gen_avg", "%d"),
-        ("ADP (Base)", "adp_gen_base", "%d"),
-        ("DVS (Avg)", "dvs_gen_avg", "%.2f"),
-        ("DVS (Base)", "dvs_gen_base", "%.2f"),
-        ("Z-Score (Avg)", "z_score_gen_avg", "%+.2f"),
-        ("Z-Score (Base)", "z_score_gen_base", "%+.2f"),
+        ("Availability", "availability", "%.0f%%"),
         ("", None, None),
         ("Position Rankings", None, None),
         ("ADP (Avg)", "adp_pos_avg", "%d"),
-        ("ADP (Base)", "adp_pos_base", "%d"),
         ("DVS (Avg)", "dvs_pos_avg", "%.2f"),
-        ("DVS (Base)", "dvs_pos_base", "%.2f"),
         ("Z-Score (Avg)", "z_score_pos_avg", "%+.2f"),
+        ("ADP (Base)", "adp_pos_base", "%d"),
+        ("DVS (Base)", "dvs_pos_base", "%.2f"),
         ("Z-Score (Base)", "z_score_pos_base", "%+.2f"),
+        ("", None, None),
+        ("General Rankings", None, None),
+        ("ADP (Avg)", "adp_gen_avg", "%d"),
+        ("DVS (Avg)", "dvs_gen_avg", "%.2f"),
+        ("Z-Score (Avg)", "z_score_gen_avg", "%+.2f"),
+        ("ADP (Base)", "adp_gen_base", "%d"),
+        ("DVS (Base)", "dvs_gen_base", "%.2f"),
+        ("Z-Score (Base)", "z_score_gen_base", "%+.2f"),
     ]
 
     cols = st.columns([1.5] + [1] * len(selected))
@@ -306,9 +298,11 @@ def render_comparison_tab(data: list[dict]) -> None:
 
 def main() -> None:
     """Run app."""
-    st.set_page_config(page_title="Fantasy BR", page_icon="⚽", layout="wide")
+    st.set_page_config(
+        page_title="Scouting Panelas", page_icon=":shallow_pan_of_food:", layout="wide"
+    )
 
-    st.title("Fantasy BR - Draft Board")
+    st.title(":shallow_pan_of_food: Scouting Panelas")
 
     # Sidebar filters
     with st.sidebar:
@@ -330,20 +324,15 @@ def main() -> None:
                 row["availability"] = row["availability"] * 100
 
         clubs = sorted({row["club"] for row in data if row.get("club")})
-        positions = sorted({row["position"] for row in data if row.get("position")})
+        positions = ["GK", "CB", "FB", "MD", "AT"]
 
         st.divider()
 
+        name_filter = st.text_input("Player Name", placeholder="Search...")
         position_filter = st.selectbox("Position", options=["All", *positions])
         club_filter = st.selectbox("Club", options=["All", *clubs])
-        name_filter = st.text_input("Player Name", placeholder="Search...")
-
-        st.divider()
-        st.caption(f"Showing {selected_period}")
 
     filtered_data = filter_data(data, name_filter, club_filter, position_filter)
-
-    st.caption(f"{len(filtered_data)} players")
 
     # Main tabs
     tab1, tab2, tab3 = st.tabs(
