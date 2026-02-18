@@ -9,11 +9,11 @@ DATASET_ID = "fdmdev_fantasy_br"
 
 TIME_PERIODS = {
     "This Season": "kpi_this_season",
-    "Last Season": "kpi_last_season",
     "Last Match": "kpi_last_1",
     "Last 5 Matches": "kpi_last_5",
     "Last 3 Home": "kpi_last_3_home",
     "Last 3 Away": "kpi_last_3_away",
+    "Last Season": "kpi_last_season",
 }
 
 
@@ -145,19 +145,20 @@ def render_details_tab(data: list[dict]) -> None:
             "adp_gen_avg": st.column_config.NumberColumn("Rank (Avg)", format="%d"),
             "adp_gen_base": st.column_config.NumberColumn("Rank (Base)", format="%d"),
             "name": st.column_config.TextColumn("Player", width="medium"),
-            "position": st.column_config.TextColumn("Pos", width="small"),
+            "position": st.column_config.TextColumn("Position", width="small"),
             "club": st.column_config.TextColumn("Club", width="small"),
             "matches_counted": st.column_config.NumberColumn("Matches", format="%d"),
             "availability": st.column_config.ProgressColumn(
                 "Availability",
+                width="small",
                 format="%.0f%%",
                 min_value=0,
                 max_value=100,
             ),
-            "pts_avg": st.column_config.NumberColumn("Pts (Avg)", format="%.1f"),
+            "pts_avg": st.column_config.NumberColumn("Pts (Avg)", format="%.2f"),
             "dvs_gen_avg": st.column_config.NumberColumn("DVS (Avg)", format="%.2f"),
             "z_score_gen_avg": st.column_config.NumberColumn("Z (Avg)", format="%+.2f"),
-            "base_avg": st.column_config.NumberColumn("Pts (Base)", format="%.1f"),
+            "base_avg": st.column_config.NumberColumn("Pts (Base)", format="%.2f"),
             "dvs_gen_base": st.column_config.NumberColumn("DVS (Base)", format="%.2f"),
             "z_score_gen_base": st.column_config.NumberColumn(
                 "Z (Base)",
@@ -184,19 +185,20 @@ def render_details_tab(data: list[dict]) -> None:
             "adp_pos_avg": st.column_config.NumberColumn("Rank (Avg)", format="%d"),
             "adp_pos_base": st.column_config.NumberColumn("Rank (Base)", format="%d"),
             "name": st.column_config.TextColumn("Player", width="medium"),
-            "position": st.column_config.TextColumn("Pos", width="small"),
+            "position": st.column_config.TextColumn("Position", width="small"),
             "club": st.column_config.TextColumn("Club", width="small"),
             "matches_counted": st.column_config.NumberColumn("Matches", format="%d"),
             "availability": st.column_config.ProgressColumn(
                 "Availability",
+                width="small",
                 format="%.0f%%",
                 min_value=0,
                 max_value=100,
             ),
-            "pts_avg": st.column_config.NumberColumn("Pts (Avg)", format="%.1f"),
+            "pts_avg": st.column_config.NumberColumn("Pts (Avg)", format="%.2f"),
             "dvs_pos_avg": st.column_config.NumberColumn("DVS (Avg)", format="%.2f"),
             "z_score_pos_avg": st.column_config.NumberColumn("Z (Avg)", format="%+.2f"),
-            "base_avg": st.column_config.NumberColumn("Pts (Base)", format="%.1f"),
+            "base_avg": st.column_config.NumberColumn("Pts (Base)", format="%.2f"),
             "dvs_pos_base": st.column_config.NumberColumn("DVS (Base)", format="%.2f"),
             "z_score_pos_base": st.column_config.NumberColumn(
                 "Z (Base)",
@@ -242,11 +244,9 @@ def render_comparison_tab(data: list[dict]) -> None:
         st.info("Select players above to compare their metrics side-by-side.")
         return
 
-    selected_data = [row for row in data if row.get("name") in selected]
-
     metrics = [
-        ("Points (Avg)", "pts_avg", "%.1f"),
-        ("Points (Base)", "base_avg", "%.1f"),
+        ("Points (Avg)", "pts_avg", "%.2f"),
+        ("Points (Base)", "base_avg", "%.2f"),
         ("Matches", "matches_counted", "%d"),
         ("Availability", "availability", "%.0f%%"),
         ("", None, None),
@@ -269,24 +269,25 @@ def render_comparison_tab(data: list[dict]) -> None:
 
     cols = st.columns([1.5] + [1] * len(selected))
     cols[0].markdown("**Metric**")
-    for i, player in enumerate(selected_data):
+    for i, player in enumerate(selected):
         cols[i + 1].markdown(f"**{player['name']}**")
-        cols[i + 1].caption(f"{player['club']} | {player['position']}")
+        cols[i + 1].caption(f"{player['position']} | {player['club']}")
 
     for label, key, fmt in metrics:
         if key is None:
             if label:
                 cols = st.columns([1.5] + [1] * len(selected))
                 cols[0].markdown(f"**{label}**")
-                for i in range(len(selected)):
-                    cols[i + 1].markdown("---")
+                for i, player in enumerate(selected):
+                    cols[i + 1].markdown(f"**{player['name']}**")
+                    cols[i + 1].caption(f"{player['position']} | {player['club']}")
             else:
                 st.divider()
             continue
 
         cols = st.columns([1.5] + [1] * len(selected))
         cols[0].write(label)
-        for i, player in enumerate(selected_data):
+        for i, player in enumerate(selected):
             val = player.get(key)
             if val is None:
                 cols[i + 1].write("-")
