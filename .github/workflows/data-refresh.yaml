@@ -26,6 +26,7 @@ jobs:
 
     strategy:
       matrix:
+        fail-fast: false
         environment: ${{ github.event_name == 'schedule' && fromJSON('["dev", "demo", "prod"]') || fromJSON(format('["{0}"]', inputs.environment)) }}
 
     env:
@@ -48,7 +49,10 @@ jobs:
       - name: Extract and load players
         run: |
           YEAR=$(date +%Y)
-          jq -c --arg temporada "$YEAR" '.atletas[] + {temporada: ($temporada | tonumber)}' market.json > players_all.jsonl
+          jq -c --arg temporada "$YEAR" '
+            .atletas[] + {temporada: ($temporada | tonumber)} 
+            | if .media_num then .media_num = (.media_num * 1.0) else . end
+          ' market.json > players_all.jsonl
           API_COUNT=$(wc -l < players_all.jsonl | tr -d ' ')
 
           # Check if table exists
