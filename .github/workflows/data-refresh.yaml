@@ -56,7 +56,9 @@ jobs:
           API_COUNT=$(wc -l < players_all.jsonl | tr -d ' ')
 
           # Check if table exists
+          TABLE_EXISTS=false
           if bq show "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_players_etl" > /dev/null 2>&1; then
+            TABLE_EXISTS=true
 
             # Table exists, get existing season + player ID + round ID combinations
             bq query --use_legacy_sql=false --format=csv --max_rows=100000 \
@@ -78,9 +80,15 @@ jobs:
           NEW_COUNT=$(wc -l < players_new.jsonl | tr -d ' ')
 
           if [ "$NEW_COUNT" -gt 0 ]; then
-            bq load --source_format=NEWLINE_DELIMITED_JSON --autodetect \
-              --schema_update_option=ALLOW_FIELD_ADDITION \
-              "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_players_etl" players_new.jsonl
+            if [ "$TABLE_EXISTS" = "true" ]; then
+              # Append to existing table without autodetect to preserve schema types
+              bq load --source_format=NEWLINE_DELIMITED_JSON \
+                "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_players_etl" players_new.jsonl
+            else
+              # New table - use autodetect to infer schema
+              bq load --source_format=NEWLINE_DELIMITED_JSON --autodetect \
+                "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_players_etl" players_new.jsonl
+            fi
             echo "API returned ${API_COUNT} players, inserted ${NEW_COUNT} new rows"
           else
             echo "API returned ${API_COUNT} players, no new rows to insert"
