@@ -1,80 +1,18 @@
 # To-Dos
 
 - Data loading
-  - [x] Load matches (to aggregate by home or away)
-  - [x] Run dbt project daily in the schedule
-  - [x] Manage terraform state in cloud (not local)
-  - [x] Add seeds for legacy data
 
-- Data transformation
-  - [x] Remove head coaches
-
-- Streamlit app
-  - [x] Add other filters
-  - [ ] Improve UI/UX
-
-- KPIs
-  - Scope
-    - [x] Last played match
-    - [x] Last 5 played matches
-    - [x] Last 3 played home matches
-    - [x] Last 3 played away matches
-    - [x] This season
-    - [x] Last season
-  - Indicator
-    - [x] Points average
-    - [x] Points average without G/A
-    - [x] Availability (played matches against total team matches in filter - this is not only for played matches)
-    - [x] Z-score average position
-    - [x] DVS position
-    - [x] ADP position
-    - [x] Z-score average w/o G/A position
-    - [x] DVS w/o G/A position
-    - [x] ADP wo G/A position
-    - [x] Z-score average general
-    - [x] DVS general
-    - [x] ADP general
-    - [x] Z-score average w/o G/A general
-    - [x] DVS w/o G/A general
-    - [x] ADP w/o G/A general
-    - [ ] All stats individually (goals, assists, fouls, offsides, ...)
+- Data model
+  - KPIs
+    - [ ] Add last 10 matches view
   - Scouts
-    - [ ] Show scouts when selecting player (not in dataframe, but in detailed view)
-    - [ ] Show scouts overall
     - [ ] Show scouts for home games
     - [ ] Show scouts for away games
+  - Validation
+    - [ ] Validate metrics
 
-- Review files and documentation (pyproject.toml, README.md, ...)
-  - Use Copilot to write AGENTS.md and README.md
+- Streamlit app
 
-- Data validation
-  - Last played
-    - [x] Average points
-    - [x] Availability
-    - [ ] Average points w/o G/A
-    - [ ] ...
-  - Last 5 played
-    - [x] Average points
-    - [x] Availability
-    - [ ] Average points w/o G/A
-    - [ ] ...
-  - Last 3 home
-    - [x] Average points
-    - [x] Availability
-    - [ ] Average points w/o G/A
-    - [ ] ...
-  - Last 3 away
-    - [x] Average points
-    - [x] Availability
-    - [ ] Average points w/o G/A
-    - [ ] ...
-  - This season
-    - [x] Average points
-    - [x] Availability
-    - [ ] Average points w/o G/A
-    - [ ] ...
-  - Last season
-    - [x] Average points
-    - [x] Availability
-    - [ ] Average points w/o G/A
-    - [ ] ...
+- Text files
+  - [ ] Review files (pyproject.toml, schemas, profiles, ...)
+  - [ ] Review and improve documentation (README.md, AGENTS.md, ...)
