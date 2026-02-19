@@ -12,8 +12,9 @@ TIME_PERIODS = {
     "This Season": "kpi_this_season",
     "Last Match": "kpi_last_1",
     "Last 5 Matches": "kpi_last_5",
-    "Last 3 Home": "kpi_last_3_home",
-    "Last 3 Away": "kpi_last_3_away",
+    "Last 10 Matches": "kpi_last_10",
+    "Last 5 Home": "kpi_last_5_home",
+    "Last 5 Away": "kpi_last_5_away",
     "Last Season": "kpi_last_season",
 }
 

@@ -99,9 +99,10 @@ Cartola FC is Brazil's most popular fantasy football game based on the Brasileir
 ### KPI Models
 
 - `kpi_last_1`: Last round performance
-- `kpi_last_3_home`: Last 3 home matches
-- `kpi_last_3_away`: Last 3 away matches
 - `kpi_last_5`: Last 5 matches (any venue)
+- `kpi_last_10`: Last 10 matches
+- `kpi_last_5_home`: Last 5 home matches
+- `kpi_last_5_away`: Last 5 away matches
 - `kpi_last_season`: Previous season aggregate
 - `kpi_this_season`: Current season aggregate
 

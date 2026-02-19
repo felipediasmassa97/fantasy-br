@@ -87,23 +87,16 @@ uv run dbt test      # Run tests
 ```
 fantasy-br/
 ├── src/
-│   ├── app/              # Streamlit web application
-│   ├── dbt/              # dbt project
-│   │   ├── models/       # SQL models
-│   │   │   ├── staging/  # stg_players (unified source)
-│   │   │   ├── intermediate/  # int_players
-│   │   │   ├── last_1/   # Last round stats
-│   │   │   ├── last_3_home/  # Last 3 home matches
-│   │   │   ├── last_3_away/  # Last 3 away matches
-│   │   │   ├── last_5/   # Last 5 matches
-│   │   │   ├── last_season/  # Previous season stats
-│   │   │   └── this_season/  # Current season stats
-│   │   └── seeds/        # Historical data (2025, 2026)
-│   └── legacy/           # Legacy notebooks and reports
-├── infra/                # Terraform (BigQuery infrastructure)
-├── scripts/              # Utility scripts
-├── tests/                # pytest tests
-└── legacy/               # Historical CSV data by season
+│   ├── app/                   # Streamlit web application
+│   ├── dbt/                   # dbt project
+│   │   ├── models/            # Data models
+│   │   │   ├── staging/       # Staging models
+│   │   │   ├── intermediate/  # Intermediate models
+│   │   │   ├── kpis/          # KPI models
+│   │   └── seeds/             # Historical data (2025, 2026)
+├── infra/                     # Terraform (BigQuery infrastructure)
+├── tests/                     # pytest tests
+└── legacy/                    # Historical notebooks and reports
 ```
 
 ## dbt Models
@@ -117,9 +110,10 @@ fantasy-br/
 | Model             | Description                    |
 | ----------------- | ------------------------------ |
 | `kpi_last_1`      | Stats from last round          |
-| `kpi_last_3_home` | Stats from last 3 home matches |
-| `kpi_last_3_away` | Stats from last 3 away matches |
 | `kpi_last_5`      | Stats from last 5 matches      |
+| `kpi_last_10`     | Stats from last 10 matches     |
+| `kpi_last_5_home` | Stats from last 5 home matches |
+| `kpi_last_5_away` | Stats from last 5 away matches |
 | `kpi_last_season` | Previous season aggregate      |
 | `kpi_this_season` | Current season aggregate       |
 
