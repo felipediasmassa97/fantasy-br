@@ -1,21 +1,30 @@
 {{ config(materialized='view') }}
 
-with player_home_rounds as (
-    select
-        id,
-        name,
-        club,
-        position,
-        round_id,
-        has_played,
-        row_number() over (partition by id order by round_id desc) as round_rank
+with last_10_rounds as (
+    select distinct round_id
     from {{ ref('int_players') }}
-    where season = 2026 and is_home = true
+    where season = 2026
+    order by round_id desc
+    limit 10
+),
+
+player_rounds as (
+    select
+        p.id,
+        p.name,
+        p.club,
+        p.position,
+        p.round_id,
+        p.has_played,
+        row_number() over (partition by p.id order by p.round_id desc) as round_rank
+    from {{ ref('int_players') }} p
+    inner join last_10_rounds r on p.round_id = r.round_id
+    where p.season = 2026
 ),
 
 latest_info as (
     select id, name, club, position
-    from player_home_rounds
+    from player_rounds
     where round_rank = 1
 ),
 
@@ -24,12 +33,11 @@ availability_calc as (
         id,
         countif(has_played = true) as matches_counted,
         countif(has_played = true) / count(*) as availability
-    from player_home_rounds
-    where round_rank <= 3
+    from player_rounds
     group by id
 ),
 
-last_3_home_played as (
+last_10_played as (
     select
         id,
         pts_round,
@@ -39,7 +47,7 @@ last_3_home_played as (
         scout_FC, scout_PC, scout_CA, scout_CV, scout_GC, scout_GS, scout_I, scout_PP,
         row_number() over (partition by id order by round_id desc) as played_rank
     from {{ ref('int_players') }}
-    where season = 2026 and is_home = true and has_played = true
+    where season = 2026 and has_played = true
 ),
 
 pts_calc as (
@@ -69,8 +77,8 @@ pts_calc as (
         avg(scout_GS) as avg_GS,
         avg(scout_I) as avg_I,
         avg(scout_PP) as avg_PP
-    from last_3_home_played
-    where played_rank <= 3
+    from last_10_played
+    where played_rank <= 10
     group by id
 ),
 
