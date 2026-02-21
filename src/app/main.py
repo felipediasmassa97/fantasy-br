@@ -34,13 +34,33 @@ def get_client() -> bigquery.Client:
 
 
 @st.cache_data(ttl=300)
-def load_data(view_name: str) -> list[dict]:
-    """Load data from a BigQuery view."""
+def load_available_rounds() -> list[int]:
+    """Load available rounds from BigQuery."""
     client = get_client()
     query = f"""
-        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.{view_name}`
-        ORDER BY adp_gen_avg ASC NULLS LAST
+        SELECT DISTINCT as_of_round_id
+        FROM `{PROJECT_ID}.{DATASET_ID}.kpi_this_season`
+        ORDER BY as_of_round_id DESC
     """  # noqa: S608
+    return [int(row["as_of_round_id"]) for row in client.query(query).result()]
+
+
+@st.cache_data(ttl=300)
+def load_data(view_name: str, round_id: int | None = None) -> list[dict]:
+    """Load data from a BigQuery view."""
+    client = get_client()
+    # kpi_last_season doesn't have as_of_round_id (previous season data)
+    if view_name == "kpi_last_season" or round_id is None:
+        query = f"""
+            SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.{view_name}`
+            ORDER BY adp_gen_avg ASC NULLS LAST
+        """  # noqa: S608
+    else:
+        query = f"""
+            SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.{view_name}`
+            WHERE as_of_round_id = {round_id}
+            ORDER BY adp_gen_avg ASC NULLS LAST
+        """  # noqa: S608
     return [dict(row) for row in client.query(query).result()]
 
 
@@ -613,8 +633,20 @@ def main() -> None:
         )
         view_name = TIME_PERIODS[selected_period]
 
+        # Only show round filter for current season KPIs
+        selected_round = None
+        if selected_period != "Last Season":
+            available_rounds = load_available_rounds()
+            selected_round = st.selectbox(
+                "As of Round",
+                options=available_rounds,
+                index=0,
+                format_func=lambda x: f"Round {x}",
+                help="View KPIs as if this was the latest round",
+            )
+
         with st.spinner("Loading data..."):
-            data = load_data(view_name)
+            data = load_data(view_name, selected_round)
             scout_points = load_scout_points()
             scout_groups = get_scout_groups(scout_points)
 

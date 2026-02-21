@@ -1,15 +1,31 @@
 {{ config(materialized='view') }}
 
-with last_5_rounds as (
-    select distinct round_id
+with all_rounds as (
+    select distinct round_id as as_of_round_id
     from {{ ref('int_players') }}
     where season = 2026
-    order by round_id desc
-    limit 5
+),
+
+-- For each as_of_round, get the last 5 rounds up to that point
+round_windows as (
+    select
+        r1.as_of_round_id,
+        r2.round_id,
+        row_number() over (partition by r1.as_of_round_id order by r2.round_id desc) as round_rank
+    from all_rounds r1
+    cross join (select distinct round_id from {{ ref('int_players') }} where season = 2026) r2
+    where r2.round_id <= r1.as_of_round_id
+),
+
+last_5_per_round as (
+    select as_of_round_id, round_id
+    from round_windows
+    where round_rank <= 5
 ),
 
 player_rounds as (
     select
+        lr.as_of_round_id,
         p.id,
         p.name,
         p.club,
@@ -17,42 +33,47 @@ player_rounds as (
         p.position,
         p.round_id,
         p.has_played,
-        row_number() over (partition by p.id order by p.round_id desc) as round_rank
+        row_number() over (partition by lr.as_of_round_id, p.id order by p.round_id desc) as round_rank
     from {{ ref('int_players') }} p
-    inner join last_5_rounds r on p.round_id = r.round_id
+    inner join last_5_per_round lr on p.round_id = lr.round_id
     where p.season = 2026
 ),
 
 latest_info as (
-    select id, name, club, club_logo_url, position
+    select as_of_round_id, id, name, club, club_logo_url, position
     from player_rounds
     where round_rank = 1
 ),
 
 availability_calc as (
     select
+        as_of_round_id,
         id,
         countif(has_played = true) as matches_counted,
         countif(has_played = true) / count(*) as availability
     from player_rounds
-    group by id
+    group by as_of_round_id, id
 ),
 
+-- Get last 5 played matches per player up to each as_of_round
 last_5_played as (
     select
-        id,
-        pts_round,
-        base_round,
-        scout_G, scout_A, scout_FT, scout_FD, scout_FF, scout_FS, scout_PS,
-        scout_DS, scout_SG, scout_DE, scout_DP,
-        scout_FC, scout_PC, scout_CA, scout_CV, scout_GC, scout_GS, scout_I, scout_PP,
-        row_number() over (partition by id order by round_id desc) as played_rank
-    from {{ ref('int_players') }}
-    where season = 2026 and has_played = true
+        r.as_of_round_id,
+        p.id,
+        p.pts_round,
+        p.base_round,
+        p.scout_G, p.scout_A, p.scout_FT, p.scout_FD, p.scout_FF, p.scout_FS, p.scout_PS,
+        p.scout_DS, p.scout_SG, p.scout_DE, p.scout_DP,
+        p.scout_FC, p.scout_PC, p.scout_CA, p.scout_CV, p.scout_GC, p.scout_GS, p.scout_I, p.scout_PP,
+        row_number() over (partition by r.as_of_round_id, p.id order by p.round_id desc) as played_rank
+    from {{ ref('int_players') }} p
+    cross join all_rounds r
+    where p.season = 2026 and p.has_played = true and p.round_id <= r.as_of_round_id
 ),
 
 pts_calc as (
     select
+        as_of_round_id,
         id,
         avg(pts_round) as pts_avg,
         avg(base_round) as base_avg,
@@ -80,11 +101,12 @@ pts_calc as (
         avg(scout_PP) as avg_PP
     from last_5_played
     where played_rank <= 5
-    group by id
+    group by as_of_round_id, id
 ),
 
 player_pts as (
     select
+        a.as_of_round_id,
         a.id,
         l.name,
         l.club,
@@ -98,24 +120,24 @@ player_pts as (
         p.avg_DS, p.avg_SG, p.avg_DE, p.avg_DP,
         p.avg_FC, p.avg_PC, p.avg_CA, p.avg_CV, p.avg_GC, p.avg_GS, p.avg_I, p.avg_PP
     from availability_calc a
-    join latest_info l on a.id = l.id
-    left join pts_calc p on a.id = p.id
+    join latest_info l on a.as_of_round_id = l.as_of_round_id and a.id = l.id
+    left join pts_calc p on a.as_of_round_id = p.as_of_round_id and a.id = p.id
 ),
 
 position_stats_avg as (
-    {{ position_stats_cte('pts_avg') }}
+    {{ position_stats_by_round('pts_avg') }}
 ),
 
 position_stats_base as (
-    {{ position_stats_cte('base_avg') }}
+    {{ position_stats_by_round('base_avg') }}
 ),
 
 general_stats_avg as (
-    {{ general_stats_cte('pts_avg') }}
+    {{ general_stats_by_round('pts_avg') }}
 ),
 
 general_stats_base as (
-    {{ general_stats_cte('base_avg') }}
+    {{ general_stats_by_round('base_avg') }}
 ),
 
 with_z_score as (
@@ -126,10 +148,10 @@ with_z_score as (
         {{ z_score_position('p.pts_avg', 'psa') }} as z_score_pos_avg,
         {{ z_score_position('p.base_avg', 'psb') }} as z_score_pos_base
     from player_pts p
-    left join position_stats_avg psa on p.position = psa.position
-    left join position_stats_base psb on p.position = psb.position
-    cross join general_stats_avg gsa
-    cross join general_stats_base gsb
+    left join position_stats_avg psa on p.as_of_round_id = psa.as_of_round_id and p.position = psa.position
+    left join position_stats_base psb on p.as_of_round_id = psb.as_of_round_id and p.position = psb.position
+    left join general_stats_avg gsa on p.as_of_round_id = gsa.as_of_round_id
+    left join general_stats_base gsb on p.as_of_round_id = gsb.as_of_round_id
 ),
 
 with_dvs as (
@@ -144,8 +166,8 @@ with_dvs as (
 
 select
     *,
-    row_number() over (order by dvs_gen_avg desc nulls last) as adp_gen_avg,
-    row_number() over (order by dvs_gen_base desc nulls last) as adp_gen_base,
-    row_number() over (partition by position order by dvs_pos_avg desc nulls last) as adp_pos_avg,
-    row_number() over (partition by position order by dvs_pos_base desc nulls last) as adp_pos_base
+    row_number() over (partition by as_of_round_id order by dvs_gen_avg desc nulls last) as adp_gen_avg,
+    row_number() over (partition by as_of_round_id order by dvs_gen_base desc nulls last) as adp_gen_base,
+    row_number() over (partition by as_of_round_id, position order by dvs_pos_avg desc nulls last) as adp_pos_avg,
+    row_number() over (partition by as_of_round_id, position order by dvs_pos_base desc nulls last) as adp_pos_base
 from with_dvs

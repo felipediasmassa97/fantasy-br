@@ -1,13 +1,14 @@
 {{ config(materialized='view') }}
 
-with last_round as (
-    select max(round_id) as max_round_id
+with all_rounds as (
+    select distinct round_id as as_of_round_id
     from {{ ref('int_players') }}
     where season = 2026
 ),
 
-last_round_status as (
+round_status as (
     select
+        r.as_of_round_id,
         p.id,
         p.name,
         p.club,
@@ -15,25 +16,28 @@ last_round_status as (
         p.position,
         p.has_played
     from {{ ref('int_players') }} p
-    cross join last_round lr
-    where p.season = 2026 and p.round_id = lr.max_round_id
+    cross join all_rounds r
+    where p.season = 2026 and p.round_id = r.as_of_round_id
 ),
 
 last_played_stats as (
     select
-        id,
-        pts_round,
-        base_round,
-        scout_G, scout_A, scout_FT, scout_FD, scout_FF, scout_FS, scout_PS,
-        scout_DS, scout_SG, scout_DE, scout_DP,
-        scout_FC, scout_PC, scout_CA, scout_CV, scout_GC, scout_GS, scout_I, scout_PP,
-        row_number() over (partition by id order by round_id desc) as rn
-    from {{ ref('int_players') }}
-    where season = 2026 and has_played = true
+        r.as_of_round_id,
+        p.id,
+        p.pts_round,
+        p.base_round,
+        p.scout_G, p.scout_A, p.scout_FT, p.scout_FD, p.scout_FF, p.scout_FS, p.scout_PS,
+        p.scout_DS, p.scout_SG, p.scout_DE, p.scout_DP,
+        p.scout_FC, p.scout_PC, p.scout_CA, p.scout_CV, p.scout_GC, p.scout_GS, p.scout_I, p.scout_PP,
+        row_number() over (partition by r.as_of_round_id, p.id order by p.round_id desc) as rn
+    from {{ ref('int_players') }} p
+    cross join all_rounds r
+    where p.season = 2026 and p.has_played = true and p.round_id <= r.as_of_round_id
 ),
 
 player_pts as (
     select
+        s.as_of_round_id,
         s.id,
         s.name,
         s.club,
@@ -65,24 +69,24 @@ player_pts as (
         lp.scout_GS as avg_GS,
         lp.scout_I as avg_I,
         lp.scout_PP as avg_PP
-    from last_round_status s
-    left join last_played_stats lp on s.id = lp.id and lp.rn = 1
+    from round_status s
+    left join last_played_stats lp on s.as_of_round_id = lp.as_of_round_id and s.id = lp.id and lp.rn = 1
 ),
 
 position_stats_avg as (
-    {{ position_stats_cte('pts_avg') }}
+    {{ position_stats_by_round('pts_avg') }}
 ),
 
 position_stats_base as (
-    {{ position_stats_cte('base_avg') }}
+    {{ position_stats_by_round('base_avg') }}
 ),
 
 general_stats_avg as (
-    {{ general_stats_cte('pts_avg') }}
+    {{ general_stats_by_round('pts_avg') }}
 ),
 
 general_stats_base as (
-    {{ general_stats_cte('base_avg') }}
+    {{ general_stats_by_round('base_avg') }}
 ),
 
 with_z_score as (
@@ -93,10 +97,10 @@ with_z_score as (
         {{ z_score_position('p.pts_avg', 'psa') }} as z_score_pos_avg,
         {{ z_score_position('p.base_avg', 'psb') }} as z_score_pos_base
     from player_pts p
-    left join position_stats_avg psa on p.position = psa.position
-    left join position_stats_base psb on p.position = psb.position
-    cross join general_stats_avg gsa
-    cross join general_stats_base gsb
+    left join position_stats_avg psa on p.as_of_round_id = psa.as_of_round_id and p.position = psa.position
+    left join position_stats_base psb on p.as_of_round_id = psb.as_of_round_id and p.position = psb.position
+    left join general_stats_avg gsa on p.as_of_round_id = gsa.as_of_round_id
+    left join general_stats_base gsb on p.as_of_round_id = gsb.as_of_round_id
 ),
 
 with_dvs as (
@@ -111,8 +115,8 @@ with_dvs as (
 
 select
     *,
-    row_number() over (order by dvs_gen_avg desc nulls last) as adp_gen_avg,
-    row_number() over (order by dvs_gen_base desc nulls last) as adp_gen_base,
-    row_number() over (partition by position order by dvs_pos_avg desc nulls last) as adp_pos_avg,
-    row_number() over (partition by position order by dvs_pos_base desc nulls last) as adp_pos_base
+    row_number() over (partition by as_of_round_id order by dvs_gen_avg desc nulls last) as adp_gen_avg,
+    row_number() over (partition by as_of_round_id order by dvs_gen_base desc nulls last) as adp_gen_base,
+    row_number() over (partition by as_of_round_id, position order by dvs_pos_avg desc nulls last) as adp_pos_avg,
+    row_number() over (partition by as_of_round_id, position order by dvs_pos_base desc nulls last) as adp_pos_base
 from with_dvs
