@@ -11,6 +11,7 @@ last_round_status as (
         p.id,
         p.name,
         p.club,
+        p.club_logo_url,
         p.position,
         p.has_played
     from {{ ref('int_players') }} p
@@ -36,6 +37,7 @@ player_pts as (
         s.id,
         s.name,
         s.club,
+        s.club_logo_url,
         s.position,
         if(s.has_played, 1, 0) as matches_counted,
         lp.pts_round as pts_avg,

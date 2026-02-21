@@ -153,6 +153,10 @@ def render_rankings_tab(data: list[dict]) -> None:
             "Position",
             width="small",
         ),
+        "club_logo_url": st.column_config.ImageColumn(
+            "",
+            width="small",
+        ),
         "club": st.column_config.TextColumn(
             "Club",
             width="small",
@@ -201,6 +205,7 @@ def render_rankings_tab(data: list[dict]) -> None:
     display_cols = [
         "name",
         "position",
+        "club_logo_url",
         "club",
         "pts_avg",
         "adp_pos_avg",
@@ -260,6 +265,10 @@ def render_details_tab(
                 "Position",
                 width="small",
             ),
+            "club_logo_url": st.column_config.ImageColumn(
+                "",
+                width="small",
+            ),
             "club": st.column_config.TextColumn(
                 "Club",
                 width="small",
@@ -312,6 +321,7 @@ def render_details_tab(
             "adp_gen_base",
             "name",
             "position",
+            "club_logo_url",
             "club",
             "matches_counted",
             "availability",
@@ -340,6 +350,10 @@ def render_details_tab(
             ),
             "position": st.column_config.TextColumn(
                 "Position",
+                width="small",
+            ),
+            "club_logo_url": st.column_config.ImageColumn(
+                "",
                 width="small",
             ),
             "club": st.column_config.TextColumn(
@@ -394,6 +408,7 @@ def render_details_tab(
             "adp_pos_base",
             "name",
             "position",
+            "club_logo_url",
             "club",
             "matches_counted",
             "availability",

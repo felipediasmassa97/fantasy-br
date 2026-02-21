@@ -5,6 +5,7 @@ with ranked_matches as (
         id,
         name,
         club,
+        club_logo_url,
         position,
         round_id,
         pts_round,
@@ -19,7 +20,7 @@ with ranked_matches as (
 ),
 
 latest_info as (
-    select id, name, club, position
+    select id, name, club, club_logo_url, position
     from ranked_matches
     where match_rank = 1
 ),
@@ -29,6 +30,7 @@ player_pts as (
         r.id,
         l.name,
         l.club,
+        l.club_logo_url,
         l.position,
         countif(r.has_played = true) as matches_counted,
         avg(if(r.has_played, r.pts_round, null)) as pts_avg,
@@ -58,7 +60,7 @@ player_pts as (
         avg(if(r.has_played, r.scout_PP, null)) as avg_PP
     from ranked_matches r
     join latest_info l on r.id = l.id
-    group by r.id, l.name, l.club, l.position
+    group by r.id, l.name, l.club, l.club_logo_url, l.position
 ),
 
 position_stats_avg as (

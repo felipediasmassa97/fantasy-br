@@ -5,6 +5,7 @@ with player_home_rounds as (
         id,
         name,
         club,
+        club_logo_url,
         position,
         round_id,
         has_played,
@@ -14,7 +15,7 @@ with player_home_rounds as (
 ),
 
 latest_info as (
-    select id, name, club, position
+    select id, name, club, club_logo_url, position
     from player_home_rounds
     where round_rank = 1
 ),
@@ -79,6 +80,7 @@ player_pts as (
         a.id,
         l.name,
         l.club,
+        l.club_logo_url,
         l.position,
         a.matches_counted,
         p.pts_avg,
