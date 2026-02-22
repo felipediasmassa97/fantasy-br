@@ -144,6 +144,18 @@ def load_data(view_name: str, round_id: int | None = None) -> list[dict]:
     return [dict(row) for row in client.query(query).result()]
 
 
+@st.cache_data(ttl=300)
+def load_map_baseline(round_id: int) -> list[dict]:
+    """Load MAP baseline data from BigQuery."""
+    client = get_client()
+    query = f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.map_baseline`
+        WHERE as_of_round_id = {round_id}
+        ORDER BY baseline_pts DESC NULLS LAST
+    """  # noqa: S608
+    return [dict(row) for row in client.query(query).result()]
+
+
 @st.cache_data(ttl=3600)
 def load_scout_points() -> dict[str, tuple[str, float]]:
     """Load scout points from BigQuery."""
@@ -836,6 +848,126 @@ def render_comparison_tab(  # noqa: C901, PLR0912 # fixit lint
             cols[i + 1].markdown(f"**{subtotal:+.1f}**")
 
 
+def render_start_sit_tab(
+    map_data: list[dict],
+    name_filter: str,
+    club_filter: str,
+    position_filter: str,
+) -> None:
+    """Render Start or Sit tab with MAP baseline calculations."""
+    st.subheader("MAP Baseline Ability")
+    st.caption(
+        "Baseline points estimate who a player is. "
+        "Players with last season data (>=5 matches, >30% avail): 60% last + 40% this. "
+        "Rookies: 70% this season + 30% position average."
+    )
+
+    # Apply filters
+    filtered = map_data
+    if name_filter:
+        filtered = [
+            row
+            for row in filtered
+            if name_filter.lower() in row.get("name", "").lower()
+        ]
+    if club_filter != "All":
+        filtered = [row for row in filtered if row.get("club") == club_filter]
+    if position_filter != "All":
+        filtered = [row for row in filtered if row.get("position") == position_filter]
+
+    # Convert availability to percentage for display
+    for row in filtered:
+        if row.get("availability_last_season") is not None:
+            row["availability_last_season"] = row["availability_last_season"] * 100
+
+    col_config = {
+        "name": st.column_config.TextColumn(
+            "Player",
+            width="medium",
+            help="Player name",
+        ),
+        "position": st.column_config.TextColumn(
+            "Position",
+            width="small",
+            help="GK=Goalkeeper, CB=Center Back, FB=Fullback, MD=Midfielder, AT=Forward",
+        ),
+        "club_logo_url": st.column_config.ImageColumn(
+            "Club",
+            width="small",
+            help="Player's club",
+        ),
+        "baseline_pts": st.column_config.NumberColumn(
+            "Baseline Pts",
+            width="small",
+            format="%.2f",
+            help="Weighted baseline points combining last season and this season",
+        ),
+        "pts_avg_this_season": st.column_config.NumberColumn(
+            "This Season Avg",
+            width="small",
+            format="%.2f",
+            help="Average points this season (as of selected round)",
+        ),
+        "matches_this_season": st.column_config.NumberColumn(
+            "Matches (This)",
+            width="small",
+            format="%d",
+            help="Matches played this season",
+        ),
+        "pts_avg_last_season": st.column_config.NumberColumn(
+            "Last Season Avg",
+            width="small",
+            format="%.2f",
+            help="Average points last season",
+        ),
+        "matches_last_season": st.column_config.NumberColumn(
+            "Matches (Last)",
+            width="small",
+            format="%d",
+            help="Matches played last season",
+        ),
+        "availability_last_season": st.column_config.ProgressColumn(
+            "Avail (Last)",
+            width="small",
+            format="%.0f%%",
+            min_value=0,
+            max_value=100,
+            help="Availability last season. Must be >30% to use weighted_seasons.",
+        ),
+        "position_pts_avg": st.column_config.NumberColumn(
+            "Position Avg",
+            width="small",
+            format="%.2f",
+            help="Position average from last season (used for rookies)",
+        ),
+        "baseline_method": st.column_config.TextColumn(
+            "Method",
+            width="small",
+            help="weighted_seasons: >=5 matches + >30% avail. rookie_shrinkage: otherwise.",
+        ),
+    }
+
+    display_cols = [
+        "name",
+        "position",
+        "club_logo_url",
+        "baseline_pts",
+        "pts_avg_this_season",
+        "matches_this_season",
+        "pts_avg_last_season",
+        "matches_last_season",
+        "availability_last_season",
+        "position_pts_avg",
+        "baseline_method",
+    ]
+
+    display_data = [{k: row.get(k) for k in display_cols} for row in filtered]
+
+    st.dataframe(
+        display_data, width="stretch", hide_index=True, column_config=col_config
+    )
+
+
 def main() -> None:
     """Run app."""
     st.set_page_config(
@@ -872,6 +1004,8 @@ def main() -> None:
             data = load_data(view_name, selected_round)
             scout_points = load_scout_points()
             scout_groups = get_scout_groups(scout_points)
+            # Load MAP baseline data if round is selected
+            map_data = load_map_baseline(selected_round) if selected_round else []
 
         # Convert availability to percentage
         for row in data:
@@ -890,8 +1024,8 @@ def main() -> None:
     filtered_data = filter_data(data, name_filter, club_filter, position_filter)
 
     # Main tabs
-    tab1, tab2, tab3 = st.tabs(
-        ["Rankings Overview", "Detailed Metrics", "Compare Players"],
+    tab1, tab2, tab3, tab4 = st.tabs(
+        ["Rankings Overview", "Detailed Metrics", "Compare Players", "Start or Sit"],
     )
 
     with tab1:
@@ -902,6 +1036,12 @@ def main() -> None:
 
     with tab3:
         render_comparison_tab(filtered_data, scout_groups, selected_period)
+
+    with tab4:
+        if selected_round:
+            render_start_sit_tab(map_data, name_filter, club_filter, position_filter)
+        else:
+            st.info("Select a round to view MAP calculations.")
 
 
 if __name__ == "__main__":
