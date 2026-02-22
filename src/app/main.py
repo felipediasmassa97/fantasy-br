@@ -49,6 +49,10 @@ COLUMN_CONFIG = {
         "tooltip": "Base average points per match (excluding G/A). Higher is better.",
         "format": "%+.1f",
     },
+    "ga_avg": {
+        "tooltip": "G/A average points per match. Higher is better.",
+        "format": "%+.1f",
+    },
     "z_score_pos_avg": {
         "tooltip": "Z-Score: how many standard deviations above or below top position players mean. >0 is above average. Based on average points. Higher is better.",
         "format": "%+.2f",
@@ -387,6 +391,12 @@ def render_details_tab(
                 format=COLUMN_CONFIG["pts_avg"]["format"],
                 help=COLUMN_CONFIG["pts_avg"]["tooltip"],
             ),
+            "ga_avg": st.column_config.NumberColumn(
+                "Pts (G/A)",
+                width="small",
+                format=COLUMN_CONFIG["ga_avg"]["format"],
+                help=COLUMN_CONFIG["ga_avg"]["tooltip"],
+            ),
             "dvs_gen_avg": st.column_config.NumberColumn(
                 "DVS (Avg)",
                 width="small",
@@ -427,6 +437,7 @@ def render_details_tab(
             "matches_counted",
             "availability",
             "pts_avg",
+            "ga_avg",
             "dvs_gen_avg",
             "z_score_gen_avg",
             "base_avg",
@@ -482,6 +493,12 @@ def render_details_tab(
                 format=COLUMN_CONFIG["pts_avg"]["format"],
                 help=COLUMN_CONFIG["pts_avg"]["tooltip"],
             ),
+            "ga_avg": st.column_config.NumberColumn(
+                "G/A",
+                width="small",
+                format=COLUMN_CONFIG["ga_avg"]["format"],
+                help=COLUMN_CONFIG["ga_avg"]["tooltip"],
+            ),
             "dvs_pos_avg": st.column_config.NumberColumn(
                 "DVS (Avg)",
                 width="small",
@@ -522,6 +539,7 @@ def render_details_tab(
             "matches_counted",
             "availability",
             "pts_avg",
+            "ga_avg",
             "dvs_pos_avg",
             "z_score_pos_avg",
             "base_avg",

@@ -105,6 +105,7 @@ with_dvs as (
 
 select
     *,
+    pts_avg - base_avg as ga_avg,
     row_number() over (order by dvs_gen_avg desc nulls last) as adp_gen_avg,
     row_number() over (order by dvs_gen_base desc nulls last) as adp_gen_base,
     row_number() over (partition by position order by dvs_pos_avg desc nulls last) as adp_pos_avg,
