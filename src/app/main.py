@@ -855,10 +855,12 @@ def render_start_sit_tab(
     position_filter: str,
 ) -> None:
     """Render Start or Sit tab with MAP baseline calculations."""
-    st.subheader("MAP: Baseline + Recent Form")
+    st.subheader("MAP: Baseline + Form + Home/Away + Opponent")
     st.caption(
-        "Baseline: who this player usually is. "
-        "Form Ratio: recent performance vs baseline (last 5 games), clamped ±20%."
+        "Baseline: who this player is. "
+        "Form: last 5 games (±20%). "
+        "Home/Away: contextual (±15%). "
+        "Opponent: matchup strength (0.85-1.20)."
     )
 
     # Apply filters
@@ -931,6 +933,29 @@ def render_start_sit_tab(
             format="%.2f",
             help="Recent form vs baseline (clamped 0.8-1.2). >1 = hot, <1 = cold.",
         ),
+        "home_multiplier": st.column_config.NumberColumn(
+            "Home Mult",
+            width="small",
+            format="%.2f",
+            help="Home performance multiplier (clamped 0.85-1.15). >1 = better at home.",
+        ),
+        "away_multiplier": st.column_config.NumberColumn(
+            "Away Mult",
+            width="small",
+            format="%.2f",
+            help="Away performance multiplier (clamped 0.85-1.15). >1 = better away.",
+        ),
+        "opponent_multiplier": st.column_config.NumberColumn(
+            "Opp Mult",
+            width="small",
+            format="%.2f",
+            help="Opponent weakness (0.85-1.20). >1 = weak opponent for this position.",
+        ),
+        "is_home_next": st.column_config.CheckboxColumn(
+            "Home?",
+            width="small",
+            help="Is the player playing at home in the next match?",
+        ),
         "pts_avg_last_season": st.column_config.NumberColumn(
             "Last Season Avg",
             width="small",
@@ -970,6 +995,10 @@ def render_start_sit_tab(
         "club_logo_url",
         "baseline_pts",
         "form_ratio",
+        "home_multiplier",
+        "away_multiplier",
+        "opponent_multiplier",
+        "is_home_next",
         "pts_avg_last_5",
         "matches_last_5",
         "pts_avg_this_season",

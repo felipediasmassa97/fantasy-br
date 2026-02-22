@@ -1,7 +1,7 @@
 {{ config(materialized='view') }}
 
 /*
-MAP Components 1 & 2: Baseline Ability + Recent Form
+MAP Components 1, 2, 3 & 4: Baseline + Form + Home/Away + Opponent Strength
 
 Component 1 - Baseline Ability:
 - Players with last season data: 0.6 * last_season_avg + 0.4 * this_season_avg
@@ -11,6 +11,16 @@ Component 2 - Recent Form Adjustment:
 - Use last 5 games average
 - form_ratio = recent_avg / baseline_pts
 - Clamp ratio between 0.8 and 1.2 (±20% max impact)
+
+Component 3 - Home/Away Context:
+- home_away_avg = 0.7 * last_season_split + 0.3 * this_season_split
+- home_away_multiplier = home_away_avg / baseline_pts
+- Clamp between 0.85 and 1.15 (±15% max impact)
+
+Component 4 - Opponent Strength:
+- Calculate points conceded by opponent to player's position (recent 5 games)
+- opponent_multiplier = conceded / league_avg
+- Clamp between 0.85 and 1.20
 */
 
 with all_rounds as (
@@ -30,6 +40,19 @@ last_season_player_avg as (
     from {{ ref('int_players') }}
     where season = 2025
     group by id, position
+),
+
+-- Last season home/away splits
+last_season_home_away as (
+    select
+        id,
+        avg(if(has_played and is_home = true, pts_round, null)) as pts_avg_home_last_season,
+        avg(if(has_played and is_home = false, pts_round, null)) as pts_avg_away_last_season,
+        countif(has_played = true and is_home = true) as matches_home_last_season,
+        countif(has_played = true and is_home = false) as matches_away_last_season
+    from {{ ref('int_players') }}
+    where season = 2025
+    group by id
 ),
 
 -- Position average from last season (for rookies)
@@ -60,6 +83,21 @@ this_season_player_avg as (
     group by r.as_of_round_id, p.id, p.name, p.club, p.club_logo_url, p.position
 ),
 
+-- This season home/away splits per round
+this_season_home_away as (
+    select
+        r.as_of_round_id,
+        p.id,
+        avg(if(p.has_played and p.is_home = true, p.pts_round, null)) as pts_avg_home_this_season,
+        avg(if(p.has_played and p.is_home = false, p.pts_round, null)) as pts_avg_away_this_season,
+        countif(p.has_played = true and p.is_home = true) as matches_home_this_season,
+        countif(p.has_played = true and p.is_home = false) as matches_away_this_season
+    from {{ ref('int_players') }} p
+    cross join all_rounds r
+    where p.season = 2026 and p.round_id <= r.as_of_round_id
+    group by r.as_of_round_id, p.id
+),
+
 -- Last 5 matches per player per round (for recent form)
 last_5_matches as (
     select
@@ -88,6 +126,91 @@ recent_form as (
     group by as_of_round_id, id
 ),
 
+-- Get club_id for each player (needed for opponent matching)
+player_club as (
+    select distinct
+        p.id as player_id,
+        p.club_id
+    from {{ ref('stg_players') }} p
+    where p.season = 2026
+),
+
+-- Next match for each club at each round (looking at as_of_round_id + 1)
+next_match as (
+    select
+        r.as_of_round_id,
+        m.club_home_id as club_id,
+        m.club_away_id as opponent_id,
+        true as is_home_next
+    from all_rounds r
+    inner join {{ ref('stg_matches') }} m
+        on m.season = 2026 and m.round_id = r.as_of_round_id + 1
+    union all
+    select
+        r.as_of_round_id,
+        m.club_away_id as club_id,
+        m.club_home_id as opponent_id,
+        false as is_home_next
+    from all_rounds r
+    inner join {{ ref('stg_matches') }} m
+        on m.season = 2026 and m.round_id = r.as_of_round_id + 1
+),
+
+-- Points conceded by each team to each position (opponent's players points when facing this team)
+-- For last 5 games per team at each round
+points_conceded_raw as (
+    select
+        r.as_of_round_id,
+        -- The team that conceded (opponent in the match)
+        case
+            when p.is_home then m.club_away_id
+            else m.club_home_id
+        end as conceding_team_id,
+        p.position,
+        p.pts_round,
+        p.has_played,
+        p.round_id,
+        row_number() over (
+            partition by r.as_of_round_id,
+                case when p.is_home then m.club_away_id else m.club_home_id end
+            order by p.round_id desc
+        ) as team_match_rank
+    from {{ ref('int_players') }} p
+    cross join all_rounds r
+    inner join {{ ref('stg_matches') }} m
+        on p.season = m.season
+        and p.round_id = m.round_id
+    inner join player_club pc on p.id = pc.player_id
+    where p.season = 2026
+        and p.round_id <= r.as_of_round_id
+        and (pc.club_id = m.club_home_id or pc.club_id = m.club_away_id)
+),
+
+-- Aggregate points conceded per team per position (last 5 team games)
+points_conceded as (
+    select
+        as_of_round_id,
+        conceding_team_id,
+        position,
+        avg(if(has_played, pts_round, null)) as avg_pts_conceded,
+        countif(has_played = true) as matches_conceded
+    from points_conceded_raw
+    where team_match_rank <= 5 * 20  -- ~20 players per team, last 5 team matches
+    group by as_of_round_id, conceding_team_id, position
+),
+
+-- League average points per position (this season up to each round)
+league_avg_by_position as (
+    select
+        r.as_of_round_id,
+        p.position,
+        avg(if(p.has_played, p.pts_round, null)) as league_avg_pts
+    from {{ ref('int_players') }} p
+    cross join all_rounds r
+    where p.season = 2026 and p.round_id <= r.as_of_round_id
+    group by r.as_of_round_id, p.position
+),
+
 -- Combine last season and this season data
 combined as (
     select
@@ -105,12 +228,39 @@ combined as (
         pa.position_pts_avg,
         rf.pts_avg_last_5,
         rf.matches_last_5,
+        -- Home/away splits
+        lha.pts_avg_home_last_season,
+        lha.pts_avg_away_last_season,
+        lha.matches_home_last_season,
+        lha.matches_away_last_season,
+        tha.pts_avg_home_this_season,
+        tha.pts_avg_away_this_season,
+        tha.matches_home_this_season,
+        tha.matches_away_this_season,
+        -- Opponent info for next match
+        nm.opponent_id,
+        nm.is_home_next,
+        pc_opp.avg_pts_conceded as opponent_pts_conceded,
+        pc_opp.matches_conceded as opponent_matches_conceded,
+        lap.league_avg_pts,
         -- Flag: player qualifies as having last season data
         (ls.matches_last_season >= 5 and ls.availability_last_season > 0.30) as has_last_season_data
     from this_season_player_avg ts
     left join last_season_player_avg ls on ts.id = ls.id
     left join position_avg_last_season pa on ts.position = pa.position
     left join recent_form rf on ts.as_of_round_id = rf.as_of_round_id and ts.id = rf.id
+    left join last_season_home_away lha on ts.id = lha.id
+    left join this_season_home_away tha on ts.as_of_round_id = tha.as_of_round_id and ts.id = tha.id
+    -- Opponent strength joins
+    left join player_club pc on ts.id = pc.player_id
+    left join next_match nm on ts.as_of_round_id = nm.as_of_round_id and pc.club_id = nm.club_id
+    left join points_conceded pc_opp
+        on ts.as_of_round_id = pc_opp.as_of_round_id
+        and nm.opponent_id = pc_opp.conceding_team_id
+        and ts.position = pc_opp.position
+    left join league_avg_by_position lap
+        on ts.as_of_round_id = lap.as_of_round_id
+        and ts.position = lap.position
 ),
 
 -- Calculate baseline points
@@ -126,7 +276,12 @@ with_baseline as (
         case
             when has_last_season_data then 'weighted_seasons'
             else 'rookie_shrinkage'
-        end as baseline_method
+        end as baseline_method,
+        -- Blended home/away averages (70% last season + 30% this season)
+        0.7 * coalesce(pts_avg_home_last_season, pts_avg_last_season) +
+        0.3 * coalesce(pts_avg_home_this_season, pts_avg_this_season, 0) as home_avg,
+        0.7 * coalesce(pts_avg_away_last_season, pts_avg_last_season) +
+        0.3 * coalesce(pts_avg_away_this_season, pts_avg_this_season, 0) as away_avg
     from combined
 )
 
@@ -151,5 +306,37 @@ select
     case
         when baseline_pts is null or baseline_pts = 0 or pts_avg_last_5 is null then null
         else greatest(0.8, least(1.2, pts_avg_last_5 / baseline_pts))
-    end as form_ratio
+    end as form_ratio,
+    -- Home/Away context
+    pts_avg_home_last_season,
+    pts_avg_away_last_season,
+    matches_home_last_season,
+    matches_away_last_season,
+    pts_avg_home_this_season,
+    pts_avg_away_this_season,
+    matches_home_this_season,
+    matches_away_this_season,
+    home_avg,
+    away_avg,
+    -- Home multiplier: clamped ±15%
+    case
+        when baseline_pts is null or baseline_pts = 0 or home_avg is null then null
+        else greatest(0.85, least(1.15, home_avg / baseline_pts))
+    end as home_multiplier,
+    -- Away multiplier: clamped ±15%
+    case
+        when baseline_pts is null or baseline_pts = 0 or away_avg is null then null
+        else greatest(0.85, least(1.15, away_avg / baseline_pts))
+    end as away_multiplier,
+    -- Opponent strength data
+    opponent_id,
+    is_home_next,
+    opponent_pts_conceded,
+    opponent_matches_conceded,
+    league_avg_pts,
+    -- Opponent multiplier: clamped 0.85 to 1.20
+    case
+        when league_avg_pts is null or league_avg_pts = 0 or opponent_pts_conceded is null then null
+        else greatest(0.85, least(1.20, opponent_pts_conceded / league_avg_pts))
+    end as opponent_multiplier
 from with_baseline
