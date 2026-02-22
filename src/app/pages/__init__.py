@@ -1,0 +1,1 @@
+"""Fantasy BR Streamlit pages."""
