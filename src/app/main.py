@@ -23,6 +23,82 @@ SCOUTS_OFFENSIVE_CODES = ["G", "A", "FT", "FD", "FF", "FS", "PS"]
 SCOUTS_DEFENSIVE_CODES = ["DS", "SG", "DE", "DP"]
 SCOUTS_NEGATIVE_CODES = ["FC", "PC", "CA", "CV", "GC", "GS", "I", "PP"]
 
+COLUMN_CONFIG = {
+    "name": {
+        "tooltip": "Player name",
+    },
+    "position": {
+        "tooltip": "GK=Goalkeeper, CB=Center Back, FB=Fullback, MD=Midfielder, AT=Forward",
+    },
+    "club_logo_url": {
+        "tooltip": "Player's club",
+    },
+    "matches_counted": {
+        "tooltip": "Matches played.",
+        "format": "%d",
+    },
+    "availability": {
+        "tooltip": "% matches played. Higher is better.",
+        "format": "%.0f%%",
+    },
+    "pts_avg": {
+        "tooltip": "Average points per match (including G/A). Higher is better.",
+        "format": "%+.1f",
+    },
+    "base_avg": {
+        "tooltip": "Base average points per match (excluding G/A). Higher is better.",
+        "format": "%+.1f",
+    },
+    "z_score_pos_avg": {
+        "tooltip": "Z-Score: how many standard deviations above or below top position players mean. >0 is above average. Based on average points. Higher is better.",
+        "format": "%+.2f",
+    },
+    "z_score_gen_avg": {
+        "tooltip": "Z-Score: how many standard deviations above or below top 200 players mean. >0 is above average. Based on average points. Higher is better.",
+        "format": "%+.2f",
+    },
+    "z_score_pos_base": {
+        "tooltip": "Z-Score: how many standard deviations above or below top position players mean. >0 is above average. Based on base average points. Higher is better.",
+        "format": "%+.2f",
+    },
+    "z_score_gen_base": {
+        "tooltip": "Z-Score: how many standard deviations above or below top 200 players mean. >0 is above average. Based on base average points. Higher is better.",
+        "format": "%+.2f",
+    },
+    "dvs_pos_avg": {
+        "tooltip": "Draft Value Score: z-score adjusted by availability factor. Within position and based on average points. Higher is better.",
+        "format": "%+.2f",
+    },
+    "dvs_gen_avg": {
+        "tooltip": "Draft Value Score: z-score adjusted by availability factor. Across positions and based on average points. Higher is better.",
+        "format": "%+.2f",
+    },
+    "dvs_pos_base": {
+        "tooltip": "Draft Value Score: z-score adjusted by availability factor. Within position and based on base average points. Higher is better.",
+        "format": "%+.2f",
+    },
+    "dvs_gen_base": {
+        "tooltip": "Draft Value Score: z-score adjusted by availability factor. Across positions and based on base average points. Higher is better.",
+        "format": "%+.2f",
+    },
+    "adp_pos_avg": {
+        "tooltip": "Average Draft Position: rank within position. Based on DVS Avg. Lower is better.",
+        "format": "%d",
+    },
+    "adp_gen_avg": {
+        "tooltip": "Average Draft Position: rank across positions. Based on DVS Avg. Lower is better.",
+        "format": "%d",
+    },
+    "adp_pos_base": {
+        "tooltip": "Average Draft Position: rank within position. Based on DVS Base. Lower is better.",
+        "format": "%d",
+    },
+    "adp_gen_base": {
+        "tooltip": "Average Draft Position: rank across positions. Based on DVS Base. Lower is better.",
+        "format": "%d",
+    },
+}
+
 
 @st.cache_resource
 def get_client() -> bigquery.Client:
@@ -166,55 +242,57 @@ def render_rankings_tab(data: list[dict]) -> None:
 
     col_config = {
         "name": st.column_config.TextColumn(
-            "Player",
-            width="medium",
+            "Player", width="medium", help=COLUMN_CONFIG["name"]["tooltip"]
         ),
         "position": st.column_config.TextColumn(
-            "Position",
-            width="small",
+            "Position", width="small", help=COLUMN_CONFIG["position"]["tooltip"]
         ),
         "club_logo_url": st.column_config.ImageColumn(
-            "Club",
-            width="small",
+            "Club", width="small", help=COLUMN_CONFIG["club_logo_url"]["tooltip"]
         ),
         "pts_avg": st.column_config.NumberColumn(
-            "Pts (Avg)", width="small", format="%+.1f"
+            "Pts (Avg)",
+            width="small",
+            format=COLUMN_CONFIG["pts_avg"]["format"],
+            help=COLUMN_CONFIG["pts_avg"]["tooltip"],
         ),
         "adp_pos_avg": st.column_config.NumberColumn(
             "Pos/Avg",
             width="small",
-            format="%d",
-            help="Position ranking by average points",
+            format=COLUMN_CONFIG["adp_pos_avg"]["format"],
+            help=COLUMN_CONFIG["adp_pos_avg"]["tooltip"],
         ),
         "adp_gen_avg": st.column_config.NumberColumn(
             "Gen/Avg",
             width="small",
-            format="%d",
-            help="General ranking by average points",
+            format=COLUMN_CONFIG["adp_gen_avg"]["format"],
+            help=COLUMN_CONFIG["adp_gen_avg"]["tooltip"],
         ),
         "base_avg": st.column_config.NumberColumn(
             "Pts (Base)",
             width="small",
-            format="%+.1f",
+            format=COLUMN_CONFIG["base_avg"]["format"],
+            help=COLUMN_CONFIG["base_avg"]["tooltip"],
         ),
         "adp_pos_base": st.column_config.NumberColumn(
             "Pos/Base",
             width="small",
-            format="%d",
-            help="Position ranking by base average",
+            format=COLUMN_CONFIG["adp_pos_base"]["format"],
+            help=COLUMN_CONFIG["adp_pos_base"]["tooltip"],
         ),
         "adp_gen_base": st.column_config.NumberColumn(
             "Gen/Base",
             width="small",
-            format="%d",
-            help="General ranking by base average",
+            format=COLUMN_CONFIG["adp_gen_base"]["format"],
+            help=COLUMN_CONFIG["adp_gen_base"]["tooltip"],
         ),
         "availability": st.column_config.ProgressColumn(
             "Availability",
             width="small",
-            format="%.0f%%",
+            format=COLUMN_CONFIG["availability"]["format"],
             min_value=0,
             max_value=100,
+            help=COLUMN_CONFIG["availability"]["tooltip"],
         ),
     }
 
@@ -265,66 +343,79 @@ def render_details_tab(
             "adp_gen_avg": st.column_config.NumberColumn(
                 "Rank (Avg)",
                 width="small",
-                format="%d",
+                format=COLUMN_CONFIG["adp_gen_avg"]["format"],
+                help=COLUMN_CONFIG["adp_gen_avg"]["tooltip"],
             ),
             "adp_gen_base": st.column_config.NumberColumn(
                 "Rank (Base)",
                 width="small",
-                format="%d",
+                format=COLUMN_CONFIG["adp_gen_base"]["format"],
+                help=COLUMN_CONFIG["adp_gen_base"]["tooltip"],
             ),
             "name": st.column_config.TextColumn(
                 "Player",
                 width="medium",
+                help=COLUMN_CONFIG["name"]["tooltip"],
             ),
             "position": st.column_config.TextColumn(
                 "Position",
                 width="small",
+                help=COLUMN_CONFIG["position"]["tooltip"],
             ),
             "club_logo_url": st.column_config.ImageColumn(
                 "Club",
                 width="small",
+                help=COLUMN_CONFIG["club_logo_url"]["tooltip"],
             ),
             "matches_counted": st.column_config.NumberColumn(
                 "Matches",
                 width="small",
-                format="%d",
+                format=COLUMN_CONFIG["matches_counted"]["format"],
+                help=COLUMN_CONFIG["matches_counted"]["tooltip"],
             ),
             "availability": st.column_config.ProgressColumn(
                 "Availability",
                 width="small",
-                format="%.0f%%",
+                format=COLUMN_CONFIG["availability"]["format"],
                 min_value=0,
                 max_value=100,
+                help=COLUMN_CONFIG["availability"]["tooltip"],
             ),
             "pts_avg": st.column_config.NumberColumn(
                 "Pts (Avg)",
                 width="small",
-                format="%+.2f",
+                format=COLUMN_CONFIG["pts_avg"]["format"],
+                help=COLUMN_CONFIG["pts_avg"]["tooltip"],
             ),
             "dvs_gen_avg": st.column_config.NumberColumn(
                 "DVS (Avg)",
                 width="small",
-                format="%+.2f",
+                format=COLUMN_CONFIG["dvs_gen_avg"]["format"],
+                help=COLUMN_CONFIG["dvs_gen_avg"]["tooltip"],
             ),
             "z_score_gen_avg": st.column_config.NumberColumn(
                 "Z (Avg)",
                 width="small",
-                format="%+.2f",
+                format=COLUMN_CONFIG["z_score_gen_avg"]["format"],
+                help=COLUMN_CONFIG["z_score_gen_avg"]["tooltip"],
             ),
             "base_avg": st.column_config.NumberColumn(
                 "Pts (Base)",
                 width="small",
-                format="%+.2f",
+                format=COLUMN_CONFIG["base_avg"]["format"],
+                help=COLUMN_CONFIG["base_avg"]["tooltip"],
             ),
             "dvs_gen_base": st.column_config.NumberColumn(
                 "DVS (Base)",
                 width="small",
-                format="%+.2f",
+                format=COLUMN_CONFIG["dvs_gen_base"]["format"],
+                help=COLUMN_CONFIG["dvs_gen_base"]["tooltip"],
             ),
             "z_score_gen_base": st.column_config.NumberColumn(
                 "Z (Base)",
                 width="small",
-                format="%+.2f",
+                format=COLUMN_CONFIG["z_score_gen_base"]["format"],
+                help=COLUMN_CONFIG["z_score_gen_base"]["tooltip"],
             ),
         }
         display_cols = [
@@ -347,66 +438,79 @@ def render_details_tab(
             "adp_pos_avg": st.column_config.NumberColumn(
                 "Rank (Avg)",
                 width="small",
-                format="%d",
+                format=COLUMN_CONFIG["adp_pos_avg"]["format"],
+                help=COLUMN_CONFIG["adp_pos_avg"]["tooltip"],
             ),
             "adp_pos_base": st.column_config.NumberColumn(
                 "Rank (Base)",
                 width="small",
-                format="%d",
+                format=COLUMN_CONFIG["adp_pos_base"]["format"],
+                help=COLUMN_CONFIG["adp_pos_base"]["tooltip"],
             ),
             "name": st.column_config.TextColumn(
                 "Player",
                 width="medium",
+                help=COLUMN_CONFIG["name"]["tooltip"],
             ),
             "position": st.column_config.TextColumn(
                 "Position",
                 width="small",
+                help=COLUMN_CONFIG["position"]["tooltip"],
             ),
             "club_logo_url": st.column_config.ImageColumn(
                 "Club",
                 width="small",
+                help=COLUMN_CONFIG["club_logo_url"]["tooltip"],
             ),
             "matches_counted": st.column_config.NumberColumn(
                 "Matches",
                 width="small",
-                format="%d",
+                format=COLUMN_CONFIG["matches_counted"]["format"],
+                help=COLUMN_CONFIG["matches_counted"]["tooltip"],
             ),
             "availability": st.column_config.ProgressColumn(
                 "Availability",
                 width="small",
-                format="%.0f%%",
+                format=COLUMN_CONFIG["availability"]["format"],
                 min_value=0,
                 max_value=100,
+                help=COLUMN_CONFIG["availability"]["tooltip"],
             ),
             "pts_avg": st.column_config.NumberColumn(
                 "Pts (Avg)",
                 width="small",
-                format="%+.2f",
+                format=COLUMN_CONFIG["pts_avg"]["format"],
+                help=COLUMN_CONFIG["pts_avg"]["tooltip"],
             ),
             "dvs_pos_avg": st.column_config.NumberColumn(
                 "DVS (Avg)",
                 width="small",
-                format="%+.2f",
+                format=COLUMN_CONFIG["dvs_pos_avg"]["format"],
+                help=COLUMN_CONFIG["dvs_pos_avg"]["tooltip"],
             ),
             "z_score_pos_avg": st.column_config.NumberColumn(
                 "Z (Avg)",
                 width="small",
-                format="%+.2f",
+                format=COLUMN_CONFIG["z_score_pos_avg"]["format"],
+                help=COLUMN_CONFIG["z_score_pos_avg"]["tooltip"],
             ),
             "base_avg": st.column_config.NumberColumn(
                 "Pts (Base)",
                 width="small",
-                format="%+.2f",
+                format=COLUMN_CONFIG["base_avg"]["format"],
+                help=COLUMN_CONFIG["base_avg"]["tooltip"],
             ),
             "dvs_pos_base": st.column_config.NumberColumn(
                 "DVS (Base)",
                 width="small",
-                format="%+.2f",
+                format=COLUMN_CONFIG["dvs_pos_base"]["format"],
+                help=COLUMN_CONFIG["dvs_pos_base"]["tooltip"],
             ),
             "z_score_pos_base": st.column_config.NumberColumn(
                 "Z (Base)",
                 width="small",
-                format="%+.2f",
+                format=COLUMN_CONFIG["z_score_pos_base"]["format"],
+                help=COLUMN_CONFIG["z_score_pos_base"]["tooltip"],
             ),
         }
         display_cols = [
@@ -505,7 +609,7 @@ def render_details_tab(
             st.divider()
 
 
-def render_comparison_tab(
+def render_comparison_tab(  # noqa: C901, PLR0912 # fixit lint
     data: list[dict],
     scout_groups: tuple[list[tuple[str, str, float]], ...],
     time_period: str,
@@ -529,26 +633,126 @@ def render_comparison_tab(
 
     # Build metrics list (without scouts - they are handled separately)
     metrics: list[tuple[str, str | None, str | None, str | None]] = [
-        ("Points (Avg)", "pts_avg", "%+.2f", None),
-        ("Points (Base)", "base_avg", "%+.2f", None),
-        ("Matches", "matches_counted", "%d", None),
-        ("Availability", "availability", "%.0f%%", None),
-        ("", None, None, None),
-        ("Position Rankings", None, None, None),
-        ("ADP (Avg)", "adp_pos_avg", "%d", None),
-        ("DVS (Avg)", "dvs_pos_avg", "%+.2f", None),
-        ("Z-Score (Avg)", "z_score_pos_avg", "%+.2f", None),
-        ("ADP (Base)", "adp_pos_base", "%d", None),
-        ("DVS (Base)", "dvs_pos_base", "%+.2f", None),
-        ("Z-Score (Base)", "z_score_pos_base", "%+.2f", None),
-        ("", None, None, None),
-        ("General Rankings", None, None, None),
-        ("ADP (Avg)", "adp_gen_avg", "%d", None),
-        ("DVS (Avg)", "dvs_gen_avg", "%+.2f", None),
-        ("Z-Score (Avg)", "z_score_gen_avg", "%+.2f", None),
-        ("ADP (Base)", "adp_gen_base", "%d", None),
-        ("DVS (Base)", "dvs_gen_base", "%+.2f", None),
-        ("Z-Score (Base)", "z_score_gen_base", "%+.2f", None),
+        (
+            "Points (Avg)",
+            "pts_avg",
+            COLUMN_CONFIG["pts_avg"]["format"],
+            COLUMN_CONFIG["pts_avg"]["tooltip"],
+        ),
+        (
+            "Points (Base)",
+            "base_avg",
+            COLUMN_CONFIG["base_avg"]["format"],
+            COLUMN_CONFIG["base_avg"]["tooltip"],
+        ),
+        (
+            "Matches",
+            "matches_counted",
+            COLUMN_CONFIG["matches_counted"]["format"],
+            COLUMN_CONFIG["matches_counted"]["tooltip"],
+        ),
+        (
+            "Availability",
+            "availability",
+            COLUMN_CONFIG["availability"]["format"],
+            COLUMN_CONFIG["availability"]["tooltip"],
+        ),
+        (
+            "",
+            None,
+            None,
+            None,
+        ),
+        (
+            "Position Rankings",
+            None,
+            None,
+            None,
+        ),
+        (
+            "ADP (Avg)",
+            "adp_pos_avg",
+            COLUMN_CONFIG["adp_pos_avg"]["format"],
+            COLUMN_CONFIG["adp_pos_avg"]["tooltip"],
+        ),
+        (
+            "DVS (Avg)",
+            "dvs_pos_avg",
+            COLUMN_CONFIG["dvs_pos_avg"]["format"],
+            COLUMN_CONFIG["dvs_pos_avg"]["tooltip"],
+        ),
+        (
+            "Z-Score (Avg)",
+            "z_score_pos_avg",
+            COLUMN_CONFIG["z_score_pos_avg"]["format"],
+            COLUMN_CONFIG["z_score_pos_avg"]["tooltip"],
+        ),
+        (
+            "ADP (Base)",
+            "adp_pos_base",
+            COLUMN_CONFIG["adp_pos_base"]["format"],
+            COLUMN_CONFIG["adp_pos_base"]["tooltip"],
+        ),
+        (
+            "DVS (Base)",
+            "dvs_pos_base",
+            COLUMN_CONFIG["dvs_pos_base"]["format"],
+            COLUMN_CONFIG["dvs_pos_base"]["tooltip"],
+        ),
+        (
+            "Z-Score (Base)",
+            "z_score_pos_base",
+            COLUMN_CONFIG["z_score_pos_base"]["format"],
+            COLUMN_CONFIG["z_score_pos_base"]["tooltip"],
+        ),
+        (
+            "",
+            None,
+            None,
+            None,
+        ),
+        (
+            "General Rankings",
+            None,
+            None,
+            None,
+        ),
+        (
+            "ADP (Avg)",
+            "adp_gen_avg",
+            COLUMN_CONFIG["adp_gen_avg"]["format"],
+            COLUMN_CONFIG["adp_gen_avg"]["tooltip"],
+        ),
+        (
+            "DVS (Avg)",
+            "dvs_gen_avg",
+            COLUMN_CONFIG["dvs_gen_avg"]["format"],
+            COLUMN_CONFIG["dvs_gen_avg"]["tooltip"],
+        ),
+        (
+            "Z-Score (Avg)",
+            "z_score_gen_avg",
+            COLUMN_CONFIG["z_score_gen_avg"]["format"],
+            COLUMN_CONFIG["z_score_gen_avg"]["tooltip"],
+        ),
+        (
+            "ADP (Base)",
+            "adp_gen_base",
+            COLUMN_CONFIG["adp_gen_base"]["format"],
+            COLUMN_CONFIG["adp_gen_base"]["tooltip"],
+        ),
+        (
+            "DVS (Base)",
+            "dvs_gen_base",
+            COLUMN_CONFIG["dvs_gen_base"]["format"],
+            COLUMN_CONFIG["dvs_gen_base"]["tooltip"],
+        ),
+        (
+            "Z-Score (Base)",
+            "z_score_gen_base",
+            COLUMN_CONFIG["z_score_gen_base"]["format"],
+            COLUMN_CONFIG["z_score_gen_base"]["tooltip"],
+        ),
     ]
 
     cols = st.columns([1.5] + [1] * len(selected))
@@ -630,6 +834,7 @@ def main() -> None:
             "Time Period",
             options=list(TIME_PERIODS.keys()),
             index=0,
+            help="Select the time window for calculating statistics",
         )
         view_name = TIME_PERIODS[selected_period]
 
