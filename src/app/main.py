@@ -146,12 +146,12 @@ def load_data(view_name: str, round_id: int | None = None) -> list[dict]:
 
 @st.cache_data(ttl=300)
 def load_map_baseline(round_id: int) -> list[dict]:
-    """Load MAP baseline data from BigQuery."""
+    """Load MAP data from BigQuery."""
     client = get_client()
     query = f"""
         SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.map_baseline`
         WHERE as_of_round_id = {round_id}
-        ORDER BY baseline_pts DESC NULLS LAST
+        ORDER BY map_score DESC NULLS LAST
     """  # noqa: S608
     return [dict(row) for row in client.query(query).result()]
 
@@ -854,13 +854,11 @@ def render_start_sit_tab(
     club_filter: str,
     position_filter: str,
 ) -> None:
-    """Render Start or Sit tab with MAP baseline calculations."""
-    st.subheader("MAP: Baseline + Form + Home/Away + Opponent")
+    """Render Start or Sit tab with MAP calculations."""
+    st.subheader("Matchup-Adjusted Projection (MAP)")
     st.caption(
-        "Baseline: who this player is. "
-        "Form: last 5 games (±20%). "
-        "Home/Away: contextual (±15%). "
-        "Opponent: matchup strength (0.85-1.20)."
+        "MAP = Baseline x Form x Venue x Opponent. "
+        "Proxy for expected points in the next match."
     )
 
     # Apply filters
@@ -897,8 +895,14 @@ def render_start_sit_tab(
             width="small",
             help="Player's club",
         ),
+        "map_score": st.column_config.NumberColumn(
+            "MAP",
+            width="small",
+            format="%.2f",
+            help="Matchup-Adjusted Projection: baseline x form x venue x opponent",
+        ),
         "baseline_pts": st.column_config.NumberColumn(
-            "Baseline Pts",
+            "Baseline",
             width="small",
             format="%.2f",
             help="Weighted baseline points combining last season and this season",
@@ -951,6 +955,12 @@ def render_start_sit_tab(
             format="%.2f",
             help="Opponent weakness (0.85-1.20). >1 = weak opponent for this position.",
         ),
+        "venue_multiplier": st.column_config.NumberColumn(
+            "Venue Mult",
+            width="small",
+            format="%.2f",
+            help="Home or Away multiplier based on next match location.",
+        ),
         "is_home_next": st.column_config.CheckboxColumn(
             "Home?",
             width="small",
@@ -993,10 +1003,10 @@ def render_start_sit_tab(
         "name",
         "position",
         "club_logo_url",
+        "map_score",
         "baseline_pts",
         "form_ratio",
-        "home_multiplier",
-        "away_multiplier",
+        "venue_multiplier",
         "opponent_multiplier",
         "is_home_next",
         "pts_avg_last_5",
@@ -1005,8 +1015,6 @@ def render_start_sit_tab(
         "matches_this_season",
         "pts_avg_last_season",
         "matches_last_season",
-        "availability_last_season",
-        "position_pts_avg",
         "baseline_method",
     ]
 

@@ -283,6 +283,33 @@ with_baseline as (
         0.7 * coalesce(pts_avg_away_last_season, pts_avg_last_season) +
         0.3 * coalesce(pts_avg_away_this_season, pts_avg_this_season, 0) as away_avg
     from combined
+),
+
+-- Add calculated ratios for final MAP
+with_ratios as (
+    select
+        *,
+        -- Form ratio: recent performance relative to baseline (clamped ±20%)
+        case
+            when baseline_pts is null or baseline_pts = 0 or pts_avg_last_5 is null then null
+            else greatest(0.8, least(1.2, pts_avg_last_5 / baseline_pts))
+        end as form_ratio,
+        -- Home multiplier: clamped ±15%
+        case
+            when baseline_pts is null or baseline_pts = 0 or home_avg is null then null
+            else greatest(0.85, least(1.15, home_avg / baseline_pts))
+        end as home_multiplier,
+        -- Away multiplier: clamped ±15%
+        case
+            when baseline_pts is null or baseline_pts = 0 or away_avg is null then null
+            else greatest(0.85, least(1.15, away_avg / baseline_pts))
+        end as away_multiplier,
+        -- Opponent multiplier: clamped 0.85 to 1.20
+        case
+            when league_avg_pts is null or league_avg_pts = 0 or opponent_pts_conceded is null then null
+            else greatest(0.85, least(1.20, opponent_pts_conceded / league_avg_pts))
+        end as opponent_multiplier
+    from with_baseline
 )
 
 select
@@ -302,11 +329,7 @@ select
     matches_last_5,
     baseline_pts,
     baseline_method,
-    -- Form ratio: recent performance relative to baseline (clamped ±20%)
-    case
-        when baseline_pts is null or baseline_pts = 0 or pts_avg_last_5 is null then null
-        else greatest(0.8, least(1.2, pts_avg_last_5 / baseline_pts))
-    end as form_ratio,
+    form_ratio,
     -- Home/Away context
     pts_avg_home_last_season,
     pts_avg_away_last_season,
@@ -318,25 +341,34 @@ select
     matches_away_this_season,
     home_avg,
     away_avg,
-    -- Home multiplier: clamped ±15%
-    case
-        when baseline_pts is null or baseline_pts = 0 or home_avg is null then null
-        else greatest(0.85, least(1.15, home_avg / baseline_pts))
-    end as home_multiplier,
-    -- Away multiplier: clamped ±15%
-    case
-        when baseline_pts is null or baseline_pts = 0 or away_avg is null then null
-        else greatest(0.85, least(1.15, away_avg / baseline_pts))
-    end as away_multiplier,
+    home_multiplier,
+    away_multiplier,
     -- Opponent strength data
     opponent_id,
     is_home_next,
     opponent_pts_conceded,
     opponent_matches_conceded,
     league_avg_pts,
-    -- Opponent multiplier: clamped 0.85 to 1.20
+    opponent_multiplier,
+    -- Venue multiplier (home or away based on next match)
     case
-        when league_avg_pts is null or league_avg_pts = 0 or opponent_pts_conceded is null then null
-        else greatest(0.85, least(1.20, opponent_pts_conceded / league_avg_pts))
-    end as opponent_multiplier
-from with_baseline
+        when is_home_next = true then home_multiplier
+        when is_home_next = false then away_multiplier
+        else null
+    end as venue_multiplier,
+    -- Final MAP: baseline * form * venue * opponent
+    case
+        when baseline_pts is null then null
+        when form_ratio is null and (home_multiplier is null or away_multiplier is null) and opponent_multiplier is null then baseline_pts
+        else
+            baseline_pts
+            * coalesce(form_ratio, 1.0)
+            * coalesce(
+                case when is_home_next = true then home_multiplier
+                     when is_home_next = false then away_multiplier
+                     else null end,
+                1.0
+            )
+            * coalesce(opponent_multiplier, 1.0)
+    end as map_score
+from with_ratios
