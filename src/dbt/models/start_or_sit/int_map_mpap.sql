@@ -1,11 +1,14 @@
 {{ config(materialized='view') }}
 
 /*
-MAP Component 4: Opponent Strength
+MAP Component 4: MPAP (Matchup Points Allowed by Position)
 
-Calculates matchup adjustment based on opponent's defensive weakness:
+MPAP measures how many fantasy points a team allows to a specific position.
+Not "is this defense good?" but "How well does this team defend against this type of player?"
+
+Calculation:
 - Track points conceded by opponent to each position (last 5 team games)
-- opponent_multiplier = opponent_pts_conceded / league_avg
+- mpap_multiplier = mpap_pts_conceded / league_avg
 - Clamped between 0.85 and 1.20 (asymmetric to favor attacking weak opponents)
 */
 
@@ -106,14 +109,14 @@ select
     b.position,
     nm.opponent_id,
     nm.is_home_next,
-    pc.avg_pts_conceded as opponent_pts_conceded,
-    pc.matches_conceded as opponent_matches_conceded,
+    pc.avg_pts_conceded as mpap_pts_conceded,
+    pc.matches_conceded as mpap_matches,
     lap.league_avg_pts,
-    -- Opponent multiplier: clamped 0.85 to 1.20
+    -- MPAP multiplier: clamped 0.85 to 1.20
     case
         when lap.league_avg_pts is null or lap.league_avg_pts = 0 or pc.avg_pts_conceded is null then null
         else greatest(0.85, least(1.20, pc.avg_pts_conceded / lap.league_avg_pts))
-    end as opponent_multiplier
+    end as mpap_multiplier
 from {{ ref('int_map_baseline') }} b
 left join player_club plc on b.id = plc.player_id
 left join next_match nm on b.as_of_round_id = nm.as_of_round_id and plc.club_id = nm.club_id

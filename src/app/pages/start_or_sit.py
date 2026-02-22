@@ -7,7 +7,7 @@ from utils import (
     load_map_baseline,
     load_map_data,
     load_map_form,
-    load_map_opponent,
+    load_map_mpap,
     load_map_venue,
 )
 
@@ -16,7 +16,7 @@ def render_map_overview_tab(data: list[dict]) -> None:
     """Render MAP overview tab with final scores."""
     st.subheader("MAP Score Overview")
     st.caption(
-        "MAP = Baseline x Form x Venue x Opponent. "
+        "MAP = Baseline x Form x Venue x MPAP. "
         "Proxy for expected points in the next match."
     )
 
@@ -40,7 +40,7 @@ def render_map_overview_tab(data: list[dict]) -> None:
             "MAP",
             width="small",
             format="%.2f",
-            help="Matchup-Adjusted Projection: baseline x form x venue x opponent",
+            help="Matchup-Adjusted Projection: baseline x form x venue x MPAP",
         ),
         "baseline_pts": st.column_config.NumberColumn(
             "Baseline",
@@ -60,11 +60,11 @@ def render_map_overview_tab(data: list[dict]) -> None:
             format="%.2f",
             help="Home or Away multiplier based on next match location.",
         ),
-        "opponent_multiplier": st.column_config.NumberColumn(
-            "Opponent",
+        "mpap_multiplier": st.column_config.NumberColumn(
+            "MPAP",
             width="small",
             format="%.2f",
-            help="Opponent weakness (0.85-1.20). >1 = weak opponent for this position.",
+            help="Matchup Points Allowed by Position (0.85-1.20). >1 = weak opponent.",
         ),
         "is_home_next": st.column_config.CheckboxColumn(
             "Home?",
@@ -86,7 +86,7 @@ def render_map_overview_tab(data: list[dict]) -> None:
         "baseline_pts",
         "form_ratio",
         "venue_multiplier",
-        "opponent_multiplier",
+        "mpap_multiplier",
         "is_home_next",
         "baseline_method",
     ]
@@ -329,25 +329,25 @@ def render_venue_tab(data: list[dict]) -> None:
     )
 
 
-def render_opponent_tab(data: list[dict]) -> None:
-    """Render Opponent component tab."""
-    st.subheader("Component 4: Opponent Strength")
+def render_mpap_tab(data: list[dict]) -> None:
+    """Render MPAP (Matchup Points Allowed by Position) component tab."""
+    st.subheader("Component 4: MPAP (Matchup Points Allowed by Position)")
     st.caption(
-        "Matchup adjustment based on opponent's defensive weakness. "
-        "opponent_multiplier = pts_conceded / league_avg. Clamped 0.85-1.20."
+        "How many fantasy points does the opponent allow to this position? "
+        "mpap_multiplier = pts_conceded / league_avg. Clamped 0.85-1.20."
     )
 
     col_config = {
         "name": st.column_config.TextColumn("Player", width="medium"),
         "position": st.column_config.TextColumn("Position", width="small"),
         "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
-        "opponent_multiplier": st.column_config.NumberColumn(
-            "Opponent Mult",
+        "mpap_multiplier": st.column_config.NumberColumn(
+            "MPAP Mult",
             width="small",
             format="%.3f",
-            help="Opponent weakness. >1 = weak opponent for this position.",
+            help="Matchup Points Allowed multiplier. >1 = weak opponent for this position.",
         ),
-        "opponent_pts_conceded": st.column_config.NumberColumn(
+        "mpap_pts_conceded": st.column_config.NumberColumn(
             "Pts Conceded",
             width="small",
             format="%.2f",
@@ -359,11 +359,11 @@ def render_opponent_tab(data: list[dict]) -> None:
             format="%.2f",
             help="League average points for this position",
         ),
-        "opponent_matches_conceded": st.column_config.NumberColumn(
-            "Opp Matches",
+        "mpap_matches": st.column_config.NumberColumn(
+            "MPAP Matches",
             width="small",
             format="%d",
-            help="Matches used to calculate opponent conceded",
+            help="Matches used to calculate MPAP",
         ),
         "is_home_next": st.column_config.CheckboxColumn(
             "Home?",
@@ -382,10 +382,10 @@ def render_opponent_tab(data: list[dict]) -> None:
         "name",
         "position",
         "club_logo_url",
-        "opponent_multiplier",
-        "opponent_pts_conceded",
+        "mpap_multiplier",
+        "mpap_pts_conceded",
         "league_avg_pts",
-        "opponent_matches_conceded",
+        "mpap_matches",
         "is_home_next",
         "opponent_id",
     ]
@@ -420,7 +420,7 @@ def main() -> None:
             baseline_data = load_map_baseline(selected_round)
             form_data = load_map_form(selected_round)
             venue_data = load_map_venue(selected_round)
-            opponent_data = load_map_opponent(selected_round)
+            mpap_data = load_map_mpap(selected_round)
 
         clubs = sorted({row["club"] for row in map_data if row.get("club")})
         positions = ["GK", "CB", "FB", "MD", "AT"]
@@ -438,13 +438,13 @@ def main() -> None:
     )
     filtered_form = filter_data(form_data, name_filter, club_filter, position_filter)
     filtered_venue = filter_data(venue_data, name_filter, club_filter, position_filter)
-    filtered_opponent = filter_data(
-        opponent_data, name_filter, club_filter, position_filter
+    filtered_mpap = filter_data(
+        mpap_data, name_filter, club_filter, position_filter
     )
 
     # Main tabs for each component
-    tab_overview, tab_baseline, tab_form, tab_venue, tab_opponent = st.tabs(
-        ["MAP Overview", "1. Baseline", "2. Form", "3. Venue", "4. Opponent"],
+    tab_overview, tab_baseline, tab_form, tab_venue, tab_mpap = st.tabs(
+        ["MAP Overview", "1. Baseline", "2. Form", "3. Venue", "4. MPAP"],
     )
 
     with tab_overview:
@@ -459,8 +459,8 @@ def main() -> None:
     with tab_venue:
         render_venue_tab(filtered_venue)
 
-    with tab_opponent:
-        render_opponent_tab(filtered_opponent)
+    with tab_mpap:
+        render_mpap_tab(filtered_mpap)
 
 
 if __name__ == "__main__":

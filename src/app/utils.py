@@ -199,16 +199,16 @@ def load_map_venue(round_id: int) -> list[dict]:
 
 
 @st.cache_data(ttl=300)
-def load_map_opponent(round_id: int) -> list[dict]:
-    """Load MAP opponent component data from BigQuery."""
+def load_map_mpap(round_id: int) -> list[dict]:
+    """Load MAP MPAP (Matchup Points Allowed by Position) component data from BigQuery."""
     client = get_client()
     query = f"""
         SELECT b.name, b.club, b.club_logo_url, o.*
-        FROM `{PROJECT_ID}.{DATASET_ID}.int_map_opponent` o
+        FROM `{PROJECT_ID}.{DATASET_ID}.int_map_mpap` o
         JOIN `{PROJECT_ID}.{DATASET_ID}.int_map_baseline` b
             ON o.as_of_round_id = b.as_of_round_id AND o.id = b.id
         WHERE o.as_of_round_id = {round_id}
-        ORDER BY o.opponent_multiplier DESC NULLS LAST
+        ORDER BY o.mpap_multiplier DESC NULLS LAST
     """  # noqa: S608
     return [dict(row) for row in client.query(query).result()]
 

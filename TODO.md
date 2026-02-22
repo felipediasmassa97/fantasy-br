@@ -25,6 +25,8 @@
   - [x] Add clubs logos
   - [x] Add tooltips for all metrics
   - [x] Add G/A per match to detailed metrics
+  - [ ] Add authentication (login)
+  - [ ] Add user-specific squads (persist in database)
 
 - Text files
   - [ ] Review files (pyproject.toml, schemas, profiles, ...)
