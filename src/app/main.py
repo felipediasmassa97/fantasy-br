@@ -855,11 +855,10 @@ def render_start_sit_tab(
     position_filter: str,
 ) -> None:
     """Render Start or Sit tab with MAP baseline calculations."""
-    st.subheader("MAP Baseline Ability")
+    st.subheader("MAP: Baseline + Recent Form")
     st.caption(
-        "Baseline points estimate who a player is. "
-        "Players with last season data (>=5 matches, >30% avail): 60% last + 40% this. "
-        "Rookies: 70% this season + 30% position average."
+        "Baseline: who this player usually is. "
+        "Form Ratio: recent performance vs baseline (last 5 games), clamped ±20%."
     )
 
     # Apply filters
@@ -914,6 +913,24 @@ def render_start_sit_tab(
             format="%d",
             help="Matches played this season",
         ),
+        "pts_avg_last_5": st.column_config.NumberColumn(
+            "Last 5 Avg",
+            width="small",
+            format="%.2f",
+            help="Average points in last 5 matches (recent form)",
+        ),
+        "matches_last_5": st.column_config.NumberColumn(
+            "Matches (L5)",
+            width="small",
+            format="%d",
+            help="Matches played in last 5 rounds",
+        ),
+        "form_ratio": st.column_config.NumberColumn(
+            "Form Ratio",
+            width="small",
+            format="%.2f",
+            help="Recent form vs baseline (clamped 0.8-1.2). >1 = hot, <1 = cold.",
+        ),
         "pts_avg_last_season": st.column_config.NumberColumn(
             "Last Season Avg",
             width="small",
@@ -952,6 +969,9 @@ def render_start_sit_tab(
         "position",
         "club_logo_url",
         "baseline_pts",
+        "form_ratio",
+        "pts_avg_last_5",
+        "matches_last_5",
         "pts_avg_this_season",
         "matches_this_season",
         "pts_avg_last_season",
