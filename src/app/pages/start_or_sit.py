@@ -399,7 +399,7 @@ def render_opponent_tab(data: list[dict]) -> None:
 
 def main() -> None:
     """Run Start or Sit page."""
-    st.title(":scales: Start or Sit")
+    st.title("⚖️ Start or Sit")
     st.caption("Matchup-Adjusted Projection (MAP) for next match decisions")
 
     # Sidebar filters

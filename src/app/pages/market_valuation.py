@@ -5,7 +5,7 @@ import streamlit as st
 
 def main() -> None:
     """Run Market Valuation page."""
-    st.title(":moneybag: Market Valuation")
+    st.title("💰 Market Valuation")
     st.caption("Player value analysis and market opportunities")
 
     st.info(

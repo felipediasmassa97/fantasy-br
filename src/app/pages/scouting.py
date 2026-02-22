@@ -612,7 +612,7 @@ def render_comparison_tab(
 
 def main() -> None:
     """Run Scouting page."""
-    st.title(":mag: Scouting")
+    st.title("🔍 Scouting")
     st.caption("Player rankings, detailed metrics, and comparison tools")
 
     # Sidebar filters

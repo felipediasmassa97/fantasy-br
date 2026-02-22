@@ -13,8 +13,18 @@ st.set_page_config(
 
 pg = st.navigation(
     [
-        st.Page(scouting, title="Scouting", icon="🔍", url_path="scouting"),
-        st.Page(start_or_sit, title="Start or Sit", icon="⚖️", url_path="start-or-sit"),
+        st.Page(
+            scouting,
+            title="Scouting",
+            icon="🔍",
+            url_path="scouting",
+        ),
+        st.Page(
+            start_or_sit,
+            title="Start or Sit",
+            icon="⚖️",
+            url_path="start-or-sit",
+        ),
         st.Page(
             market_valuation,
             title="Market Valuation",
