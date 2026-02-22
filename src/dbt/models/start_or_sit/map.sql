@@ -1,26 +1,31 @@
 {{ config(materialized='view') }}
 
 /*
-MAP Components 1, 2, 3 & 4: Baseline + Form + Home/Away + Opponent Strength
+Matchup-Adjusted Projection (MAP):
 
-Component 1 - Baseline Ability:
-- Players with last season data: 0.6 * last_season_avg + 0.4 * this_season_avg
-- Rookies/new players: 0.7 * this_season_avg + 0.3 * position_avg_last_season
+MAP answers: 
+“Given who this player is, how he has been playing recently, and who he’s facing this round, how many points should I expect?”
 
-Component 2 - Recent Form Adjustment:
-- Use last 5 games average
-- form_ratio = recent_avg / baseline_pts
-- Clamp ratio between 0.8 and 1.2 (±20% max impact)
+MAP is an Expected Points (xP) proxy for the next match, combining:
 
-Component 3 - Home/Away Context:
-- home_away_avg = 0.7 * last_season_split + 0.3 * this_season_split
-- home_away_multiplier = home_away_avg / baseline_pts
-- Clamp between 0.85 and 1.15 (±15% max impact)
+- Baseline Ability:
+  - Players with last season data: 0.6 * last_season_avg + 0.4 * this_season_avg
+  - New players: 0.7 * this_season_avg + 0.3 * position_avg_last_season
 
-Component 4 - Opponent Strength:
-- Calculate points conceded by opponent to player's position (recent 5 games)
-- opponent_multiplier = conceded / league_avg
-- Clamp between 0.85 and 1.20
+- Recent Form Adjustment:
+  - Use last 5 games average
+  - form_ratio = recent_avg / baseline_pts
+  - Clamp ratio between 0.8 and 1.2 (20% max impact)
+
+- Home/Away Context:
+  - home_away_avg = 0.7 * last_season_split + 0.3 * this_season_split
+  - home_away_multiplier = home_away_avg / baseline_pts
+  - Clamp between 0.85 and 1.15 (15% max impact)
+
+- Opponent Strength:
+  - Calculate points conceded by opponent to player's position (recent 5 games)
+  - opponent_multiplier = conceded / league_avg
+  - Clamp between 0.85 and 1.20 (15% max impact)
 */
 
 with all_rounds as (
@@ -42,8 +47,8 @@ last_season_player_avg as (
     group by id, position
 ),
 
--- Last season home/away splits
-last_season_home_away as (
+-- Last season home/away splits (full season 2025)
+last_season_home_away_avg as (
     select
         id,
         avg(if(has_played and is_home = true, pts_round, null)) as pts_avg_home_last_season,
@@ -84,7 +89,7 @@ this_season_player_avg as (
 ),
 
 -- This season home/away splits per round
-this_season_home_away as (
+this_season_home_away_avg as (
     select
         r.as_of_round_id,
         p.id,
@@ -249,8 +254,8 @@ combined as (
     left join last_season_player_avg ls on ts.id = ls.id
     left join position_avg_last_season pa on ts.position = pa.position
     left join recent_form rf on ts.as_of_round_id = rf.as_of_round_id and ts.id = rf.id
-    left join last_season_home_away lha on ts.id = lha.id
-    left join this_season_home_away tha on ts.as_of_round_id = tha.as_of_round_id and ts.id = tha.id
+    left join last_season_home_away_avg lha on ts.id = lha.id
+    left join this_season_home_away_avg tha on ts.as_of_round_id = tha.as_of_round_id and ts.id = tha.id
     -- Opponent strength joins
     left join player_club pc on ts.id = pc.player_id
     left join next_match nm on ts.as_of_round_id = nm.as_of_round_id and pc.club_id = nm.club_id
