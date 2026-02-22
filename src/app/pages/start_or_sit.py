@@ -4,6 +4,7 @@ import streamlit as st
 from utils import (
     filter_data,
     load_available_rounds,
+    load_ewm_form,
     load_map_baseline,
     load_map_data,
     load_map_form,
@@ -397,6 +398,75 @@ def render_mpap_tab(data: list[dict]) -> None:
     )
 
 
+def render_ewm_tab(data: list[dict]) -> None:
+    """Render EWM (Exponentially Weighted Mean) form tab."""
+    st.subheader("Recency-Weighted Form (EWM Points)")
+    st.caption(
+        "Player form with more weight on recent games. "
+        "More stable than last-3 average, faster than season average. Alpha=0.25."
+    )
+
+    col_config = {
+        "name": st.column_config.TextColumn("Player", width="medium"),
+        "position": st.column_config.TextColumn("Position", width="small"),
+        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
+        "ewm_pts": st.column_config.NumberColumn(
+            "EWM Pts",
+            width="small",
+            format="%.2f",
+            help="Exponentially weighted mean points (recent games weighted more)",
+        ),
+        "ewm_ratio": st.column_config.NumberColumn(
+            "EWM/Baseline",
+            width="small",
+            format="%.2f",
+            help="EWM vs baseline ratio. >1 = hot streak, <1 = cold streak.",
+        ),
+        "ewm_vs_season_ratio": st.column_config.NumberColumn(
+            "EWM/Season",
+            width="small",
+            format="%.2f",
+            help="EWM vs season average. >1 = recent form better than season avg.",
+        ),
+        "baseline_pts": st.column_config.NumberColumn(
+            "Baseline",
+            width="small",
+            format="%.2f",
+            help="Player baseline points for comparison",
+        ),
+        "pts_avg_this_season": st.column_config.NumberColumn(
+            "Season Avg",
+            width="small",
+            format="%.2f",
+            help="Simple season average for comparison",
+        ),
+        "matches_used": st.column_config.NumberColumn(
+            "Matches",
+            width="small",
+            format="%d",
+            help="Number of matches used in EWM calculation",
+        ),
+    }
+
+    display_cols = [
+        "name",
+        "position",
+        "club_logo_url",
+        "ewm_pts",
+        "ewm_ratio",
+        "ewm_vs_season_ratio",
+        "baseline_pts",
+        "pts_avg_this_season",
+        "matches_used",
+    ]
+
+    display_data = [{k: row.get(k) for k in display_cols} for row in data]
+
+    st.dataframe(
+        display_data, width="stretch", hide_index=True, column_config=col_config
+    )
+
+
 def main() -> None:
     """Run Start or Sit page."""
     st.title("⚖️ Start or Sit")
@@ -421,6 +491,7 @@ def main() -> None:
             form_data = load_map_form(selected_round)
             venue_data = load_map_venue(selected_round)
             mpap_data = load_map_mpap(selected_round)
+            ewm_data = load_ewm_form(selected_round)
 
         clubs = sorted({row["club"] for row in map_data if row.get("club")})
         positions = ["GK", "CB", "FB", "MD", "AT"]
@@ -438,13 +509,12 @@ def main() -> None:
     )
     filtered_form = filter_data(form_data, name_filter, club_filter, position_filter)
     filtered_venue = filter_data(venue_data, name_filter, club_filter, position_filter)
-    filtered_mpap = filter_data(
-        mpap_data, name_filter, club_filter, position_filter
-    )
+    filtered_mpap = filter_data(mpap_data, name_filter, club_filter, position_filter)
+    filtered_ewm = filter_data(ewm_data, name_filter, club_filter, position_filter)
 
     # Main tabs for each component
-    tab_overview, tab_baseline, tab_form, tab_venue, tab_mpap = st.tabs(
-        ["MAP Overview", "1. Baseline", "2. Form", "3. Venue", "4. MPAP"],
+    tab_overview, tab_baseline, tab_form, tab_venue, tab_mpap, tab_ewm = st.tabs(
+        ["MAP Overview", "1. Baseline", "2. Form", "3. Venue", "4. MPAP", "EWM Form"],
     )
 
     with tab_overview:
@@ -461,6 +531,9 @@ def main() -> None:
 
     with tab_mpap:
         render_mpap_tab(filtered_mpap)
+
+    with tab_ewm:
+        render_ewm_tab(filtered_ewm)
 
 
 if __name__ == "__main__":

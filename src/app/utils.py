@@ -214,6 +214,18 @@ def load_map_mpap(round_id: int) -> list[dict]:
 
 
 @st.cache_data(ttl=300)
+def load_ewm_form(round_id: int) -> list[dict]:
+    """Load EWM (Exponentially Weighted Mean) form data from BigQuery."""
+    client = get_client()
+    query = f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.int_ewm_form`
+        WHERE as_of_round_id = {round_id}
+        ORDER BY ewm_pts DESC NULLS LAST
+    """  # noqa: S608
+    return [dict(row) for row in client.query(query).result()]
+
+
+@st.cache_data(ttl=300)
 def load_par_data(round_id: int) -> list[dict]:
     """Load PAR (Points Above Replacement) data from BigQuery."""
     client = get_client()
