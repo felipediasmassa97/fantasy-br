@@ -98,13 +98,13 @@ Cartola FC is Brazil's most popular fantasy football game based on the Brasileir
 
 ### KPI Models
 
-- `kpi_last_1`: Last round performance
-- `kpi_last_5`: Last 5 matches (any venue)
-- `kpi_last_10`: Last 10 matches
-- `kpi_last_5_home`: Last 5 home matches
-- `kpi_last_5_away`: Last 5 away matches
-- `kpi_last_season`: Previous season aggregate
-- `kpi_this_season`: Current season aggregate
+- `scouting_last_1`: Last round performance
+- `scouting_last_5`: Last 5 matches (any venue)
+- `scouting_last_10`: Last 10 matches
+- `scouting_last_5_home`: Last 5 home matches
+- `scouting_last_5_away`: Last 5 away matches
+- `scouting_last_season`: Previous season aggregate
+- `scouting_this_season`: Current season aggregate
 
 ## Development Workflow & Commands
 
@@ -158,7 +158,7 @@ uv run dbt run
 uv run dbt run --select stg_players
 
 # Run with dependencies
-uv run dbt run --select +kpi_last_5
+uv run dbt run --select +scouting_last_5
 
 # Build all models (runs seeds, models, tests and snapshots)
 uv run dbt build

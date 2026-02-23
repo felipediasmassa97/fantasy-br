@@ -8,7 +8,7 @@ from utils import (
     filter_data,
     get_scout_groups,
     load_available_rounds,
-    load_kpi_data,
+    load_scouting_data,
     load_scout_points,
     style_dataframe,
 )
@@ -640,7 +640,7 @@ def main() -> None:
             )
 
         with st.spinner("Loading data..."):
-            data = load_kpi_data(view_name, selected_round)
+            data = load_scouting_data(view_name, selected_round)
             scout_points = load_scout_points()
             scout_groups = get_scout_groups(scout_points)
 

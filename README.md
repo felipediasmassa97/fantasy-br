@@ -107,15 +107,15 @@ fantasy-br/
 
 ### KPI Views
 
-| Model             | Description                    |
-| ----------------- | ------------------------------ |
-| `kpi_last_1`      | Stats from last round          |
-| `kpi_last_5`      | Stats from last 5 matches      |
-| `kpi_last_10`     | Stats from last 10 matches     |
-| `kpi_last_5_home` | Stats from last 5 home matches |
-| `kpi_last_5_away` | Stats from last 5 away matches |
-| `kpi_last_season` | Previous season aggregate      |
-| `kpi_this_season` | Current season aggregate       |
+| Model                   | Description                    |
+| ----------------------- | ------------------------------ |
+| `scounting_last_1`      | Stats from last round          |
+| `scounting_last_5`      | Stats from last 5 matches      |
+| `scounting_last_10`     | Stats from last 10 matches     |
+| `scounting_last_5_home` | Stats from last 5 home matches |
+| `scounting_last_5_away` | Stats from last 5 away matches |
+| `scounting_last_season` | Previous season aggregate      |
+| `scounting_this_season` | Current season aggregate       |
 
 ## Business Rules
 

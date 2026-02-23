@@ -20,6 +20,8 @@
   - Validation
     - [ ] Validate metrics
     - [ ] Add tests for validated metrics (anchor on round 3)
+  - Materalization
+    - [ ] Materialize views as tables to reduce load time
 
 - Streamlit app
   - [x] Add clubs logos
