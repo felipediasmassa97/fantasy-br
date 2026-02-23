@@ -1,4 +1,4 @@
-N{{ config(materialized='view') }}
+{{ config(materialized='view') }}
 
 /*
 EWM Form: Recency-Weighted Form (Exponentially Weighted Mean Points)
