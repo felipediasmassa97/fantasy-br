@@ -226,6 +226,30 @@ def load_ewm_form(round_id: int) -> list[dict]:
 
 
 @st.cache_data(ttl=300)
+def load_distribution_stats(round_id: int) -> list[dict]:
+    """Load distribution stats (floor/median/ceiling + consistency) from BigQuery."""
+    client = get_client()
+    query = f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.int_distribution_stats`
+        WHERE as_of_round_id = {round_id}
+        ORDER BY median_pts DESC NULLS LAST
+    """  # noqa: S608
+    return [dict(row) for row in client.query(query).result()]
+
+
+@st.cache_data(ttl=300)
+def load_poe_data(round_id: int) -> list[dict]:
+    """Load PoE (Points over Expected) data from BigQuery."""
+    client = get_client()
+    query = f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.int_poe`
+        WHERE as_of_round_id = {round_id}
+        ORDER BY poe_total DESC NULLS LAST
+    """  # noqa: S608
+    return [dict(row) for row in client.query(query).result()]
+
+
+@st.cache_data(ttl=300)
 def load_par_data(round_id: int) -> list[dict]:
     """Load PAR (Points Above Replacement) data from BigQuery."""
     client = get_client()

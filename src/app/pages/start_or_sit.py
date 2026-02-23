@@ -4,12 +4,14 @@ import streamlit as st
 from utils import (
     filter_data,
     load_available_rounds,
+    load_distribution_stats,
     load_ewm_form,
     load_map_baseline,
     load_map_data,
     load_map_form,
     load_map_mpap,
     load_map_venue,
+    load_poe_data,
 )
 
 
@@ -467,6 +469,172 @@ def render_ewm_tab(data: list[dict]) -> None:
     )
 
 
+def render_distribution_tab(data: list[dict]) -> None:
+    """Render distribution stats (floor/median/ceiling + consistency) tab."""
+    st.subheader("Floor / Median / Ceiling + Consistency")
+    st.caption(
+        "Risk profile based on score distribution. "
+        "Floor (20th pct), Median (50th pct), Ceiling (80th pct). "
+        "Blended with position avg if <10 games."
+    )
+
+    col_config = {
+        "name": st.column_config.TextColumn("Player", width="medium"),
+        "position": st.column_config.TextColumn("Position", width="small"),
+        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
+        "floor_pts": st.column_config.NumberColumn(
+            "Floor",
+            width="small",
+            format="%.2f",
+            help="20th percentile: bad-but-normal game",
+        ),
+        "median_pts": st.column_config.NumberColumn(
+            "Median",
+            width="small",
+            format="%.2f",
+            help="50th percentile: typical game",
+        ),
+        "ceiling_pts": st.column_config.NumberColumn(
+            "Ceiling",
+            width="small",
+            format="%.2f",
+            help="80th percentile: great-but-realistic game",
+        ),
+        "pts_range": st.column_config.NumberColumn(
+            "Range",
+            width="small",
+            format="%.2f",
+            help="Ceiling - Floor: measure of volatility",
+        ),
+        "consistency_rating": st.column_config.NumberColumn(
+            "Consistency",
+            width="small",
+            format="%.2f",
+            help="1/(1+CV): Higher = more consistent. Range 0-1.",
+        ),
+        "cv": st.column_config.NumberColumn(
+            "CV",
+            width="small",
+            format="%.2f",
+            help="Coefficient of Variation (std/mean). Lower = more stable.",
+        ),
+        "matches_played": st.column_config.NumberColumn(
+            "Matches",
+            width="small",
+            format="%d",
+            help="Games played (blend with position avg if <10)",
+        ),
+        "blend_weight": st.column_config.ProgressColumn(
+            "Blend",
+            width="small",
+            format="%.0f%%",
+            min_value=0,
+            max_value=100,
+            help="How much position avg is blended in (0% = pure player data)",
+        ),
+    }
+
+    display_cols = [
+        "name",
+        "position",
+        "club_logo_url",
+        "floor_pts",
+        "median_pts",
+        "ceiling_pts",
+        "pts_range",
+        "consistency_rating",
+        "cv",
+        "matches_played",
+        "blend_weight",
+    ]
+
+    # Convert blend_weight to percentage
+    for row in data:
+        if row.get("blend_weight") is not None:
+            row["blend_weight"] = row["blend_weight"] * 100
+
+    display_data = [{k: row.get(k) for k in display_cols} for row in data]
+
+    st.dataframe(
+        display_data, width="stretch", hide_index=True, column_config=col_config
+    )
+
+
+def render_poe_tab(data: list[dict]) -> None:
+    """Render PoE (Points over Expected) tab."""
+    st.subheader("Points over Expected (PoE)")
+    st.caption(
+        "How much a player over/underperforms their MAP projection. "
+        "Positive = exceeding expectations, Negative = underperforming."
+    )
+
+    col_config = {
+        "name": st.column_config.TextColumn("Player", width="medium"),
+        "position": st.column_config.TextColumn("Position", width="small"),
+        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
+        "poe_total": st.column_config.NumberColumn(
+            "PoE Total",
+            width="small",
+            format="%.2f",
+            help="Cumulative points over expected this season",
+        ),
+        "poe_avg": st.column_config.NumberColumn(
+            "PoE Avg",
+            width="small",
+            format="%.2f",
+            help="Average PoE per round",
+        ),
+        "poe_rounds_total": st.column_config.NumberColumn(
+            "Rounds",
+            width="small",
+            format="%d",
+            help="Rounds with PoE data (needs MAP from previous round)",
+        ),
+        "poe_last_5": st.column_config.NumberColumn(
+            "PoE Last 5",
+            width="small",
+            format="%.2f",
+            help="Cumulative PoE over last 5 rounds",
+        ),
+        "poe_avg_last_5": st.column_config.NumberColumn(
+            "PoE Avg L5",
+            width="small",
+            format="%.2f",
+            help="Average PoE per round (last 5)",
+        ),
+        "poe_category": st.column_config.TextColumn(
+            "Category",
+            width="small",
+            help="overperforming (>5), underperforming (<-5), or as_expected",
+        ),
+        "baseline_pts": st.column_config.NumberColumn(
+            "Baseline",
+            width="small",
+            format="%.2f",
+            help="Player baseline for reference",
+        ),
+    }
+
+    display_cols = [
+        "name",
+        "position",
+        "club_logo_url",
+        "poe_total",
+        "poe_avg",
+        "poe_rounds_total",
+        "poe_last_5",
+        "poe_avg_last_5",
+        "poe_category",
+        "baseline_pts",
+    ]
+
+    display_data = [{k: row.get(k) for k in display_cols} for row in data]
+
+    st.dataframe(
+        display_data, width="stretch", hide_index=True, column_config=col_config
+    )
+
+
 def main() -> None:
     """Run Start or Sit page."""
     st.title("⚖️ Start or Sit")
@@ -492,6 +660,8 @@ def main() -> None:
             venue_data = load_map_venue(selected_round)
             mpap_data = load_map_mpap(selected_round)
             ewm_data = load_ewm_form(selected_round)
+            dist_data = load_distribution_stats(selected_round)
+            poe_data = load_poe_data(selected_round)
 
         clubs = sorted({row["club"] for row in map_data if row.get("club")})
         positions = ["GK", "CB", "FB", "MD", "AT"]
@@ -511,10 +681,23 @@ def main() -> None:
     filtered_venue = filter_data(venue_data, name_filter, club_filter, position_filter)
     filtered_mpap = filter_data(mpap_data, name_filter, club_filter, position_filter)
     filtered_ewm = filter_data(ewm_data, name_filter, club_filter, position_filter)
+    filtered_dist = filter_data(dist_data, name_filter, club_filter, position_filter)
+    filtered_poe = filter_data(poe_data, name_filter, club_filter, position_filter)
 
     # Main tabs for each component
-    tab_overview, tab_baseline, tab_form, tab_venue, tab_mpap, tab_ewm = st.tabs(
-        ["MAP Overview", "1. Baseline", "2. Form", "3. Venue", "4. MPAP", "EWM Form"],
+    tab_overview, tab_baseline, tab_form, tab_venue, tab_mpap, tab_ewm, tab_dist, tab_poe = (
+        st.tabs(
+            [
+                "MAP Overview",
+                "1. Baseline",
+                "2. Form",
+                "3. Venue",
+                "4. MPAP",
+                "EWM Form",
+                "Distribution",
+                "PoE",
+            ],
+        )
     )
 
     with tab_overview:
@@ -534,6 +717,12 @@ def main() -> None:
 
     with tab_ewm:
         render_ewm_tab(filtered_ewm)
+
+    with tab_dist:
+        render_distribution_tab(filtered_dist)
+
+    with tab_poe:
+        render_poe_tab(filtered_poe)
 
 
 if __name__ == "__main__":
