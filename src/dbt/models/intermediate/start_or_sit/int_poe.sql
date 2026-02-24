@@ -41,7 +41,7 @@ map_projections as (
         as_of_round_id + 1 as projected_for_round,
         id,
         map_score
-    from {{ ref('map') }}
+    from {{ ref('ss_map') }}
 ),
 
 -- Join actual points with MAP projections

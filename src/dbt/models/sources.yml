@@ -7,6 +7,10 @@ sources:
     tables:
       - name: raw_players_etl
         description: Raw players data from Cartola Market API
+      - name: raw_players_legacy_2025
+        description: Raw players data from Cartola Market API, season 2025, rounds 1-38 (legacy)
+      - name: raw_players_legacy_2026
+        description: Raw players data from Cartola Market API, season 2026, rounds 1-2 (legacy)
       - name: raw_clubs
         description: Raw clubs (teams) data from Cartola Market API
       - name: raw_positions
