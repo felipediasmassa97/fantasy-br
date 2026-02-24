@@ -1,5 +1,3 @@
-{{ config(materialized='view') }}
-
 with raw_players_etl as (
     select
         temporada as season,

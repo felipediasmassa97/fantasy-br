@@ -13,3 +13,16 @@ snapshot-paths: ["snapshots"]
 clean-targets:
   - target
   - dbt_packages
+
+models:
+  fantasy_br:
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: view
+    scouting:
+      +materialized: table
+    start_or_sit:
+      +materialized: table
+    market_valuation:
+      +materialized: table

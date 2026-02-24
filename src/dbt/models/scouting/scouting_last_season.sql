@@ -1,5 +1,3 @@
-{{ config(materialized='view') }}
-
 with ranked_matches as (
     select
         id,

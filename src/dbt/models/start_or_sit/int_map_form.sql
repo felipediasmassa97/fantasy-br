@@ -1,5 +1,3 @@
-{{ config(materialized='view') }}
-
 /*
 MAP Component 2: Recent Form
 

@@ -1,5 +1,3 @@
-{{ config(materialized='view') }}
-
 /*
 Distribution Stats: Floor / Median / Ceiling + Consistency Rating
 

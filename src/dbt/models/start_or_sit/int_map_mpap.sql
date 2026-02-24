@@ -1,5 +1,3 @@
-{{ config(materialized='view') }}
-
 /*
 MAP Component 4: MPAP (Matchup Points Allowed by Position)
 

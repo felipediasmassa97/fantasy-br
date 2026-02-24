@@ -1,5 +1,3 @@
-{{ config(materialized='view') }}
-
 with scout_points as (
     select code, points
     from {{ ref('scout_points') }}

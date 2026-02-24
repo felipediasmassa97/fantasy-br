@@ -1,5 +1,3 @@
-{{ config(materialized='view') }}
-
 -- Consistency & CV metrics split from int_distribution_stats
 with blended_stats as (
     select

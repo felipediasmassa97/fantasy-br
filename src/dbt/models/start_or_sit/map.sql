@@ -1,5 +1,3 @@
-{{ config(materialized='view') }}
-
 /*
 Matchup-Adjusted Projection (MAP):
 

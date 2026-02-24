@@ -1,5 +1,3 @@
-{{ config(materialized='view') }}
-
 /*
 PoE (Points over Expected)
 

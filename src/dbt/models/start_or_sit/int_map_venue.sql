@@ -1,5 +1,3 @@
-{{ config(materialized='view') }}
-
 /*
 MAP Component 3: Home/Away Context
 

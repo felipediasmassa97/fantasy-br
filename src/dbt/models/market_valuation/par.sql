@@ -1,5 +1,3 @@
-{{ config(materialized='view') }}
-
 /*
 PAR (Points Above Replacement)
 

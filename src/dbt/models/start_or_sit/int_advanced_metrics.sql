@@ -1,5 +1,3 @@
-{{ config(materialized='view') }}
-
 -- Final combined model for all advanced metrics
 select
     b.as_of_round_id,

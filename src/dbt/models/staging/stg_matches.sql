@@ -1,5 +1,3 @@
-{{ config(materialized='view') }}
-
 select
     m.temporada as season,
     m.rodada_id as round_id,

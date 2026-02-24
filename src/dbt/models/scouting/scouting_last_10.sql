@@ -1,5 +1,3 @@
-{{ config(materialized='view') }}
-
 with all_rounds as (
     select distinct round_id as as_of_round_id
     from {{ ref('int_players') }}
