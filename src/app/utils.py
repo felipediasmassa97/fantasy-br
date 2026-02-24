@@ -9,13 +9,13 @@ PROJECT_ID = "fantasy-br"
 DATASET_ID = "fdmdev_fantasy_br"
 
 TIME_PERIODS = {
-    "This Season": "scouting_this_season",
-    "Last Match": "scouting_last_1",
-    "Last 5 Matches": "scouting_last_5",
-    "Last 10 Matches": "scouting_last_10",
-    "Last 5 Home": "scouting_last_5_home",
-    "Last 5 Away": "scouting_last_5_away",
-    "Last Season": "scouting_last_season",
+    "This Season": "sct_this_season",
+    "Last Match": "sct_last_1",
+    "Last 5 Matches": "sct_last_5",
+    "Last 10 Matches": "sct_last_10",
+    "Last 5 Home": "sct_last_5_home",
+    "Last 5 Away": "sct_last_5_away",
+    "Last Season": "sct_last_season",
 }
 
 # Scout groupings by code
@@ -119,7 +119,7 @@ def load_available_rounds() -> list[int]:
     client = get_client()
     query = f"""
         SELECT DISTINCT as_of_round_id
-        FROM `{PROJECT_ID}.{DATASET_ID}.scouting_this_season`
+        FROM `{PROJECT_ID}.{DATASET_ID}.sct_this_season`
         ORDER BY as_of_round_id DESC
     """  # noqa: S608
     return [int(row["as_of_round_id"]) for row in client.query(query).result()]
@@ -129,8 +129,8 @@ def load_available_rounds() -> list[int]:
 def load_scouting_data(view_name: str, round_id: int | None = None) -> list[dict]:
     """Load scouting data from a BigQuery view."""
     client = get_client()
-    # scouting_last_season doesn't have as_of_round_id (previous season data)
-    if view_name == "scouting_last_season" or round_id is None:
+    # sct_last_season doesn't have as_of_round_id (previous season data)
+    if view_name == "sct_last_season" or round_id is None:
         query = f"""
             SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.{view_name}`
             ORDER BY adp_gen_avg ASC NULLS LAST
