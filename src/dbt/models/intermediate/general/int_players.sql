@@ -20,7 +20,13 @@ base_players as (
         case
             when m.club_home_id = p.club_id then true
             when m.club_away_id = p.club_id then false
-        end as is_home
+        end as is_home,
+        p.club_id,
+        m.match_id,
+        case
+            when p.club_id = m.club_home_id then m.club_away_id
+            when p.club_id = m.club_away_id then m.club_home_id
+        end as opponent_id
     from {{ ref('stg_players') }} p
     left join {{ ref('stg_clubs') }} c on p.club_id = c.id
     left join {{ ref('stg_positions') }} pos on p.position_id = pos.id
@@ -73,6 +79,9 @@ select
     d.has_played,
     d.matches_played,
     d.is_home,
+    d.club_id,
+    d.match_id,
+    d.opponent_id,
     d.pts_round - (d.scout_G * gp.points) - (d.scout_A * ap.points) as base_round,
     -- Scout columns
     d.scout_G,
