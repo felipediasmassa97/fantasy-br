@@ -6,10 +6,12 @@ Calculates expected baseline points per player:
   - With this season data: 0.6 * last_season_avg + 0.4 * this_season_avg
   - Without this season data: last_season_avg
   # fixit as player has more this season data, increase weight of this season avg - use factor like shrinkage factor, which ammortizes as matches get closer to 10
+  # fixit baseline should be stabilized mean
 - Rookies:
   - With this season data: 0.7 * this_season_avg + 0.3 * position_avg_last_season
   - Without this season data: position_avg_last_season
   # fixit as player has more this season data, increase weight of this season avg - use factor like shrinkage factor, which ammortizes as matches get closer to 10
+  # fixit baseline should be stabilized mean
 */
 
 with all_rounds as (
