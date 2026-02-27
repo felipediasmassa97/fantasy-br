@@ -83,12 +83,17 @@ select
     case
         when b.baseline_pts is null or b.baseline_pts = 0 then null
         else e.ewm_pts / b.baseline_pts
-    end as ewm_ratio,
+    end as ewm_vs_baseline_ratio,
     -- EWM vs season average (is recent form better or worse than season average)
     case
         when b.pts_avg_this_season is null or b.pts_avg_this_season = 0 then null
         else e.ewm_pts / b.pts_avg_this_season
-    end as ewm_vs_season_ratio
+    end as ewm_vs_season_ratio,
+    -- Form multiplier: EWM-based, clamped 0.8-1.2 (replaces simple last-5 avg form for MAP)
+    case
+        when b.baseline_pts is null or b.baseline_pts = 0 or e.ewm_pts is null then null
+        else greatest(0.8, least(1.2, e.ewm_pts / b.baseline_pts))
+    end as form_multiplier
 from {{ ref('int_map_baseline') }} b
 left join ewm_agg e
     on b.as_of_round_id = e.as_of_round_id

@@ -5,9 +5,11 @@ Calculates expected baseline points per player:
 - Returning players (>=5 matches, >30% availability last season):
   - With this season data: 0.6 * last_season_avg + 0.4 * this_season_avg
   - Without this season data: last_season_avg
+  # fixit as player has more this season data, increase weight of this season avg - use factor like shrinkage factor, which ammortizes as matches get closer to 10
 - Rookies:
   - With this season data: 0.7 * this_season_avg + 0.3 * position_avg_last_season
   - Without this season data: position_avg_last_season
+  # fixit as player has more this season data, increase weight of this season avg - use factor like shrinkage factor, which ammortizes as matches get closer to 10
 */
 
 with all_rounds as (
@@ -108,5 +110,13 @@ select
     case
         when has_last_season_data then 'weighted_seasons'
         else 'rookie_shrinkage'
-    end as baseline_method
+    end as baseline_method,
+    -- Weight of this-season data in the stabilized mean
+    -- weighted_seasons: 0.4 this + 0.6 last; rookie_shrinkage: 0.7 this + 0.3 position_avg
+    case
+        when has_last_season_data then
+            case when pts_avg_this_season is null then 0.0 else 0.4 end
+        else
+            case when pts_avg_this_season is null then 0.0 else 0.7 end
+    end as weight_this_season
 from combined

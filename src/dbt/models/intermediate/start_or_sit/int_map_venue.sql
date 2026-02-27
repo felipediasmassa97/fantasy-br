@@ -7,6 +7,8 @@ Calculates venue adjustments based on historical home/away performance:
 - Only this season: this_season_split (or overall this season avg)
 - venue_multiplier = [home|away]_avg / baseline_pts
 - Clamped between 0.85 and 1.15 (+-15% max impact)
+
+# fixit as player has more this season data, increase weight of this season avg - use factor like shrinkage factor, which ammortizes as matches get closer to 10
 */
 
 with all_rounds as (
@@ -113,5 +115,7 @@ select
     case
         when baseline_pts is null or baseline_pts = 0 or away_avg is null then null
         else greatest(0.85, least(1.15, away_avg / baseline_pts))
-    end as away_multiplier
+    end as away_multiplier,
+    -- Delta: positive means player performs better at home
+    coalesce(home_avg, 0) - coalesce(away_avg, 0) as home_away_delta
 from with_averages

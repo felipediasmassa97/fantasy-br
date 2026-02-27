@@ -1,14 +1,20 @@
 /*
-Distribution Stats: Floor / Median / Ceiling + Consistency Rating
+Distribution Stats: Floor / Median / Ceiling + Consistency
 
-Floor (20th percentile): Bad-but-normal game
-Median (50th percentile): Typical game  
-Ceiling (80th percentile): Great-but-realistic game
-Consistency Rating: How stable are the player's scores (higher = more consistent)
+Score distribution analysis per player, blended with position-level data for small samples.
+
+Percentile definitions:
+  - Floor (20th percentile): Bad-but-normal game
+  - Median (50th percentile): Typical game
+  - Ceiling (80th percentile): Great-but-realistic game
 
 Small-sample fix: If < 10 games, blend with position-level distribution.
+  blend_weight = (10 - matches) / 10, so 0 games = 100% position, 10+ games = 0% position.
 
-Consistency = 1 / (1 + CV) where CV = std_dev / mean
+Consistency metrics (derived from blended stats):
+  - CV (Coefficient of Variation) = stddev / mean. Lower = more stable.
+  - Consistency Rating = 1 / (1 + CV). Range 0-1, higher = more consistent.
+  - Range = ceiling - floor. Measure of volatility.
 */
 
 with all_rounds as (
@@ -17,7 +23,7 @@ with all_rounds as (
     where season = 2026
 ),
 
--- All played matches per player (this season)
+-- All played matches per player (this season) up to each as_of_round
 player_matches as (
     select
         r.as_of_round_id,
@@ -66,7 +72,10 @@ player_percentiles as (
         percentile_cont(pts_round, 0.80) over (partition by as_of_round_id, id) as raw_ceiling,
         avg(pts_round) over (partition by as_of_round_id, id) as pts_avg,
         stddev(pts_round) over (partition by as_of_round_id, id) as pts_stddev,
-        count(*) over (partition by as_of_round_id, id) as matches_played
+        count(*) over (partition by as_of_round_id, id) as matches_played,
+        -- Boom/bust counts for rate computation
+        sum(case when pts_round >= 8.0 then 1 else 0 end) over (partition by as_of_round_id, id) as boom_count,
+        sum(case when pts_round <= 2.0 then 1 else 0 end) over (partition by as_of_round_id, id) as bust_count
     from player_matches
 ),
 
@@ -79,17 +88,20 @@ player_percentiles_deduped as (
         raw_ceiling,
         pts_avg,
         pts_stddev,
-        matches_played
+        matches_played,
+        boom_count,
+        bust_count
     from player_percentiles
 ),
 
--- Calculate blended stats (blend with position if < 10 games)
+-- Blend player stats with position stats if < 10 games
 blended_stats as (
     select
         pp.as_of_round_id,
         pp.id,
         b.name,
         b.club,
+        b.club_logo_url,
         b.position,
         pp.matches_played,
         pp.pts_avg,
@@ -100,39 +112,50 @@ blended_stats as (
         ps.pos_floor,
         ps.pos_median,
         ps.pos_ceiling,
-        ps.pos_avg,
-        ps.pos_stddev,
+        -- blend_weight: 0 if >= 10 games (pure player data), up to 1.0 if 0 games (pure position data)
         case 
             when pp.matches_played >= 10 then 0.0
             else (10.0 - pp.matches_played) / 10.0
-        end as blend_weight
+        end as blend_weight,
+        pp.boom_count,
+        pp.bust_count
     from player_percentiles_deduped pp
-    inner join (
-        select as_of_round_id, id, name, club, position from {{ ref('int_map_baseline') }}
-    ) b 
+    inner join {{ ref('int_map_baseline') }} b
         on pp.as_of_round_id = b.as_of_round_id and pp.id = b.id
     left join position_stats_deduped ps
         on pp.as_of_round_id = ps.as_of_round_id and b.position = ps.position
 )
-
 
 select
     bs.as_of_round_id,
     bs.id,
     bs.name,
     bs.club,
+    bs.club_logo_url,
     bs.position,
     bs.matches_played,
     bs.pts_avg,
     bs.pts_stddev,
+    -- Blended percentiles: weighted average of player and position stats
     (1 - bs.blend_weight) * bs.raw_floor + bs.blend_weight * coalesce(bs.pos_floor, bs.raw_floor) as floor_pts,
     (1 - bs.blend_weight) * bs.raw_median + bs.blend_weight * coalesce(bs.pos_median, bs.raw_median) as median_pts,
     (1 - bs.blend_weight) * bs.raw_ceiling + bs.blend_weight * coalesce(bs.pos_ceiling, bs.raw_ceiling) as ceiling_pts,
-    bs.raw_floor,
-    bs.raw_median,
-    bs.raw_ceiling,
-    bs.pos_floor,
-    bs.pos_median,
-    bs.pos_ceiling,
-    bs.blend_weight
+    -- Range: ceiling - floor (measure of volatility)
+    ((1 - bs.blend_weight) * bs.raw_ceiling + bs.blend_weight * coalesce(bs.pos_ceiling, bs.raw_ceiling))
+    - ((1 - bs.blend_weight) * bs.raw_floor + bs.blend_weight * coalesce(bs.pos_floor, bs.raw_floor)) as pts_range,
+    -- CV (Coefficient of Variation): lower = more stable
+    case
+        when bs.pts_avg is null or bs.pts_avg = 0 or bs.pts_stddev is null then null
+        else bs.pts_stddev / bs.pts_avg
+    end as cv,
+    -- Consistency Rating: 1 / (1 + CV), range 0-1, higher = more consistent
+    case
+        when bs.pts_avg is null or bs.pts_avg = 0 or bs.pts_stddev is null then null
+        else 1.0 / (1.0 + bs.pts_stddev / bs.pts_avg)
+    end as consistency_rating,
+    bs.blend_weight,
+    -- Boom rate: fraction of games scoring >= 8 points
+    case when bs.matches_played > 0 then bs.boom_count * 1.0 / bs.matches_played else null end as boom_rate_ge_8,
+    -- Bust rate: fraction of games scoring <= 2 points
+    case when bs.matches_played > 0 then bs.bust_count * 1.0 / bs.matches_played else null end as bust_rate_le_2
 from blended_stats bs
