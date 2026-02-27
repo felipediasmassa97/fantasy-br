@@ -414,7 +414,7 @@ def color_zscore_dvs(val: float | None) -> str:
 
 def style_dataframe(
     df: pd.DataFrame, zscore_dvs_cols: list[str]
-) -> pd.io.formats.style.Styler:
+) -> "pd.io.formats.style.Styler":
     """Apply styling to dataframe with color-coded z-score and DVS columns."""
     styler = df.style
     for col in zscore_dvs_cols:

@@ -10,13 +10,9 @@ dependencies = [
   "google-cloud-bigquery>=3.0"
 ]
 
-[build-system]
-requires = ["uv_build>=0.8.17,<0.9.0"]
-build-backend = "uv_build"
-
-[tool.uv.build-backend]
-module-name = []
-module-root = ""
+# fixit separate dbt and app
+# fixit add dev dependencies (e.g., ruff, pytest, etc.)
+# fixit consider adding [project.scripts] for CLI commands (e.g., run app, run dbt, etc.)
 
 [project.optional-dependencies]
 tests = []

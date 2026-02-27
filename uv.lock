@@ -474,7 +474,7 @@ wheels = [
 [[package]]
 name = "fantasy-br"
 version = "0.1.0"
-source = { editable = "." }
+source = { virtual = "." }
 dependencies = [
     { name = "dbt-bigquery" },
     { name = "google-cloud-bigquery" },

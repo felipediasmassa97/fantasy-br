@@ -1,20 +1,28 @@
 # To-Dos
 
-- Data loading
+- Data Loading
 
-- Data model
+- Data Model
+  - Performance
+    - [ ] Improve performance (choose intermediate views to materialize?)
   - Refactoring
     - [ ] Refactor mart models logic to intermediate models to reduce complexity (mart models should be very simple, minimum CTEs)
     - [ ] Define columns to show in each mart model (no need for excessive columns)
+    - [ ] Format SQL code
+    - [ ] Standardize naming: baseline points vs stabilized mean -> decide one term only, apply for everything
   - KPIs
     - [x] Add last 10 matches view
     - [x] Last 5 home matches and last 5 away matches KPIs
     - [x] Adapt views for "as of round" data
+    - [ ] Address fixits
+    - [ ] Remove red card and own goal from base average
     - [ ] Add Matchup-Adjusted Projection (MAP)
       - [ ] Add player baseline
       - [ ] Add home-away effect
       - [ ] Add form effect
       - [ ] Add opponent strength effect
+    - [ ] Add PoE (points over expected) to Start/Sit (cumulative PoE + last 5 PoE)
+    - [ ] Add trade fairness delta
     - [ ] Add ELO or Power Index for each player
     - [ ] Update ELO or Power Index each week (start with base ELO maybe)
   - Scouts
@@ -23,34 +31,34 @@
   - Validation
     - [ ] Validate scouting
     - [ ] Add tests for validated metrics (anchor on round 3)
-  - Materalization
+  - Materialization
     - [x] Materialize views as tables to reduce load time
+    - [ ] Materialize intermediate models as ephemeral to reduce storage and clean models
+    - [ ] Evaluate materializing some models as incremental to reduce computing
 
-- Streamlit app
+- Streamlit App
   - [x] Add clubs logos
   - [x] Add tooltips for all metrics
   - [x] Add G/A per match to detailed metrics
+  - [ ] Refactor files
+  - [ ] Add theming
+  - [ ] Add tooltips (clear, with intuition on metric definition, must say whether higher is better or worse, must disclaim premises and assumptions)
+  - [ ] Refactor configuration (column configs may be in dedicated files)
   - [ ] Add authentication (login)
   - [ ] Add user-specific squads (persist in database)
   - [ ] Add trade-fairness page (select players for trade)
+  - [ ] Add "My Squad" (using user info from auth)
+  - [ ] Add "My Team" (subset of my squad)
+  - [ ] Add toggles for my team and my squad on visualizations
+  - [ ] Add "My Opponent Squad" - goal: estimate points, evaluate trades
+  - [ ] Add "My Opponent Team" - goal: estimate points
+  - [ ] Add trade fairness delta (select groups of players from both sides and check overall PAR delta)
 
-- Text files
-  - [ ] Review files (pyproject.toml, schemas, profiles, ...)
-  - [ ] Review and improve documentation (README.md, AGENTS.md, ...)
+- Text Files
+  - [ ] Improve pyproject.toml
+  - [ ] Improve README.md
+  - [ ] Improve AGENTS.md
+  - [ ] Improve dbt YAMLs
 
 - Panela FC
   - [ ] Emulate mobile app to get internal API to fetch players' squads
-
-- Intelligence
-  - Weekly lineup optimization
-    - !!! Matchup-Adjusted Projection (MAP): A single-week projection blending player baseline + home/away + matchup.
-    - ! Matchup Points Allowed by Position (MPAP): Difficulty of the opponent for a position
-    - ! Recency-Weighted Form (EWM points): A "hotness" metric built as exponentially weighted moving average of points.
-    - ! Floor / Median / Ceiling: Percentile-based range of outcomes (e.g., floor=25th percentile, ceiling=75th/85th).
-    - ! Consistency Rating (CV of points): Volatility normalized by production.
-    - ! Points Over Expected (PoE): Actual minus expected.
-  - Market decisions
-    - !!! Points Above Replacement (PAR): Value over a replacement-level player at the same position.
-    - ! Stabilized Mean / Shrinkage Value: Prevents small-sample miracles from polluting rankings.
-    - ! Regression Candidate Score (Buy-Low / Sell-High): Combines PoE and opportunity to find mispriced players.
-    - ! Trade Fairness Delta (ΔPAR): A cross-position "fairness" view aligned with trade value chart logic.

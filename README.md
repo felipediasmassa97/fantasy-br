@@ -121,7 +121,7 @@ fantasy-br/
 
 - **Position ID 6 = Head Coach**: Excluded from player models (coaches have different scoring)
 - **Scout fields**: Player actions (G=goals, A=assists, SG=clean sheet, etc.)
-- **Round (rodada)**: Each game week in the Brasileirao season (38 rounds total)
+- **Round (rodada)**: Each game week in the Brasileirão season (38 rounds total)
 
 ## Development
 
