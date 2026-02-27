@@ -13,7 +13,7 @@ select
     o.games_last_season as games_in_sample_last_season,
     o.pts_allowed_this_season_avg as points_allowed_this_season_avg,
     o.pts_allowed_last_season_avg as points_allowed_last_season_avg,
-    o.pts_allowed_blended_avg as points_allowed_blended_avg,
+    o.pts_allowed_avg as points_allowed_avg,
     o.league_avg_pts as league_avg_allowed_pos,
     o.mpap_ratio,
     o.mpap_multiplier,
