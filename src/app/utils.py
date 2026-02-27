@@ -28,7 +28,11 @@ COLUMN_CONFIG = {
         "tooltip": "Player name",
     },
     "position": {
-        "tooltip": "GK=Goalkeeper, CB=Center Back, FB=Fullback, MD=Midfielder, AT=Forward",
+        "tooltip": "GK=Goalkeeper, "
+        "CB=Center Back, "
+        "FB=Fullback, "
+        "MD=Midfielder, "
+        "AT=Forward",
     },
     "club_logo_url": {
         "tooltip": "Player's club",
@@ -54,51 +58,83 @@ COLUMN_CONFIG = {
         "format": "%+.1f",
     },
     "z_score_pos_avg": {
-        "tooltip": "Z-Score: how many standard deviations above or below top position players mean. >0 is above average. Based on average points. Higher is better.",
+        "tooltip": "Z-Score: how many standard deviations above or below top position "
+        "players mean. "
+        ">0 is above average. "
+        "Based on average points. "
+        "Higher is better.",
         "format": "%+.2f",
     },
     "z_score_gen_avg": {
-        "tooltip": "Z-Score: how many standard deviations above or below top 200 players mean. >0 is above average. Based on average points. Higher is better.",
+        "tooltip": "Z-Score: how many standard deviations above or below top 200 "
+        "players mean. "
+        ">0 is above average. "
+        "Based on average points. "
+        "Higher is better.",
         "format": "%+.2f",
     },
     "z_score_pos_base": {
-        "tooltip": "Z-Score: how many standard deviations above or below top position players mean. >0 is above average. Based on base average points. Higher is better.",
+        "tooltip": "Z-Score: how many standard deviations above or below top position "
+        "players mean. "
+        ">0 is above average. "
+        "Based on base average points. "
+        "Higher is better.",
         "format": "%+.2f",
     },
     "z_score_gen_base": {
-        "tooltip": "Z-Score: how many standard deviations above or below top 200 players mean. >0 is above average. Based on base average points. Higher is better.",
+        "tooltip": "Z-Score: how many standard deviations above or below top 200 "
+        "players mean. "
+        ">0 is above average. "
+        "Based on base average points. "
+        "Higher is better.",
         "format": "%+.2f",
     },
     "dvs_pos_avg": {
-        "tooltip": "Draft Value Score: z-score adjusted by availability factor. Within position and based on average points. Higher is better.",
+        "tooltip": "Draft Value Score: z-score adjusted by availability factor. "
+        "Within position and based on average points. "
+        "Higher is better.",
         "format": "%+.2f",
     },
     "dvs_gen_avg": {
-        "tooltip": "Draft Value Score: z-score adjusted by availability factor. Across positions and based on average points. Higher is better.",
+        "tooltip": "Draft Value Score: z-score adjusted by availability factor. "
+        "Across positions and based on average points. "
+        "Higher is better.",
         "format": "%+.2f",
     },
     "dvs_pos_base": {
-        "tooltip": "Draft Value Score: z-score adjusted by availability factor. Within position and based on base average points. Higher is better.",
+        "tooltip": "Draft Value Score: z-score adjusted by availability factor. "
+        "Within position and based on base average points. "
+        "Higher is better.",
         "format": "%+.2f",
     },
     "dvs_gen_base": {
-        "tooltip": "Draft Value Score: z-score adjusted by availability factor. Across positions and based on base average points. Higher is better.",
+        "tooltip": "Draft Value Score: z-score adjusted by availability factor. "
+        "Across positions and based on base average points. "
+        "Higher is better.",
         "format": "%+.2f",
     },
     "adp_pos_avg": {
-        "tooltip": "Average Draft Position: rank within position. Based on DVS Avg. Lower is better.",
+        "tooltip": "Average Draft Position: rank within position. "
+        "Based on DVS Avg. "
+        "Lower is better.",
         "format": "%d",
     },
     "adp_gen_avg": {
-        "tooltip": "Average Draft Position: rank across positions. Based on DVS Avg. Lower is better.",
+        "tooltip": "Average Draft Position: rank across positions. "
+        "Based on DVS Avg. "
+        "Lower is better.",
         "format": "%d",
     },
     "adp_pos_base": {
-        "tooltip": "Average Draft Position: rank within position. Based on DVS Base. Lower is better.",
+        "tooltip": "Average Draft Position: rank within position. "
+        "Based on DVS Base. "
+        "Lower is better.",
         "format": "%d",
     },
     "adp_gen_base": {
-        "tooltip": "Average Draft Position: rank across positions. Based on DVS Base. Lower is better.",
+        "tooltip": "Average Draft Position: rank across positions. "
+        "Based on DVS Base. "
+        "Lower is better.",
         "format": "%d",
     },
 }
@@ -113,165 +149,198 @@ def get_client() -> bigquery.Client:
     return bigquery.Client(project=PROJECT_ID, credentials=credentials)
 
 
+def _query(sql: str) -> list[dict]:
+    """Execute query and return list of dicts."""
+    client = get_client()
+    return [dict(row) for row in client.query(sql).result()]
+
+
 @st.cache_data(ttl=300)
 def load_available_rounds() -> list[int]:
     """Load available rounds from BigQuery."""
-    client = get_client()
-    query = f"""
-        SELECT DISTINCT as_of_round_id
-        FROM `{PROJECT_ID}.{DATASET_ID}.sct_this_season`
-        ORDER BY as_of_round_id DESC
-    """  # noqa: S608
-    return [int(row["as_of_round_id"]) for row in client.query(query).result()]
+    return [
+        int(r["as_of_round_id"])
+        for r in _query(f"""
+            SELECT DISTINCT as_of_round_id
+            FROM `{PROJECT_ID}.{DATASET_ID}.sct_this_season`
+            ORDER BY as_of_round_id DESC
+        """)  # noqa: S608
+    ]
 
 
 @st.cache_data(ttl=300)
 def load_scouting_data(view_name: str, round_id: int | None = None) -> list[dict]:
     """Load scouting data from a BigQuery view."""
-    client = get_client()
-    # sct_last_season doesn't have as_of_round_id (previous season data)
     if view_name == "sct_last_season" or round_id is None:
-        query = f"""
+        return _query(f"""
             SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.{view_name}`
             ORDER BY adp_gen_avg ASC NULLS LAST
-        """  # noqa: S608
-    else:
-        query = f"""
-            SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.{view_name}`
-            WHERE as_of_round_id = {round_id}
-            ORDER BY adp_gen_avg ASC NULLS LAST
-        """  # noqa: S608
-    return [dict(row) for row in client.query(query).result()]
+        """)  # noqa: S608
+    return _query(f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.{view_name}`
+        WHERE as_of_round_id = {round_id}
+        ORDER BY adp_gen_avg ASC NULLS LAST
+    """)  # noqa: S608
+
+
+# Start or Sit loaders
+# fixit refactor to reduce code duplication (e.g., single function with view name and
+# as_of_round_id parameter)
 
 
 @st.cache_data(ttl=300)
-def load_map_data(round_id: int) -> list[dict]:
-    """Load MAP data from BigQuery."""
-    client = get_client()
-    query = f"""
-        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.map`
+def load_ss_main(round_id: int) -> list[dict]:
+    """Load Start or Sit main tab data."""
+    return _query(f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.ss_main`
         WHERE as_of_round_id = {round_id}
         ORDER BY map_score DESC NULLS LAST
-    """  # noqa: S608
-    return [dict(row) for row in client.query(query).result()]
+    """)  # noqa: S608
 
 
 @st.cache_data(ttl=300)
-def load_map_baseline(round_id: int) -> list[dict]:
-    """Load MAP baseline component data from BigQuery."""
-    client = get_client()
-    query = f"""
-        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.int_map_baseline`
+def load_ss_map_breakdown(round_id: int) -> list[dict]:
+    """Load MAP breakdown data."""
+    return _query(f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.ss_map_breakdown`
         WHERE as_of_round_id = {round_id}
-        ORDER BY baseline_pts DESC NULLS LAST
-    """  # noqa: S608
-    return [dict(row) for row in client.query(query).result()]
+        ORDER BY map_points DESC NULLS LAST
+    """)  # noqa: S608
 
 
 @st.cache_data(ttl=300)
-def load_map_form(round_id: int) -> list[dict]:
-    """Load MAP form component data from BigQuery."""
-    client = get_client()
-    query = f"""
-        SELECT b.name, b.position, b.club, b.club_logo_url, f.*
-        FROM `{PROJECT_ID}.{DATASET_ID}.int_map_form` f
-        JOIN `{PROJECT_ID}.{DATASET_ID}.int_map_baseline` b
-            ON f.as_of_round_id = b.as_of_round_id AND f.id = b.id
-        WHERE f.as_of_round_id = {round_id}
-        ORDER BY f.form_ratio DESC NULLS LAST
-    """  # noqa: S608
-    return [dict(row) for row in client.query(query).result()]
-
-
-@st.cache_data(ttl=300)
-def load_map_venue(round_id: int) -> list[dict]:
-    """Load MAP venue component data from BigQuery."""
-    client = get_client()
-    query = f"""
-        SELECT b.name, b.position, b.club, b.club_logo_url, v.*
-        FROM `{PROJECT_ID}.{DATASET_ID}.int_map_venue` v
-        JOIN `{PROJECT_ID}.{DATASET_ID}.int_map_baseline` b
-            ON v.as_of_round_id = b.as_of_round_id AND v.id = b.id
-        WHERE v.as_of_round_id = {round_id}
-        ORDER BY v.home_multiplier DESC NULLS LAST
-    """  # noqa: S608
-    return [dict(row) for row in client.query(query).result()]
-
-
-@st.cache_data(ttl=300)
-def load_map_mpap(round_id: int) -> list[dict]:
-    """Load MAP MPAP (Matchup Points Allowed by Position) component data from BigQuery."""
-    client = get_client()
-    query = f"""
-        SELECT b.name, b.club, b.club_logo_url, o.*
-        FROM `{PROJECT_ID}.{DATASET_ID}.int_map_mpap` o
-        JOIN `{PROJECT_ID}.{DATASET_ID}.int_map_baseline` b
-            ON o.as_of_round_id = b.as_of_round_id AND o.id = b.id
-        WHERE o.as_of_round_id = {round_id}
-        ORDER BY o.mpap_multiplier DESC NULLS LAST
-    """  # noqa: S608
-    return [dict(row) for row in client.query(query).result()]
-
-
-@st.cache_data(ttl=300)
-def load_ewm_form(round_id: int) -> list[dict]:
-    """Load EWM (Exponentially Weighted Mean) form data from BigQuery."""
-    client = get_client()
-    query = f"""
-        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.int_ewm_form`
+def load_ss_mpap_debug(round_id: int) -> list[dict]:
+    """Load MPAP debug data."""
+    return _query(f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.ss_mpap_debug`
         WHERE as_of_round_id = {round_id}
-        ORDER BY ewm_pts DESC NULLS LAST
-    """  # noqa: S608
-    return [dict(row) for row in client.query(query).result()]
+        ORDER BY mpap_multiplier DESC NULLS LAST
+    """)  # noqa: S608
 
 
 @st.cache_data(ttl=300)
-def load_distribution_stats(round_id: int) -> list[dict]:
-    """Load distribution stats (floor/median/ceiling + consistency) from BigQuery."""
-    client = get_client()
-    query = f"""
-        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.int_distribution_stats`
+def load_ss_splits(round_id: int) -> list[dict]:
+    """Load player home/away splits."""
+    return _query(f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.ss_splits`
         WHERE as_of_round_id = {round_id}
-        ORDER BY median_pts DESC NULLS LAST
-    """  # noqa: S608
-    return [dict(row) for row in client.query(query).result()]
+        ORDER BY home_away_delta DESC NULLS LAST
+    """)  # noqa: S608
 
 
 @st.cache_data(ttl=300)
-def load_poe_data(round_id: int) -> list[dict]:
-    """Load PoE (Points over Expected) data from BigQuery."""
-    client = get_client()
-    query = f"""
-        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.int_poe`
+def load_ss_distribution(round_id: int) -> list[dict]:
+    """Load distribution and volatility data."""
+    return _query(f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.ss_distribution`
         WHERE as_of_round_id = {round_id}
-        ORDER BY poe_total DESC NULLS LAST
-    """  # noqa: S608
-    return [dict(row) for row in client.query(query).result()]
+        ORDER BY median_p50 DESC NULLS LAST
+    """)  # noqa: S608
 
 
 @st.cache_data(ttl=300)
-def load_par_data(round_id: int) -> list[dict]:
-    """Load PAR (Points Above Replacement) data from BigQuery."""
-    client = get_client()
-    query = f"""
-        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.par`
+def load_ss_round_by_round(round_id: int) -> list[dict]:
+    """Load round-by-round raw data."""
+    return _query(f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.ss_round_by_round`
+        WHERE round <= {round_id}
+        ORDER BY round DESC, points_total DESC NULLS LAST
+    """)  # noqa: S608
+
+
+@st.cache_data(ttl=300)
+def load_ss_edge_cases() -> list[dict]:
+    """Load edge cases and missing data."""
+    return _query(f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.ss_edge_cases`
+        ORDER BY games_this_season ASC
+    """)  # noqa: S608
+
+
+# Market Valuation loaders
+# fixit refactor to reduce code duplication (e.g., single function with view name and
+# as_of_round_id parameter)
+
+
+@st.cache_data(ttl=300)
+def load_mv_main(round_id: int) -> list[dict]:
+    """Load Market Valuation main tab data."""
+    return _query(f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.mv_main`
         WHERE as_of_round_id = {round_id}
         ORDER BY par DESC NULLS LAST
-    """  # noqa: S608
-    return [dict(row) for row in client.query(query).result()]
+    """)  # noqa: S608
+
+
+@st.cache_data(ttl=300)
+def load_mv_par_breakdown(round_id: int) -> list[dict]:
+    """Load PAR breakdown data."""
+    return _query(f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.mv_par_breakdown`
+        WHERE as_of_round_id = {round_id}
+        ORDER BY par_points DESC NULLS LAST
+    """)  # noqa: S608
+
+
+@st.cache_data(ttl=300)
+def load_mv_stabilized(round_id: int) -> list[dict]:
+    """Load stabilized mean and shrinkage data."""
+    return _query(f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.mv_stabilized`
+        WHERE as_of_round_id = {round_id}
+        ORDER BY stabilized_mean_points DESC NULLS LAST
+    """)  # noqa: S608
+
+
+@st.cache_data(ttl=300)
+def load_mv_form_trend(round_id: int) -> list[dict]:
+    """Load form and trend data."""
+    return _query(f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.mv_form_trend`
+        WHERE as_of_round_id = {round_id}
+        ORDER BY ewm_points DESC NULLS LAST
+    """)  # noqa: S608
+
+
+@st.cache_data(ttl=300)
+def load_mv_regression(round_id: int) -> list[dict]:
+    """Load regression candidate data."""
+    return _query(f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.mv_regression`
+        WHERE as_of_round_id = {round_id}
+        ORDER BY regression_score DESC NULLS LAST
+    """)  # noqa: S608
+
+
+@st.cache_data(ttl=300)
+def load_mv_value_profile(round_id: int) -> list[dict]:
+    """Load value profile data."""
+    return _query(f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.mv_value_profile`
+        WHERE as_of_round_id = {round_id}
+        ORDER BY par_points DESC NULLS LAST
+    """)  # noqa: S608
+
+
+@st.cache_data(ttl=300)
+def load_mv_round_by_round(round_id: int) -> list[dict]:
+    """Load MV round-by-round raw data."""
+    return _query(f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.mv_round_by_round`
+        WHERE round <= {round_id}
+        ORDER BY round DESC, points_total DESC NULLS LAST
+    """)  # noqa: S608
 
 
 @st.cache_data(ttl=3600)
 def load_scout_points() -> dict[str, tuple[str, float]]:
     """Load scout points from BigQuery."""
-    client = get_client()
-    query = f"""
-        SELECT code, description_en, points
-        FROM `{PROJECT_ID}.{DATASET_ID}.scout_points`
-    """  # noqa: S608
     return {
         row["code"]: (row["description_en"], float(row["points"]))
-        for row in client.query(query).result()
+        for row in _query(f"""
+            SELECT code, description_en, points
+            FROM `{PROJECT_ID}.{DATASET_ID}.raw_scout_points`
+        """)  # noqa: S608
     }
 
 
@@ -309,10 +378,15 @@ def filter_data(
         filtered = [
             row
             for row in filtered
-            if name_filter.lower() in row.get("name", "").lower()
+            if name_filter.lower()
+            # fixit use player_name in all mart views for consistency
+            in row.get("name", row.get("player_name", "")).lower()
         ]
     if club_filter != "All":
-        filtered = [row for row in filtered if row.get("club") == club_filter]
+        # fixit use club in all mart views for consistency
+        filtered = [
+            row for row in filtered if row.get("club", row.get("team")) == club_filter
+        ]
     if position_filter != "All":
         filtered = [row for row in filtered if row.get("position") == position_filter]
     return filtered
@@ -339,9 +413,8 @@ def color_zscore_dvs(val: float | None) -> str:
 
 
 def style_dataframe(
-    df: pd.DataFrame,
-    zscore_dvs_cols: list[str],
-) -> "pd.io.formats.style.Styler":
+    df: pd.DataFrame, zscore_dvs_cols: list[str]
+) -> pd.io.formats.style.Styler:
     """Apply styling to dataframe with color-coded z-score and DVS columns."""
     styler = df.style
     for col in zscore_dvs_cols:

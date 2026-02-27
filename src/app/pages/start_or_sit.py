@@ -1,536 +1,52 @@
-"""Start or Sit page for Fantasy BR - MAP (Matchup-Adjusted Projection) metrics."""
+"""Start or Sit page - MAP projection with component breakdown and diagnostics."""
 
+# fixit evaluate, refactor, standardize and improve
+
+import pandas as pd
 import streamlit as st
 from utils import (
     filter_data,
     load_available_rounds,
-    load_distribution_stats,
-    load_ewm_form,
-    load_map_baseline,
-    load_map_data,
-    load_map_form,
-    load_map_mpap,
-    load_map_venue,
-    load_poe_data,
+    load_ss_distribution,
+    load_ss_edge_cases,
+    load_ss_main,
+    load_ss_map_breakdown,
+    load_ss_mpap_debug,
+    load_ss_round_by_round,
+    load_ss_splits,
 )
 
+# ---------------------------------------------------------------------------
+# Tab renderers
+# ---------------------------------------------------------------------------
 
-def render_map_overview_tab(data: list[dict]) -> None:
-    """Render MAP overview tab with final scores."""
-    st.subheader("MAP Score Overview")
-    st.caption(
-        "MAP = Baseline x Form x Venue x MPAP. "
-        "Proxy for expected points in the next match."
-    )
+
+def _render_main(data: list[dict]) -> None:
+    """Render main consolidated tab with key decision columns."""
+    st.subheader("Start or Sit Overview")
+    if not data:
+        st.info("No data available for this round.")
+        return
 
     col_config = {
-        "name": st.column_config.TextColumn(
-            "Player",
-            width="medium",
-            help="Player name",
-        ),
-        "position": st.column_config.TextColumn(
-            "Position",
-            width="small",
-            help="GK=Goalkeeper, CB=Center Back, FB=Fullback, MD=Midfielder, AT=Forward",
-        ),
-        "club_logo_url": st.column_config.ImageColumn(
-            "Club",
-            width="small",
-            help="Player's club",
-        ),
+        "name": st.column_config.TextColumn("Player", width="medium"),
+        "position": st.column_config.TextColumn("Pos", width="small"),
+        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
+        "club": st.column_config.TextColumn("Team", width="small"),
         "map_score": st.column_config.NumberColumn(
-            "MAP",
-            width="small",
-            format="%.2f",
-            help="Matchup-Adjusted Projection: baseline x form x venue x MPAP",
+            "MAP", format="%.2f", help="Multi-factor Adjusted Projection"
         ),
-        "baseline_pts": st.column_config.NumberColumn(
-            "Baseline",
-            width="small",
-            format="%.2f",
-            help="Weighted baseline points combining last season and this season",
-        ),
-        "form_ratio": st.column_config.NumberColumn(
-            "Form",
-            width="small",
-            format="%.2f",
-            help="Recent form vs baseline (clamped 0.8-1.2). >1 = hot, <1 = cold.",
-        ),
-        "venue_multiplier": st.column_config.NumberColumn(
-            "Venue",
-            width="small",
-            format="%.2f",
-            help="Home or Away multiplier based on next match location.",
-        ),
-        "mpap_multiplier": st.column_config.NumberColumn(
-            "MPAP",
-            width="small",
-            format="%.2f",
-            help="Matchup Points Allowed by Position (0.85-1.20). >1 = weak opponent.",
-        ),
-        "is_home_next": st.column_config.CheckboxColumn(
-            "Home?",
-            width="small",
-            help="Is the player playing at home in the next match?",
-        ),
-        "baseline_method": st.column_config.TextColumn(
-            "Method",
-            width="small",
-            help="weighted_seasons: >=5 matches + >30% avail. rookie_shrinkage: otherwise.",
-        ),
-    }
-
-    display_cols = [
-        "name",
-        "position",
-        "club_logo_url",
-        "map_score",
-        "baseline_pts",
-        "form_ratio",
-        "venue_multiplier",
-        "mpap_multiplier",
-        "is_home_next",
-        "baseline_method",
-    ]
-
-    display_data = [{k: row.get(k) for k in display_cols} for row in data]
-
-    st.dataframe(
-        display_data, width="stretch", hide_index=True, column_config=col_config
-    )
-
-
-def render_baseline_tab(data: list[dict]) -> None:
-    """Render Baseline component tab."""
-    st.subheader("Component 1: Baseline Ability")
-    st.caption(
-        "Expected baseline points per player. "
-        "Returning players: 0.6 * last_season + 0.4 * this_season. "
-        "Rookies: 0.7 * this_season + 0.3 * position_avg."
-    )
-
-    col_config = {
-        "name": st.column_config.TextColumn("Player", width="medium"),
-        "position": st.column_config.TextColumn("Position", width="small"),
-        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
-        "baseline_pts": st.column_config.NumberColumn(
-            "Baseline Pts",
-            width="small",
-            format="%.2f",
-            help="Final baseline expected points",
-        ),
-        "baseline_method": st.column_config.TextColumn(
-            "Method",
-            width="small",
-            help="weighted_seasons or rookie_shrinkage",
-        ),
-        "pts_avg_this_season": st.column_config.NumberColumn(
-            "This Season Avg",
-            width="small",
-            format="%.2f",
-            help="Average points this season",
-        ),
-        "matches_this_season": st.column_config.NumberColumn(
-            "Matches (This)",
-            width="small",
-            format="%d",
-        ),
-        "pts_avg_last_season": st.column_config.NumberColumn(
-            "Last Season Avg",
-            width="small",
-            format="%.2f",
-            help="Average points last season",
-        ),
-        "matches_last_season": st.column_config.NumberColumn(
-            "Matches (Last)",
-            width="small",
-            format="%d",
-        ),
-        "availability_last_season": st.column_config.ProgressColumn(
-            "Avail (Last)",
-            width="small",
-            format="%.0f%%",
-            min_value=0,
-            max_value=100,
-            help="Availability last season. Must be >30% to use weighted_seasons.",
-        ),
-        "position_pts_avg": st.column_config.NumberColumn(
-            "Position Avg",
-            width="small",
-            format="%.2f",
-            help="Position average from last season (used for rookies)",
-        ),
-        "has_last_season_data": st.column_config.CheckboxColumn(
-            "Has Last Season?",
-            width="small",
-            help=">=5 matches AND >30% availability last season",
-        ),
-    }
-
-    display_cols = [
-        "name",
-        "position",
-        "club_logo_url",
-        "baseline_pts",
-        "baseline_method",
-        "pts_avg_this_season",
-        "matches_this_season",
-        "pts_avg_last_season",
-        "matches_last_season",
-        "availability_last_season",
-        "position_pts_avg",
-        "has_last_season_data",
-    ]
-
-    # Convert availability to percentage
-    for row in data:
-        if row.get("availability_last_season") is not None:
-            row["availability_last_season"] = row["availability_last_season"] * 100
-
-    display_data = [{k: row.get(k) for k in display_cols} for row in data]
-
-    st.dataframe(
-        display_data, width="stretch", hide_index=True, column_config=col_config
-    )
-
-
-def render_form_tab(data: list[dict]) -> None:
-    """Render Form component tab."""
-    st.subheader("Component 2: Recent Form")
-    st.caption(
-        "Recent form adjustment from last 5 games. "
-        "form_ratio = last_5_avg / baseline. Clamped between 0.8 and 1.2."
-    )
-
-    col_config = {
-        "name": st.column_config.TextColumn("Player", width="medium"),
-        "position": st.column_config.TextColumn("Position", width="small"),
-        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
-        "form_ratio": st.column_config.NumberColumn(
-            "Form Ratio",
-            width="small",
-            format="%.3f",
-            help="Recent form vs baseline. >1 = hot, <1 = cold.",
-        ),
-        "pts_avg_last_5": st.column_config.NumberColumn(
-            "Last 5 Avg",
-            width="small",
-            format="%.2f",
-            help="Average points in last 5 matches",
-        ),
-        "matches_last_5": st.column_config.NumberColumn(
-            "Matches (L5)",
-            width="small",
-            format="%d",
-            help="Matches played in last 5 rounds",
-        ),
-    }
-
-    display_cols = [
-        "name",
-        "position",
-        "club_logo_url",
-        "form_ratio",
-        "pts_avg_last_5",
-        "matches_last_5",
-    ]
-
-    display_data = [{k: row.get(k) for k in display_cols} for row in data]
-
-    st.dataframe(
-        display_data, width="stretch", hide_index=True, column_config=col_config
-    )
-
-
-def render_venue_tab(data: list[dict]) -> None:
-    """Render Venue component tab."""
-    st.subheader("Component 3: Home/Away Context")
-    st.caption(
-        "Venue adjustment based on historical home/away performance. "
-        "Blended: 0.7 * last_season + 0.3 * this_season. Clamped +-15%."
-    )
-
-    col_config = {
-        "name": st.column_config.TextColumn("Player", width="medium"),
-        "position": st.column_config.TextColumn("Position", width="small"),
-        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
-        "home_multiplier": st.column_config.NumberColumn(
-            "Home Mult",
-            width="small",
-            format="%.3f",
-            help="Home performance multiplier. >1 = better at home.",
-        ),
-        "away_multiplier": st.column_config.NumberColumn(
-            "Away Mult",
-            width="small",
-            format="%.3f",
-            help="Away performance multiplier. >1 = better away.",
-        ),
-        "home_avg": st.column_config.NumberColumn(
-            "Home Avg",
-            width="small",
-            format="%.2f",
-            help="Blended home average points",
-        ),
-        "away_avg": st.column_config.NumberColumn(
-            "Away Avg",
-            width="small",
-            format="%.2f",
-            help="Blended away average points",
-        ),
-        "pts_avg_home_last_season": st.column_config.NumberColumn(
-            "Home (Last)",
-            width="small",
-            format="%.2f",
-        ),
-        "pts_avg_away_last_season": st.column_config.NumberColumn(
-            "Away (Last)",
-            width="small",
-            format="%.2f",
-        ),
-        "pts_avg_home_this_season": st.column_config.NumberColumn(
-            "Home (This)",
-            width="small",
-            format="%.2f",
-        ),
-        "pts_avg_away_this_season": st.column_config.NumberColumn(
-            "Away (This)",
-            width="small",
-            format="%.2f",
-        ),
-        "matches_home_last_season": st.column_config.NumberColumn(
-            "Home Matches (Last)",
-            width="small",
-            format="%d",
-        ),
-        "matches_away_last_season": st.column_config.NumberColumn(
-            "Away Matches (Last)",
-            width="small",
-            format="%d",
-        ),
-    }
-
-    display_cols = [
-        "name",
-        "position",
-        "club_logo_url",
-        "home_multiplier",
-        "away_multiplier",
-        "home_avg",
-        "away_avg",
-        "pts_avg_home_last_season",
-        "pts_avg_away_last_season",
-        "pts_avg_home_this_season",
-        "pts_avg_away_this_season",
-    ]
-
-    display_data = [{k: row.get(k) for k in display_cols} for row in data]
-
-    st.dataframe(
-        display_data, width="stretch", hide_index=True, column_config=col_config
-    )
-
-
-def render_mpap_tab(data: list[dict]) -> None:
-    """Render MPAP (Matchup Points Allowed by Position) component tab."""
-    st.subheader("Component 4: MPAP (Matchup Points Allowed by Position)")
-    st.caption(
-        "How many fantasy points does the opponent allow to this position? "
-        "mpap_multiplier = pts_conceded / league_avg. Clamped 0.85-1.20."
-    )
-
-    col_config = {
-        "name": st.column_config.TextColumn("Player", width="medium"),
-        "position": st.column_config.TextColumn("Position", width="small"),
-        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
-        "mpap_multiplier": st.column_config.NumberColumn(
-            "MPAP Mult",
-            width="small",
-            format="%.3f",
-            help="Matchup Points Allowed multiplier. >1 = weak opponent for this position.",
-        ),
-        "mpap_pts_conceded": st.column_config.NumberColumn(
-            "Pts Conceded",
-            width="small",
-            format="%.2f",
-            help="Avg points opponent concedes to this position (last 5 games)",
-        ),
-        "league_avg_pts": st.column_config.NumberColumn(
-            "League Avg",
-            width="small",
-            format="%.2f",
-            help="League average points for this position",
-        ),
-        "mpap_matches": st.column_config.NumberColumn(
-            "MPAP Matches",
-            width="small",
-            format="%d",
-            help="Matches used to calculate MPAP",
-        ),
-        "is_home_next": st.column_config.CheckboxColumn(
-            "Home?",
-            width="small",
-            help="Is the player playing at home in the next match?",
-        ),
-        "opponent_id": st.column_config.NumberColumn(
-            "Opponent ID",
-            width="small",
-            format="%d",
-            help="Opponent club ID for next match",
-        ),
-    }
-
-    display_cols = [
-        "name",
-        "position",
-        "club_logo_url",
-        "mpap_multiplier",
-        "mpap_pts_conceded",
-        "league_avg_pts",
-        "mpap_matches",
-        "is_home_next",
-        "opponent_id",
-    ]
-
-    display_data = [{k: row.get(k) for k in display_cols} for row in data]
-
-    st.dataframe(
-        display_data, width="stretch", hide_index=True, column_config=col_config
-    )
-
-
-def render_ewm_tab(data: list[dict]) -> None:
-    """Render EWM (Exponentially Weighted Mean) form tab."""
-    st.subheader("Recency-Weighted Form (EWM Points)")
-    st.caption(
-        "Player form with more weight on recent games. "
-        "More stable than last-3 average, faster than season average. Alpha=0.25."
-    )
-
-    col_config = {
-        "name": st.column_config.TextColumn("Player", width="medium"),
-        "position": st.column_config.TextColumn("Position", width="small"),
-        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
-        "ewm_pts": st.column_config.NumberColumn(
-            "EWM Pts",
-            width="small",
-            format="%.2f",
-            help="Exponentially weighted mean points (recent games weighted more)",
-        ),
-        "ewm_ratio": st.column_config.NumberColumn(
-            "EWM/Baseline",
-            width="small",
-            format="%.2f",
-            help="EWM vs baseline ratio. >1 = hot streak, <1 = cold streak.",
-        ),
-        "ewm_vs_season_ratio": st.column_config.NumberColumn(
-            "EWM/Season",
-            width="small",
-            format="%.2f",
-            help="EWM vs season average. >1 = recent form better than season avg.",
-        ),
-        "baseline_pts": st.column_config.NumberColumn(
-            "Baseline",
-            width="small",
-            format="%.2f",
-            help="Player baseline points for comparison",
-        ),
-        "pts_avg_this_season": st.column_config.NumberColumn(
-            "Season Avg",
-            width="small",
-            format="%.2f",
-            help="Simple season average for comparison",
-        ),
-        "matches_used": st.column_config.NumberColumn(
-            "Matches",
-            width="small",
-            format="%d",
-            help="Number of matches used in EWM calculation",
-        ),
-    }
-
-    display_cols = [
-        "name",
-        "position",
-        "club_logo_url",
-        "ewm_pts",
-        "ewm_ratio",
-        "ewm_vs_season_ratio",
-        "baseline_pts",
-        "pts_avg_this_season",
-        "matches_used",
-    ]
-
-    display_data = [{k: row.get(k) for k in display_cols} for row in data]
-
-    st.dataframe(
-        display_data, width="stretch", hide_index=True, column_config=col_config
-    )
-
-
-def render_distribution_tab(data: list[dict]) -> None:
-    """Render distribution stats (floor/median/ceiling + consistency) tab."""
-    st.subheader("Floor / Median / Ceiling + Consistency")
-    st.caption(
-        "Risk profile based on score distribution. "
-        "Floor (20th pct), Median (50th pct), Ceiling (80th pct). "
-        "Blended with position avg if <10 games."
-    )
-
-    col_config = {
-        "name": st.column_config.TextColumn("Player", width="medium"),
-        "position": st.column_config.TextColumn("Position", width="small"),
-        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
         "floor_pts": st.column_config.NumberColumn(
-            "Floor",
-            width="small",
-            format="%.2f",
-            help="20th percentile: bad-but-normal game",
-        ),
-        "median_pts": st.column_config.NumberColumn(
-            "Median",
-            width="small",
-            format="%.2f",
-            help="50th percentile: typical game",
+            "Floor (P20)", format="%.1f", help="20th-percentile score"
         ),
         "ceiling_pts": st.column_config.NumberColumn(
-            "Ceiling",
-            width="small",
-            format="%.2f",
-            help="80th percentile: great-but-realistic game",
+            "Ceiling (P80)", format="%.1f", help="80th-percentile score"
         ),
-        "pts_range": st.column_config.NumberColumn(
-            "Range",
-            width="small",
-            format="%.2f",
-            help="Ceiling - Floor: measure of volatility",
+        "consistency_rating": st.column_config.TextColumn(
+            "Consistency", help="LOW / MED / HIGH"
         ),
-        "consistency_rating": st.column_config.NumberColumn(
-            "Consistency",
-            width="small",
-            format="%.2f",
-            help="1/(1+CV): Higher = more consistent. Range 0-1.",
-        ),
-        "cv": st.column_config.NumberColumn(
-            "CV",
-            width="small",
-            format="%.2f",
-            help="Coefficient of Variation (std/mean). Lower = more stable.",
-        ),
-        "matches_played": st.column_config.NumberColumn(
-            "Matches",
-            width="small",
-            format="%d",
-            help="Games played (blend with position avg if <10)",
-        ),
-        "blend_weight": st.column_config.ProgressColumn(
-            "Blend",
-            width="small",
-            format="%.0f%%",
-            min_value=0,
-            max_value=100,
-            help="How much position avg is blended in (0% = pure player data)",
+        "is_home_next": st.column_config.CheckboxColumn(
+            "Home?", help="Playing at home next round"
         ),
     }
 
@@ -538,192 +54,327 @@ def render_distribution_tab(data: list[dict]) -> None:
         "name",
         "position",
         "club_logo_url",
+        "club",
+        "map_score",
         "floor_pts",
-        "median_pts",
         "ceiling_pts",
-        "pts_range",
         "consistency_rating",
-        "cv",
-        "matches_played",
-        "blend_weight",
+        "is_home_next",
     ]
-
-    # Convert blend_weight to percentage
-    for row in data:
-        if row.get("blend_weight") is not None:
-            row["blend_weight"] = row["blend_weight"] * 100
-
-    display_data = [{k: row.get(k) for k in display_cols} for row in data]
-
-    st.dataframe(
-        display_data, width="stretch", hide_index=True, column_config=col_config
-    )
+    rows = [{k: row.get(k) for k in display_cols} for row in data]
+    st.dataframe(rows, width="stretch", hide_index=True, column_config=col_config)
 
 
-def render_poe_tab(data: list[dict]) -> None:
-    """Render PoE (Points over Expected) tab."""
-    st.subheader("Points over Expected (PoE)")
-    st.caption(
-        "How much a player over/underperforms their MAP projection. "
-        "Positive = exceeding expectations, Negative = underperforming."
-    )
+def _render_map_breakdown(data: list[dict]) -> None:
+    """MAP Breakdown subtab: every component of the MAP projection."""
+    st.subheader("MAP Component Breakdown")
+    if not data:
+        st.info("No data available for this round.")
+        return
 
     col_config = {
-        "name": st.column_config.TextColumn("Player", width="medium"),
-        "position": st.column_config.TextColumn("Position", width="small"),
-        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
-        "poe_total": st.column_config.NumberColumn(
-            "PoE Total",
-            width="small",
-            format="%.2f",
-            help="Cumulative points over expected this season",
+        "player_name": st.column_config.TextColumn("Player", width="medium"),
+        "player_id": st.column_config.NumberColumn("ID", format="%d"),
+        "position": st.column_config.TextColumn("Pos", width="small"),
+        "team": st.column_config.TextColumn("Team", width="small"),
+        "opponent_team": st.column_config.TextColumn("Opp", width="small"),
+        "is_home": st.column_config.CheckboxColumn("Home?"),
+        "baseline_points": st.column_config.NumberColumn("Baseline", format="%.2f"),
+        "ewm_form_points": st.column_config.NumberColumn("EWM Form", format="%.2f"),
+        "form_multiplier": st.column_config.NumberColumn("Form Mult", format="%.3f"),
+        "home_away_multiplier": st.column_config.NumberColumn(
+            "Venue Mult", format="%.3f"
         ),
-        "poe_avg": st.column_config.NumberColumn(
-            "PoE Avg",
-            width="small",
-            format="%.2f",
-            help="Average PoE per round",
+        "mpap_multiplier": st.column_config.NumberColumn("MPAP Mult", format="%.3f"),
+        "map_points": st.column_config.NumberColumn("MAP", format="%.2f"),
+        "map_rank_pos": st.column_config.NumberColumn("Rank (Pos)", format="%d"),
+        "map_rank_gen": st.column_config.NumberColumn("Rank (All)", format="%d"),
+    }
+
+    display_cols = list(col_config.keys())
+    rows = [{k: row.get(k) for k in display_cols} for row in data]
+    st.dataframe(rows, width="stretch", hide_index=True, column_config=col_config)
+
+
+def _render_mpap_debug(data: list[dict]) -> None:
+    """Opponent & MPAP Debug subtab."""
+    st.subheader("Opponent & MPAP Debug")
+    if not data:
+        st.info("No data available for this round.")
+        return
+
+    col_config = {
+        "opponent_team": st.column_config.TextColumn("Opponent", width="small"),
+        "position": st.column_config.TextColumn("Pos", width="small"),
+        "games_in_sample_this_season": st.column_config.NumberColumn(
+            "Games (This)", format="%d"
         ),
-        "poe_rounds_total": st.column_config.NumberColumn(
-            "Rounds",
-            width="small",
-            format="%d",
-            help="Rounds with PoE data (needs MAP from previous round)",
+        "games_in_sample_last_season": st.column_config.NumberColumn(
+            "Games (Last)", format="%d"
         ),
-        "poe_last_5": st.column_config.NumberColumn(
-            "PoE Last 5",
-            width="small",
-            format="%.2f",
-            help="Cumulative PoE over last 5 rounds",
+        "points_allowed_this_season_avg": st.column_config.NumberColumn(
+            "Allowed Avg (This)", format="%.2f"
         ),
-        "poe_avg_last_5": st.column_config.NumberColumn(
-            "PoE Avg L5",
-            width="small",
-            format="%.2f",
-            help="Average PoE per round (last 5)",
+        "points_allowed_last_season_avg": st.column_config.NumberColumn(
+            "Allowed Avg (Last)", format="%.2f"
         ),
-        "poe_category": st.column_config.TextColumn(
-            "Category",
-            width="small",
-            help="overperforming (>5), underperforming (<-5), or as_expected",
+        "points_allowed_blended_avg": st.column_config.NumberColumn(
+            "Allowed Blended", format="%.2f"
         ),
-        "baseline_pts": st.column_config.NumberColumn(
-            "Baseline",
-            width="small",
-            format="%.2f",
-            help="Player baseline for reference",
+        "league_avg_allowed_pos": st.column_config.NumberColumn(
+            "League Avg", format="%.2f"
+        ),
+        "mpap_ratio": st.column_config.NumberColumn("Ratio", format="%.3f"),
+        "mpap_multiplier": st.column_config.NumberColumn("Multiplier", format="%.3f"),
+        "last_updated_round": st.column_config.NumberColumn("Updated Rd", format="%d"),
+    }
+
+    display_cols = list(col_config.keys())
+    rows = [{k: row.get(k) for k in display_cols} for row in data]
+    st.dataframe(rows, width="stretch", hide_index=True, column_config=col_config)
+
+
+def _render_splits(data: list[dict]) -> None:
+    """Player Splits subtab: home vs away performance."""
+    st.subheader("Home vs Away Splits")
+    if not data:
+        st.info("No data available for this round.")
+        return
+
+    col_config = {
+        "player_name": st.column_config.TextColumn("Player", width="medium"),
+        "player_id": st.column_config.NumberColumn("ID", format="%d"),
+        "position": st.column_config.TextColumn("Pos", width="small"),
+        "team": st.column_config.TextColumn("Team", width="small"),
+        "games_home_this_season": st.column_config.NumberColumn(
+            "Home G (This)", format="%d"
+        ),
+        "avg_points_home_this_season": st.column_config.NumberColumn(
+            "Home Avg (This)", format="%.2f"
+        ),
+        "games_away_this_season": st.column_config.NumberColumn(
+            "Away G (This)", format="%d"
+        ),
+        "avg_points_away_this_season": st.column_config.NumberColumn(
+            "Away Avg (This)", format="%.2f"
+        ),
+        "games_home_last_season": st.column_config.NumberColumn(
+            "Home G (Last)", format="%d"
+        ),
+        "avg_points_home_last_season": st.column_config.NumberColumn(
+            "Home Avg (Last)", format="%.2f"
+        ),
+        "games_away_last_season": st.column_config.NumberColumn(
+            "Away G (Last)", format="%d"
+        ),
+        "avg_points_away_last_season": st.column_config.NumberColumn(
+            "Away Avg (Last)", format="%.2f"
+        ),
+        "home_away_delta": st.column_config.NumberColumn("H/A Delta", format="%+.2f"),
+        "home_away_multiplier_home": st.column_config.NumberColumn(
+            "Home Mult", format="%.3f"
+        ),
+        "home_away_multiplier_away": st.column_config.NumberColumn(
+            "Away Mult", format="%.3f"
         ),
     }
 
+    display_cols = list(col_config.keys())
+    rows = [{k: row.get(k) for k in display_cols} for row in data]
+    st.dataframe(rows, width="stretch", hide_index=True, column_config=col_config)
+
+
+def _render_distribution(data: list[dict]) -> None:
+    """Distribution & Volatility subtab."""
+    st.subheader("Distribution & Volatility")
+    if not data:
+        st.info("No data available for this round.")
+        return
+
+    col_config = {
+        "player_name": st.column_config.TextColumn("Player", width="medium"),
+        "player_id": st.column_config.NumberColumn("ID", format="%d"),
+        "position": st.column_config.TextColumn("Pos", width="small"),
+        "n_games_total_used": st.column_config.NumberColumn("Games", format="%d"),
+        "floor_p20": st.column_config.NumberColumn("Floor (P20)", format="%.1f"),
+        "median_p50": st.column_config.NumberColumn("Median (P50)", format="%.1f"),
+        "ceiling_p80": st.column_config.NumberColumn("Ceiling (P80)", format="%.1f"),
+        "mean_points_used": st.column_config.NumberColumn("Mean", format="%.2f"),
+        "std_points_used": st.column_config.NumberColumn("Std", format="%.2f"),
+        "cv_points": st.column_config.NumberColumn("CV", format="%.2f"),
+        "consistency_rating": st.column_config.TextColumn("Consistency"),
+        "boom_rate_ge_8": st.column_config.NumberColumn("Boom% (>=8)", format="%.0f%%"),
+        "bust_rate_le_2": st.column_config.NumberColumn("Bust% (<=2)", format="%.0f%%"),
+    }
+
+    display_cols = list(col_config.keys())
+    rows = [{k: row.get(k) for k in display_cols} for row in data]
+    st.dataframe(rows, width="stretch", hide_index=True, column_config=col_config)
+
+
+def _render_round_by_round(data: list[dict]) -> None:
+    """Round-by-Round Raw subtab."""
+    st.subheader("Round-by-Round Raw Data")
+    if not data:
+        st.info("No data available.")
+        return
+
+    df = pd.DataFrame(data)
+
+    # Display columns
     display_cols = [
-        "name",
+        "round",
+        "match_id",
+        "player_name",
+        "player_id",
         "position",
-        "club_logo_url",
-        "poe_total",
-        "poe_avg",
-        "poe_rounds_total",
-        "poe_last_5",
-        "poe_avg_last_5",
-        "poe_category",
-        "baseline_pts",
+        "team",
+        "opponent_team",
+        "is_home",
+        "points_total",
+        "points_base",
+        "goals",
+        "assists",
+        "did_play",
     ]
 
-    display_data = [{k: row.get(k) for k in display_cols} for row in data]
+    # Add scout columns that exist
+    scout_cols = [c for c in df.columns if c.startswith("scout_")]
+    display_cols.extend(scout_cols)
+
+    # Filter to existing columns
+    display_cols = [c for c in display_cols if c in df.columns]
 
     st.dataframe(
-        display_data, width="stretch", hide_index=True, column_config=col_config
+        df[display_cols],
+        width="stretch",
+        hide_index=True,
+        column_config={
+            "round": st.column_config.NumberColumn("Round", format="%d"),
+            "match_id": st.column_config.NumberColumn("Match", format="%d"),
+            "player_name": st.column_config.TextColumn("Player", width="medium"),
+            "player_id": st.column_config.NumberColumn("ID", format="%d"),
+            "position": st.column_config.TextColumn("Pos", width="small"),
+            "team": st.column_config.TextColumn("Team", width="small"),
+            "opponent_team": st.column_config.TextColumn("Opp", width="small"),
+            "is_home": st.column_config.CheckboxColumn("Home?"),
+            "points_total": st.column_config.NumberColumn("Total", format="%.1f"),
+            "points_base": st.column_config.NumberColumn("Base", format="%.1f"),
+            "goals": st.column_config.NumberColumn("G", format="%d"),
+            "assists": st.column_config.NumberColumn("A", format="%d"),
+            "did_play": st.column_config.CheckboxColumn("Played?"),
+        },
     )
+
+
+def _render_edge_cases(data: list[dict]) -> None:
+    """Edge Cases & Missing Data subtab."""
+    st.subheader("Edge Cases & Missing Data")
+    if not data:
+        st.info("No data available.")
+        return
+
+    col_config = {
+        "player_name": st.column_config.TextColumn("Player", width="medium"),
+        "player_id": st.column_config.NumberColumn("ID", format="%d"),
+        "position": st.column_config.TextColumn("Pos", width="small"),
+        "team": st.column_config.TextColumn("Team", width="small"),
+        "has_last_season_data": st.column_config.CheckboxColumn("Has Last Szn?"),
+        "games_last_season": st.column_config.NumberColumn("Games (Last)", format="%d"),
+        "games_this_season": st.column_config.NumberColumn("Games (This)", format="%d"),
+        "first_round_seen": st.column_config.NumberColumn("First Rd", format="%d"),
+        "last_round_seen": st.column_config.NumberColumn("Last Rd", format="%d"),
+        "missing_home_away_flag": st.column_config.CheckboxColumn("Missing H/A?"),
+        "missing_opponent_flag": st.column_config.CheckboxColumn("Missing Opp?"),
+        "missing_points_flag": st.column_config.CheckboxColumn("Missing Pts?"),
+    }
+
+    display_cols = list(col_config.keys())
+    rows = [{k: row.get(k) for k in display_cols} for row in data]
+    st.dataframe(rows, width="stretch", hide_index=True, column_config=col_config)
+
+
+# ---------------------------------------------------------------------------
+# Sidebar filters
+# ---------------------------------------------------------------------------
+
+
+def _sidebar_filters(data: list[dict]) -> tuple[str, str, str]:
+    """Render sidebar filters and return (name, club, position)."""
+    st.sidebar.header("Filters")
+    name_filter = st.sidebar.text_input("Player Name", "")
+
+    clubs = sorted(
+        {
+            row.get("club", row.get("team", ""))
+            for row in data
+            if row.get("club") or row.get("team")
+        }
+    )
+    club_filter = st.sidebar.selectbox("Club", ["All", *clubs])
+
+    positions = sorted({row.get("position", "") for row in data if row.get("position")})
+    position_filter = st.sidebar.selectbox("Position", ["All", *positions])
+
+    return name_filter, club_filter, position_filter
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
 
 
 def main() -> None:
-    """Run Start or Sit page."""
-    st.title("⚖️ Start or Sit")
-    st.caption("Matchup-Adjusted Projection (MAP) for next match decisions")
+    """Render Start or Sit page."""
+    st.title("Start or Sit")
 
-    # Sidebar filters
-    with st.sidebar:
-        st.header("Filters")
+    rounds = load_available_rounds()
+    if not rounds:
+        st.warning("No rounds available.")
+        return
 
-        available_rounds = load_available_rounds()
-        selected_round = st.selectbox(
-            "As of Round",
-            options=available_rounds,
-            index=0,
-            format_func=lambda x: f"Round {x}",
-            help="View MAP as if this was the latest round",
-        )
+    selected_round = st.selectbox("Select Round", rounds, index=0)
 
-        with st.spinner("Loading MAP data..."):
-            map_data = load_map_data(selected_round)
-            baseline_data = load_map_baseline(selected_round)
-            form_data = load_map_form(selected_round)
-            venue_data = load_map_venue(selected_round)
-            mpap_data = load_map_mpap(selected_round)
-            ewm_data = load_ewm_form(selected_round)
-            dist_data = load_distribution_stats(selected_round)
-            poe_data = load_poe_data(selected_round)
+    # Pre-load main data for filters
+    main_data = load_ss_main(selected_round)
+    name_f, club_f, pos_f = _sidebar_filters(main_data)
 
-        clubs = sorted({row["club"] for row in map_data if row.get("club")})
-        positions = ["GK", "CB", "FB", "MD", "AT"]
-
-        st.divider()
-
-        name_filter = st.text_input("Player Name", placeholder="Search...")
-        position_filter = st.selectbox("Position", options=["All", *positions])
-        club_filter = st.selectbox("Club", options=["All", *clubs])
-
-    # Apply filters to all datasets
-    filtered_map = filter_data(map_data, name_filter, club_filter, position_filter)
-    filtered_baseline = filter_data(
-        baseline_data, name_filter, club_filter, position_filter
-    )
-    filtered_form = filter_data(form_data, name_filter, club_filter, position_filter)
-    filtered_venue = filter_data(venue_data, name_filter, club_filter, position_filter)
-    filtered_mpap = filter_data(mpap_data, name_filter, club_filter, position_filter)
-    filtered_ewm = filter_data(ewm_data, name_filter, club_filter, position_filter)
-    filtered_dist = filter_data(dist_data, name_filter, club_filter, position_filter)
-    filtered_poe = filter_data(poe_data, name_filter, club_filter, position_filter)
-
-    # Main tabs for each component
-    tab_overview, tab_baseline, tab_form, tab_venue, tab_mpap, tab_ewm, tab_dist, tab_poe = (
-        st.tabs(
-            [
-                "MAP Overview",
-                "1. Baseline",
-                "2. Form",
-                "3. Venue",
-                "4. MPAP",
-                "EWM Form",
-                "Distribution",
-                "PoE",
-            ],
-        )
+    tabs = st.tabs(
+        [
+            "Main",
+            "MAP Breakdown",
+            "Opponent & MPAP Debug",
+            "Player Splits",
+            "Distribution & Volatility",
+            "Round-by-Round Raw",
+            "Edge Cases",
+        ]
     )
 
-    with tab_overview:
-        render_map_overview_tab(filtered_map)
+    with tabs[0]:
+        _render_main(filter_data(main_data, name_f, club_f, pos_f))
 
-    with tab_baseline:
-        render_baseline_tab(filtered_baseline)
+    with tabs[1]:
+        data = load_ss_map_breakdown(selected_round)
+        _render_map_breakdown(filter_data(data, name_f, club_f, pos_f))
 
-    with tab_form:
-        render_form_tab(filtered_form)
+    with tabs[2]:
+        data = load_ss_mpap_debug(selected_round)
+        # MPAP debug has no player-level name/club, show as-is
+        _render_mpap_debug(data)
 
-    with tab_venue:
-        render_venue_tab(filtered_venue)
+    with tabs[3]:
+        data = load_ss_splits(selected_round)
+        _render_splits(filter_data(data, name_f, club_f, pos_f))
 
-    with tab_mpap:
-        render_mpap_tab(filtered_mpap)
+    with tabs[4]:
+        data = load_ss_distribution(selected_round)
+        _render_distribution(filter_data(data, name_f, club_f, pos_f))
 
-    with tab_ewm:
-        render_ewm_tab(filtered_ewm)
+    with tabs[5]:
+        data = load_ss_round_by_round(selected_round)
+        _render_round_by_round(filter_data(data, name_f, club_f, pos_f))
 
-    with tab_dist:
-        render_distribution_tab(filtered_dist)
-
-    with tab_poe:
-        render_poe_tab(filtered_poe)
-
-
-if __name__ == "__main__":
-    main()
+    with tabs[6]:
+        data = load_ss_edge_cases()
+        _render_edge_cases(filter_data(data, name_f, club_f, pos_f))
