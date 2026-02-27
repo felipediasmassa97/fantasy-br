@@ -27,7 +27,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        environment: ${{ github.event_name == 'schedule' && fromJSON('["demo", "prod"]') || fromJSON(format('["{0}"]', inputs.environment)) }}
+        environment: ${{ github.event_name == 'schedule' && fromJSON('["dev", "demo", "prod"]') || fromJSON(format('["{0}"]', inputs.environment)) }}
 
     env:
       BQ_DATASET_ID: fdm${{ matrix.environment }}_fantasy_br
