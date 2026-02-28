@@ -1,25 +1,47 @@
 [project]
 name = "fantasy-br"
 version = "0.1.0"
-description = "Fantasy BR"
+description = "Fantasy BR - Analytics Platform for Cartola FC / Panela FC"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = [
+dependencies = []
+
+[project.scripts]
+app         = "scripts:run_app"
+dbt         = "scripts:run_dbt"
+lint-sql    = "scripts:lint_sql"
+format-sql  = "scripts:format_sql"
+lint-app    = "scripts:lint_app"
+format-app  = "scripts:format_app"
+
+[dependency-groups]
+app = [
+  "db-dtypes>=1.0",
+  "google-cloud-bigquery>=3.0",
+  "google-cloud-firestore>=2.0",
+  "streamlit>=1.42",
+]
+dbt = [
   "dbt-bigquery>=1.9",
-  "streamlit>=1.40",
-  "google-cloud-bigquery>=3.0"
+]
+dev = [
+  "pytest>=8.0",
+  "pytest-xdist>=3.0",
+  "ruff>=0.9",
+  "sqlfluff>=3.0",
+  "sqlfluff-templater-dbt>=3.0",
 ]
 
-# fixit separate dbt and app
-# fixit add dev dependencies (e.g., ruff, pytest, etc.)
-# fixit consider adding [project.scripts] for CLI commands (e.g., run app, run dbt, etc.)
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[project.optional-dependencies]
-tests = []
+[tool.hatch.build.targets.wheel]
+packages = ["scripts"]
 
-[tool.ruff]
-lint.select = ["ALL"]
-lint.ignore = [
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
     "D203",   # Use D211 (no blank line before class docstring)
     "D213",   # Use D212 (summary on first line)
     "COM812", # Conflicts with ruff formatter
@@ -27,3 +49,44 @@ lint.ignore = [
 
 [tool.pytest.ini_options]
 log_cli_level = "INFO"
+
+[tool.sqlfluff.core]
+dialect = "bigquery"
+templater = "jinja"
+sql_file_exts = ".sql"
+max_line_length = 120
+exclude_rules = [
+    "CP02",   # Identifiers: scout codes (G, FT, FD …) are uppercase in BigQuery structs
+    "RF04",   # References: avoid function references (BigQuery uses STRUCT, ARRAY, etc.)
+    "ST05",   # Structure: subquery in FROM/JOIN - CTEs preferred but not enforced here
+    "ST06",   # Structure: select wildcards - too opinionated for dbt models
+    "AM04",   # Ambiguous: column count - not useful in dbt context
+    "CV02",   # Convention: COALESCE instead of IFNULL - BigQuery COALESCE is fine
+]
+
+[tool.sqlfluff.templater.jinja]
+apply_dbt_builtins = true
+
+[tool.sqlfluff.templater.jinja.macros]
+# Stub for scouting_enrichment custom macro so jinja templater can parse the files.
+# The real macro generates enrichment CTEs + a final SELECT; this mimics that shape.
+scouting_enrichment = "{% macro scouting_enrichment(by_round=true) %}enriched as (select * from player_pts limit 0)\nselect * from enriched{% endmacro %}"
+
+[tool.sqlfluff.rules.aliasing.table]
+aliasing = "explicit"
+
+[tool.sqlfluff.rules.capitalisation.keywords]
+capitalisation_policy = "lower"
+
+[tool.sqlfluff.rules.capitalisation.identifiers]
+capitalisation_policy = "lower"
+
+[tool.sqlfluff.rules.capitalisation.functions]
+capitalisation_policy = "lower"
+
+[tool.sqlfluff.rules.capitalisation.literals]
+capitalisation_policy = "lower"
+
+[tool.sqlfluff.indentation]
+tab_space_size = 4
+indent_unit = "space"

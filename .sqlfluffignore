@@ -1,0 +1,4 @@
+# Auto-generated dbt artifacts
+src/dbt/target/
+src/dbt/dbt_packages/
+src/dbt/logs/

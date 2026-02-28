@@ -8,9 +8,10 @@ Instructions for AI agents working on this project.
 - **Infrastructure**: Terraform for Google BigQuery (GCS backend per environment)
 - **Data Transformation**: dbt-bigquery v1.11.5
 - **Web Application**: Streamlit
-- **Package Management**: uv
-- **Testing**: pytest (no mocks)
-- **Linting & Formatting**: ruff
+- **Package Management**: uv (dependency groups: `app`, `dbt`, `dev`)
+- **Testing**: pytest + pytest-xdist (no mocks)
+- **Python Linting & Formatting**: ruff
+- **SQL Linting & Formatting**: SQLFluff 4.x (dialect: BigQuery, templater: jinja)
 - **CI/CD**: GitHub Actions with reusable workflows
 
 ## General Instructions
@@ -25,21 +26,31 @@ Instructions for AI agents working on this project.
 
 ### Processes
 
-- Always update documentation (`AGENTS.md`, `README.md`, `pyproject.toml`, `src/dbt/sources.yml`, `src/dbt/dbt_project.yml`, `src/dbt/profiles.yml`, ...) after implementing features and making changes
-- After making dbt changes, always run `dbt build` with modified models selected to verify everything is working
-- Always run linting and formatting for Streamlit and dbt using their appropriate frameworks.
+- Always update documentation (`AGENTS.md`, `README.md`, `pyproject.toml`, `src/dbt/sources.yml`, `src/dbt/dbt_project.yml`, `src/dbt/profiles.yml`) after implementing features and making changes
+- After making dbt changes, always run `uv run dbt build` with modified models selected to verify everything is working
+- After Python changes, run `uv run lint-app` and `uv run format-app`
+- After SQL changes, run `uv run lint-sql` and `uv run format-sql`
+- Do not use generic try/except blocks
 
 ## Project Structure
 
 ```
 fantasy-br/
+├── scripts/
+│   └── __init__.py           # CLI entry points (run_app, run_dbt, lint_sql, ...)
 ├── src/
-│   ├── app/              # Streamlit application
-│   └── dbt/              # dbt project (models, seeds, macros)
-├── infra/                # Terraform (BigQuery infrastructure)
-├── tests/                # pytest tests
-├── legacy/               # Legacy Jupyter notebooks and spreadsheets
-└── .github/              # CI/CD pipelines
+│   ├── app/                  # Streamlit application
+│   │   ├── main.py           # Entry point (navigation)
+│   │   ├── utils.py          # Shared loaders and helpers
+│   │   └── pages/
+│   │       ├── scouting.py
+│   │       ├── start_or_sit.py
+│   │       └── market_valuation.py
+│   └── dbt/                  # dbt project (models, seeds, macros)
+├── infra/                    # Terraform (BigQuery infrastructure)
+├── tests/                    # pytest tests
+├── legacy/                   # Legacy Jupyter notebooks and CSVs
+└── .github/                  # CI/CD pipelines
 ```
 
 ## Environments
@@ -131,200 +142,212 @@ Base rules for Panela FC are the same as for Cartola FC, with the following chan
 
 ## Architecture and Components
 
-### Infra
+### Infrastructure
 
-Infra is managed within Google Cloud Platform (GCP) using Terraform for IaC.
+Managed with Terraform on GCP:
 
-The provisioned resources are:
-
-- Big Query: data warehousing, integration with dbt and GitHub Actions.
-
-- Cloud Storage: bucket to store Terraform state.
+- **BigQuery**: data warehousing, dbt and GitHub Actions integration
+- **Cloud Storage**: Terraform state buckets (one per environment)
 
 ```bash
-# Initialize for an environment
 terraform init -chdir=infra -backend-config="bucket=fantasy-br-tfstate-dev"
-
-# Deploy
-terraform apply -chdir=infra -var-file=envs/dev.tfvars
+terraform apply -chdir=infra -var-file=infra/envs/dev.tfvars
 ```
 
-### Data Project
+IAM bindings are managed in `infra/iam.tf`. The service account (`app_service_account_email` variable, default `github-actions@fantasy-br.iam.gserviceaccount.com`) is granted:
 
-Data is loaded from Cartola API to Big Query by a GitHub Actions' scheduled workflow (`data-refresh.yaml`).
+| Role                        | Purpose                                         |
+| --------------------------- | ----------------------------------------------- |
+| `roles/datastore.user`      | Firestore read/write (squad & team persistence) |
+| `roles/bigquery.dataViewer` | BigQuery SELECT for dbt mart queries            |
+| `roles/bigquery.jobUser`    | BigQuery job execution                          |
 
-Data is transformed and served to the Streamlit UI by `dbt`.
+### Data Pipeline
 
-```
-fantasy-br/
-└── src/
-    └── dbt/
-        ├── macros/                            # reusable functions
-        ├── models/
-        │   ├── staging/                       # staging models
-        │   ├── intermediate/                  # intermediate models
-        │   ├── scouting/                      # mart models for Scouting
-        │   ├── start_or_sit/                  # mart models for Start or Sit
-        │   ├── market_valuation/              # mart models for Market Valuation
-        │   └── sources.yml                    # sources definitions (data loaded by data-refresh workflow)
-        ├── seeds/
-        │   ├── raw_players_legacy_2025.csv    # legacy players' data for season 2025, rounds 1-38
-        │   ├── raw_players_legacy_2026.csv    # legacy players' data for season 2026, rounds 1-2
-        │   └── scout_points.csv               # scout points mapping (e.g.: goal = +8.0 points)
-        ├── dbt_project.yml                    # dbt configuration (e.g.: materialization)
-        └── profiles.yml                       # local, dev, demo and prod profiles definitions
-```
+Raw data is loaded from the Cartola FC API daily by `data-refresh.yaml` and stored in BigQuery
+(`raw_players_etl`, `raw_clubs`, `raw_positions`, `raw_matches`).
+Historical season data (2025, 2026) is stored as dbt seeds.
 
-### User Interface
-
-Streamlit is used as web application development framework.
-
-Each page in the multi-page application (MPA) renders data for a specific thematic analysis (Scouting, Start or Sit, Market Valuation).
+### dbt Project (`src/dbt/`)
 
 ```
-fantasy-br/
-└── src/
-    └── app/
-        ├── .streamlit/                    # Streamlit configuration (e.g.: theme, secrets)
-        ├── pages/
-        │   ├── scouting.py                # Scouting page
-        │   ├── start_or_sit.py            # Start or Sit page
-        │   ├── market_valuation.py        # Market Valuation page
-        ├── main.py                        # Streamlit entry point
-        └── utils.py                       # utility functions
+src/dbt/
+├── macros/
+│   ├── scouting_enrichment.sql   # generates z-score + DVS enrichment CTEs
+│   ├── stats_by_round.sql        # position/general stat benchmarks
+│   ├── z_score_position.sql
+│   ├── z_score_general.sql
+│   └── dvs.sql
+├── models/
+│   ├── sources.yml               # raw BigQuery source table definitions
+│   ├── staging/                  # Views: stg_players, stg_clubs, stg_matches, stg_positions
+│   ├── intermediate/
+│   │   ├── general/              # int_players, int_round_by_round, int_edge_cases, int_ga_dependency
+│   │   ├── scouting/             # int_sct_*_stats (7 models, one per time window)
+│   │   ├── start_or_sit/         # int_map_baseline, int_map_venue, int_map_mpap,
+│   │   │                         # int_ewm_form, int_distribution_stats, int_map_score
+│   │   └── market_valuation/     # int_replacement_levels, int_form_trend, int_regression
+│   ├── scouting/                 # sct_last_1, sct_last_5, sct_last_5_home, sct_last_5_away,
+│   │                             # sct_last_10, sct_this_season, sct_last_season
+│   ├── start_or_sit/             # ss_main, ss_map_breakdown, ss_mpap_debug, ss_splits,
+│   │                             # ss_distribution, ss_round_by_round, ss_edge_cases
+│   └── market_valuation/         # mv_main, mv_par_breakdown, mv_stabilized, mv_form_trend,
+│                                 # mv_regression, mv_value_profile, mv_round_by_round
+├── seeds/
+│   ├── raw_players_legacy_2025.csv
+│   ├── raw_players_legacy_2026.csv
+│   └── scout_points.csv          # scout code → points mapping
+├── dbt_project.yml               # staging=view, intermediate=view, marts=table
+└── profiles.yml                  # local/dev/demo/prod profile definitions
 ```
 
-### Raw Layer
+#### Materialization Strategy
 
-- **raw_players_etl**: Loaded daily from Cartola API (nested `scout` STRUCT)
+| Layer            | Type  | Notes                                  |
+| ---------------- | ----- | -------------------------------------- |
+| staging          | view  | Thin wrappers over raw source tables   |
+| intermediate     | view  | Business logic and transformations     |
+| scouting         | table | Mart: scouting rankings by time window |
+| start_or_sit     | table | Mart: MAP projections and diagnostics  |
+| market_valuation | table | Mart: PAR, stabilized mean, regression |
 
-### Staging Layer
+#### Key Intermediate Models
 
-- **stg_players**: Unified view combining:
-  - raw_players_etl (API data)
-  - raw_players_legacy_2025 seed (historical)
-  - raw_players_legacy_2026 seed (historical)
-  - Reconstructs nested `scout` STRUCT from flat seed columns
+**General:**
 
-### Scouting Models
+- `int_players` — base enriched player data per round (scout per-round deltas, opponent, is_home)
+- `int_round_by_round` — season 2026 round-level data with opponent name
+- `int_edge_cases` — per-player data quality flags
+- `int_ga_dependency` — goal + assist share of total points
 
-- `sct_last_1`: Last round performance
-- `sct_last_5`: Last 5 matches (any venue)
-- `sct_last_10`: Last 10 matches
-- `sct_last_5_home`: Last 5 home matches
-- `sct_last_5_away`: Last 5 away matches
-- `sct_last_season`: Previous season aggregate
-- `sct_this_season`: Current season aggregate
+**Start or Sit (MAP = Matchup Adjusted Projection):**
+
+- `int_map_baseline` — stabilized mean via shrinkage blending (this + last season, k=5)
+- `int_map_venue` — home/away averages, delta, multiplier
+- `int_map_mpap` — matchup-adjusted points allowed per position (blended seasons, k=5)
+- `int_ewm_form` — EWM form with multiplier clamped 0.8–1.2
+- `int_distribution_stats` — P20/P50/P80, CV, consistency rating, boom/bust rates
+- `int_map_score` — final MAP = baseline × form_mult × venue_mult × mpap_mult
+
+**Market Valuation:**
+
+- `int_replacement_levels` — position-specific percentile replacement level + depth flag (DEEP/MODERATE/SCARCE)
+- `int_form_trend` — last-3, last-5, EWM averages, trend ratios, form bucket (UP/FLAT/DOWN)
+- `int_regression` — regression_score = perf_gap × (1+ga_share) × (1/consistency); signals SELL_HIGH/BUY_LOW/NEUTRAL
+
+### Streamlit App (`src/app/`)
+
+| Page             | Mart models used                                                                                            |
+| ---------------- | ----------------------------------------------------------------------------------------------------------- |
+| Scouting         | sct_last_1, sct_last_5, sct_last_5_home, sct_last_5_away, sct_last_10, sct_this_season, sct_last_season     |
+| Start or Sit     | ss_main, ss_map_breakdown, ss_mpap_debug, ss_splits, ss_distribution, ss_round_by_round, ss_edge_cases      |
+| Market Valuation | mv_main, mv_par_breakdown, mv_stabilized, mv_form_trend, mv_regression, mv_value_profile, mv_round_by_round |
+
+Each mart has a dedicated loader in `utils.py` (e.g., `load_ss_main()`, `load_mv_regression()`).
+Add new loaders there when adding new mart models.
+
+## Dependencies and Package Management
+
+```toml
+[dependency-groups]
+app = ["streamlit", "google-cloud-bigquery", "db-dtypes"]
+dbt = ["dbt-bigquery"]
+dev = ["ruff", "pytest", "pytest-xdist", "sqlfluff", "sqlfluff-templater-dbt"]
+```
+
+`uv sync` installs all groups. Use `uv sync --group <name>` for a subset.
+
+## Script Aliases
+
+All commands run from the repo root:
+
+```bash
+uv run app             # Start the Streamlit app
+uv run dbt <args>      # Run any dbt command from src/dbt/ (e.g., uv run dbt build)
+uv run lint-sql        # Lint all dbt SQL with SQLFluff
+uv run format-sql      # Auto-fix all dbt SQL with SQLFluff
+uv run lint-app        # Lint all app Python with ruff
+uv run format-app      # Auto-fix and format all app Python with ruff
+```
 
 ## Development Workflow & Commands
 
-### Code Style
-
-- Do not commit changes unless explicitly asked
-- Avoid fallbacks; throw errors instead
-- Do not use emojis
-- Use single-line docstrings
-- Do not use generic try/except blocks
-
-### Linting and Formatting
+### Python Linting and Formatting
 
 ```bash
-# Fix linting (run multiple times if needed)
-uvx ruff check --fix
+uv run lint-app        # ruff check src/app/
+uv run format-app      # ruff check --fix src/app/ && ruff format src/app/
+```
 
-# Format code
-uvx ruff format
+### SQL Linting and Formatting
+
+```bash
+uv run lint-sql        # sqlfluff lint src/dbt/
+uv run format-sql      # sqlfluff fix src/dbt/ --force
 ```
 
 ### dbt
 
-All commands run from `src/dbt/`:
-
 ```bash
-cd src/dbt
-
-# Verify connection
-uv run dbt debug
-
-# Load seeds (historical data)
-uv run dbt seed
-
-# Run all models
-uv run dbt run
-
-# Run specific model
-uv run dbt run --select stg_players
-
-# Run with dependencies
-uv run dbt run --select +sct_last_5
-
-# Build all models (runs seeds, models, tests and snapshots)
-uv run dbt build
-
-# Test models
-uv run dbt test
-
-# Full refresh
-uv run dbt run --full-refresh
-
-# Target specific environment
-uv run dbt run --target demo
+uv run dbt debug                     # verify connection
+uv run dbt seed                      # load historical seeds
+uv run dbt run                       # run all models
+uv run dbt run --select stg_players  # run specific model
+uv run dbt run --select +ss_main     # run with upstream deps
+uv run dbt build                     # seeds + models + tests
+uv run dbt test                      # run schema tests
+uv run dbt run --full-refresh        # rebuild all tables
+uv run dbt run --target demo         # target specific environment
 ```
 
-After making dbt changes, always run `dbt build` to verify everything is working.
+After making dbt changes, always run `uv run dbt build` to verify.
 
 ### Testing
 
 ```bash
-# Single test
-uv run --env-file .env pytest <PATH>::<TEST> --log-cli-level=INFO
-
-# Parallel tests
-uv run --env-file .env pytest <PATH> -n auto
+uv run --env-file .env pytest tests/                          # all tests
+uv run --env-file .env pytest tests/ -n auto                  # parallel
+uv run --env-file .env pytest tests/test_foo.py::test_bar     # single test
 ```
 
-Do not use mocks in tests.
+Do not use mocks.
 
-### Creating Seeds from Legacy Data
+### Streamlit App
 
 ```bash
-uv run python scripts/create_seeds.py
+uv run app    # runs at http://localhost:8501
 ```
 
-This combines CSVs from `legacy/{year}/` into dbt seeds at `src/dbt/seeds/`.
+Ensure `src/app/.streamlit/secrets.toml` has `gcp_service_account` credentials.
 
 ## CI/CD Workflows
 
-| File                  | Trigger          | Jobs                                  |
-| --------------------- | ---------------- | ------------------------------------- |
-| `data-refresh.yaml`   | Daily 8 AM UTC   | Load Cartola API → dbt run (all envs) |
-| `implementation.yaml` | Push to main     | infra+dbt: dev → demo → prod          |
-| `development.yaml`    | Push to branches | infra+dbt: dev only                   |
-
-### Reusable Workflows
-
-- `reusable-infra-deploy.yaml`: Creates GCS bucket + Terraform apply
-- `reusable-dbt-build.yaml`: Seeds + dbt build
+| File                         | Trigger            | Jobs                                    |
+| ---------------------------- | ------------------ | --------------------------------------- |
+| `data-refresh.yaml`          | Daily 3 AM UTC     | Load Cartola API → dbt build (all envs) |
+| `implementation.yaml`        | Push to `main`     | infra + dbt: dev → demo → prod          |
+| `development.yaml`           | Push to non-`main` | infra + dbt: dev only                   |
+| `reusable-infra-deploy.yaml` | Called by above    | GCS bucket + Terraform apply            |
+| `reusable-dbt-build.yaml`    | Called by above    | `dbt build`                             |
 
 ## Common Tasks
 
-# fixit add
+### Add a new mart model
 
-### Add new KPI model
-
-1. Create SQL in appropriate folder under `src/dbt/models/`
-2. Run `uv run dbt run --select new_model`
-3. Test with `uv run dbt test --select new_model`
+1. Create SQL in the appropriate `src/dbt/models/` subfolder
+2. Add a loader function in `src/app/utils.py`
+3. Add a tab renderer in the relevant page
+4. Run `uv run dbt build --select +new_model`
+5. Run `uv run lint-sql && uv run format-sql`
 
 ### Update historical data
 
 1. Add/update CSVs in `legacy/{year}/`
-2. Run `uv run python scripts/create_seeds.py`
-3. Update `stg_players.sql` if column structure changed
-4. Run `uv run dbt seed && uv run dbt run`
+2. Update `stg_players.sql` if column structure changed
+3. Run `uv run dbt build`
 
-### Add new environment
+### SQLFluff notes
 
-1. Create `infra/envs/{env}.tfvars`
-2. Update workflows to include new environment
-3. Add IAM permissions for service account
+- Scout field column names (e.g., `scout_G`, `avg_FT`) are uppercase — do not rename to lowercase
+- `CP02` (identifier capitalisation) is disabled in sqlfluff for this reason
+- The `scouting_enrichment` macro has a jinja stub in `pyproject.toml` so sqlfluff can parse scouting intermediate models without running dbt locally
