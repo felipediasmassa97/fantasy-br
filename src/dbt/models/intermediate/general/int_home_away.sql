@@ -108,10 +108,18 @@ combined as (
 with_averages as (
     select
         *,
-        -- Blended home average: prior = last season home player average, fallback to overall last season home position average
+        -- Blended home average (shrinkage):
+        -- prior = last season home avg; fallback to position home avg (rookies)
         case
             when has_last_season_home_data
-                then {{ shrink_blend('matches_home_this_season', 'player_pts_avg_home_this_season', 'player_pts_avg_home_last_season') }}
+                then
+                    {{
+                        shrink_blend(
+                            'matches_home_this_season',
+                            'player_pts_avg_home_this_season',
+                            'player_pts_avg_home_last_season'
+                        )
+                    }}
             else
                 {{
                     shrink_blend(
@@ -121,10 +129,18 @@ with_averages as (
                     )
                 }}
         end as pts_avg_home,
-        -- Blended away average: prior = last season away player average, fallback to overall last season away position average
+        -- Blended away average (shrinkage):
+        -- prior = last season away avg; fallback to position away avg (rookies)
         case
             when has_last_season_away_data
-                then {{ shrink_blend('matches_away_this_season', 'player_pts_avg_away_this_season', 'player_pts_avg_away_last_season') }}
+                then
+                    {{
+                        shrink_blend(
+                            'matches_away_this_season',
+                            'player_pts_avg_away_this_season',
+                            'player_pts_avg_away_last_season'
+                        )
+                    }}
             else
                 {{
                     shrink_blend(

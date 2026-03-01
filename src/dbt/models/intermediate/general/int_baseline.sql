@@ -58,7 +58,6 @@ position_avg_last_season as (
     group by position
 ),
 
-
 -- Combine and calculate stabilized points using shrinkage (baseline)
 combined as (
     select

@@ -10,7 +10,7 @@ select
     b.id as player_id,
     b.position,
     b.baseline_pts,
-    rl.replacement_pct as replacement_percentile_used,
+    rl.drafted_count as drafted_players_in_position,
     rl.replacement_level as replacement_level_points_pos,
     b.baseline_pts - rl.replacement_level as par_points,
     -- PAR rank within position
@@ -22,8 +22,7 @@ select
     row_number() over (
         partition by b.as_of_round_id
         order by b.baseline_pts - rl.replacement_level desc nulls last
-    ) as par_rank_gen,
-    rl.position_depth_flag
+    ) as par_rank_gen
 from {{ ref('int_baseline') }} as b
 inner join {{ ref('int_replacement_levels') }} as rl
     on b.as_of_round_id = rl.as_of_round_id and b.position = rl.position

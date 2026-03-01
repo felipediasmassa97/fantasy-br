@@ -7,7 +7,7 @@ MAP = baseline * form_multiplier * venue_multiplier * mpap_multiplier
 Components:
   - Baseline (int_baseline): stabilized points average (true talent level, using shrinkage)
   - Form (int_ewm_form): EWM-based recency form, clamped 0.8 - 1.2
-  - Venue (int_map_venue): home/away split adjustment, clamped 0.85 - 1.15
+  - Venue (int_home_away): home/away split adjustment, clamped 0.85 - 1.15
   - MPAP (int_map_mpap): opponent matchup adjustment, clamped 0.85 - 1.20
 
 Ranks computed per position and general for each as_of_round.
@@ -90,7 +90,7 @@ select
 from {{ ref('int_baseline') }} as b
 left join {{ ref('int_ewm_form') }} as e
     on b.as_of_round_id = e.as_of_round_id and b.id = e.id
-left join {{ ref('int_map_venue') }} as v
+left join {{ ref('int_home_away') }} as v
     on b.as_of_round_id = v.as_of_round_id and b.id = v.id
 left join {{ ref('int_map_mpap') }} as o
     on b.as_of_round_id = o.as_of_round_id and b.id = o.id

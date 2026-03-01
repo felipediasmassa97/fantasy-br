@@ -1,107 +1,68 @@
 /*
 Replacement Levels per Position
 
-Computes the replacement-level baseline_pts for each position using position-specific percentiles of baseline_pts.
+Replacement level = the average baseline_pts of the first 5 undrafted players
+at each position (the best waiver-wire options).
 
-Replacement level = the expected output of a freely available player at a given position.
-Higher percentile = more players available on waivers at that position (i.e., replacement is closer to average).
-# fixit improve replacement levels calculations (still don't know how)
+Draft roster sizes (10 participants * roster spots per position):
+  GK: 20  (2 per team)
+  CB: 40  (4 per team)
+  FB: 40  (4 per team)
+  MD: 60  (6 per team)
+  AT: 60  (6 per team)
 
-Position-specific percentiles:
-  - GK (50th): Fewer GKs on waivers, replacement is median-quality
-  - CB (80th): Many CBs available, replacement is near top
-  - FB (75th): Moderate FB supply
-  - MD (65th): Moderate MD supply
-  - AT (55th): Fewer quality ATs on waivers
+Players are ranked by baseline_pts descending. The replacement window is
+  ranks [drafted_count + 1 .. drafted_count + 5].
 */
 
-with baseline as (
-    -- Only players with computed baseline (filters nulls)
+-- Draft configuration: expected number of rostered players per position
+with
+draft_config as (
+    select *
+    from
+        unnest(
+            [
+                struct('GK' as position, 20 as drafted_count),
+                struct('FB' as position, 40 as drafted_count),
+                struct('CB' as position, 40 as drafted_count),
+                struct('MD' as position, 60 as drafted_count),
+                struct('AT' as position, 60 as drafted_count)
+            ]
+        )
+),
+
+-- Rank all players per position per round by baseline (best = rank 1)
+ranked as (
     select
         as_of_round_id,
         position,
-        baseline_pts
+        baseline_pts,
+        row_number() over (
+            partition by as_of_round_id, position
+            order by baseline_pts desc nulls last
+        ) as position_rank
     from {{ ref('int_baseline') }}
     where baseline_pts is not null
 ),
 
--- BigQuery requires literal percentile values, so each position needs its own CTE.
-
--- GK: 50th percentile (fewer GKs on waivers, replacement is median-quality)
-replacement_gk as (
-    select distinct
-        as_of_round_id,
-        'GK' as position,
-        0.50 as replacement_pct,
-        percentile_cont(baseline_pts, 0.50) over (partition by as_of_round_id) as replacement_level
-    from baseline
-    where position = 'GK'
-),
-
--- CB: 80th percentile (many CBs available, replacement is near top)
-replacement_cb as (
-    select distinct
-        as_of_round_id,
-        'CB' as position,
-        0.80 as replacement_pct,
-        percentile_cont(baseline_pts, 0.80) over (partition by as_of_round_id) as replacement_level
-    from baseline
-    where position = 'CB'
-),
-
--- FB: 75th percentile (moderate FB supply)
-replacement_fb as (
-    select distinct
-        as_of_round_id,
-        'FB' as position,
-        0.75 as replacement_pct,
-        percentile_cont(baseline_pts, 0.75) over (partition by as_of_round_id) as replacement_level
-    from baseline
-    where position = 'FB'
-),
-
--- MD: 65th percentile (moderate MD supply)
-replacement_md as (
-    select distinct
-        as_of_round_id,
-        'MD' as position,
-        0.65 as replacement_pct,
-        percentile_cont(baseline_pts, 0.65) over (partition by as_of_round_id) as replacement_level
-    from baseline
-    where position = 'MD'
-),
-
--- AT: 55th percentile (fewer quality ATs on waivers)
-replacement_at as (
-    select distinct
-        as_of_round_id,
-        'AT' as position,
-        0.55 as replacement_pct,
-        percentile_cont(baseline_pts, 0.55) over (partition by as_of_round_id) as replacement_level
-    from baseline
-    where position = 'AT'
-),
-
--- Union all positions into a single reference table
-replacement_all as (
-    select * from replacement_gk
-    union all
-    select * from replacement_cb
-    union all
-    select * from replacement_fb
-    union all
-    select * from replacement_md
-    union all
-    select * from replacement_at
+-- Average baseline of the replacement window for each position
+replacement_window as (
+    select
+        r.as_of_round_id,
+        r.position,
+        dc.drafted_count,
+        avg(r.baseline_pts) as replacement_level,
+        count(*) as players_in_replacement_window
+    from ranked as r
+    inner join draft_config as dc on r.position = dc.position
+    where r.position_rank between dc.drafted_count + 1 and dc.drafted_count + 5
+    group by r.as_of_round_id, r.position, dc.drafted_count
 )
 
 select
-    *,
-    -- Position depth flag: DEEP = many viable options (high replacement pct)
-    -- SCARCE = few viable options (low replacement pct)
-    case
-        when replacement_pct >= 0.75 then 'DEEP'
-        when replacement_pct >= 0.60 then 'MODERATE'
-        else 'SCARCE'
-    end as position_depth_flag
-from replacement_all
+    as_of_round_id,
+    position,
+    drafted_count,
+    replacement_level,
+    players_in_replacement_window,
+from replacement_window

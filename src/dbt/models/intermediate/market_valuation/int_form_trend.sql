@@ -75,7 +75,9 @@ select
     end as trend_ratio_ewm,
     -- Form bucket last 3: IMPROVING / DECLINING / FLAT vs season average
     case
-        when b.player_pts_avg_this_season is null or b.player_pts_avg_this_season = 0 or ra.last3_avg_pts is null then null
+        when
+            b.player_pts_avg_this_season is null or b.player_pts_avg_this_season = 0 or ra.last3_avg_pts is null
+            then null
         when ra.last3_avg_pts / b.player_pts_avg_this_season > 1.10 then 'IMPROVING'
         when ra.last3_avg_pts / b.player_pts_avg_this_season < 0.90 then 'DECLINING'
         else 'FLAT'
