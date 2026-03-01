@@ -24,7 +24,7 @@ player_ga as (
         sum(if(p.has_played, p.pts_round, null)) as total_pts,
         sum(if(p.has_played, p.pts_round - p.base_round, null)) as ga_pts,
         sum(if(p.has_played, p.base_round, null)) as base_pts,
-        countif(p.has_played) as games_played
+        countif(p.has_played) as matches_played
     from {{ ref('int_players') }} as p
     cross join all_rounds as r
     where
@@ -39,7 +39,7 @@ select
     total_pts,
     ga_pts,
     base_pts,
-    games_played,
+    matches_played,
     -- G/A share: fraction of total points from goals + assists
     -- Range 0-1 (can exceed 1 if base_pts is negative and total is still positive)
     case

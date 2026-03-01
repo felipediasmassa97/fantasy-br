@@ -25,11 +25,19 @@ def _render_main() -> None:
         return
 
     col_config = {
-        "player_name": st.column_config.TextColumn("Player", width="medium"),
-        "position": st.column_config.TextColumn(
-            "Position", width="small", help="GK / CB / FB / MD / AT"
+        "player_name": st.column_config.TextColumn(
+            "Player",
+            width="medium",
         ),
-        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
+        "position": st.column_config.TextColumn(
+            "Position",
+            width="small",
+            help="GK / CB / FB / MD / AT",
+        ),
+        "club_logo_url": st.column_config.ImageColumn(
+            "Club",
+            width="small",
+        ),
         "par": st.column_config.NumberColumn(
             "PAR",
             format="%+.2f",
@@ -78,11 +86,22 @@ def _render_par_breakdown() -> None:
         return
 
     col_config = {
-        "player_name": st.column_config.TextColumn("Player", width="medium"),
-        "position": st.column_config.TextColumn("Position", width="small"),
-        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
+        "player_name": st.column_config.TextColumn(
+            "Player",
+            width="medium",
+        ),
+        "position": st.column_config.TextColumn(
+            "Position",
+            width="small",
+        ),
+        "club_logo_url": st.column_config.ImageColumn(
+            "Club",
+            width="small",
+        ),
         "baseline_pts": st.column_config.NumberColumn(
-            "Baseline", format="%.2f", help="Shrinkage-blended expected output"
+            "Baseline",
+            format="%.2f",
+            help="Shrinkage-blended expected output",
         ),
         "drafted_players_in_position": st.column_config.NumberColumn(
             "Drafted",
@@ -100,10 +119,14 @@ def _render_par_breakdown() -> None:
             help="Points Above Replacement = baseline - replacement level",
         ),
         "par_rank_pos": st.column_config.NumberColumn(
-            "Rk (Pos)", format="%d", help="PAR rank within same position"
+            "Rk (Pos)",
+            format="%d",
+            help="PAR rank within same position",
         ),
         "par_rank_gen": st.column_config.NumberColumn(
-            "Rk (All)", format="%d", help="PAR rank across all positions"
+            "Rk (All)",
+            format="%d",
+            help="PAR rank across all positions",
         ),
     }
 
@@ -124,23 +147,39 @@ def _render_baseline() -> None:
         return
 
     col_config = {
-        "player_name": st.column_config.TextColumn("Player", width="medium"),
-        "position": st.column_config.TextColumn("Position", width="small"),
-        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
+        "player_name": st.column_config.TextColumn(
+            "Player",
+            width="medium",
+        ),
+        "position": st.column_config.TextColumn(
+            "Position",
+            width="small",
+        ),
+        "club_logo_url": st.column_config.ImageColumn(
+            "Club",
+            width="small",
+        ),
         "pts_avg_this_season": st.column_config.NumberColumn(
-            "Avg (This)", format="%.2f", help="Raw average this season"
+            "Avg (This)",
+            format="%.2f",
+            help="Raw average this season",
         ),
         "matches_this_season": st.column_config.NumberColumn(
-            "Games (This)", format="%d"
+            "Matches (This)",
+            format="%d",
         ),
         "pts_avg_last_season": st.column_config.NumberColumn(
-            "Avg (Last)", format="%.2f", help="Raw average last season"
+            "Avg (Last)",
+            format="%.2f",
+            help="Raw average last season",
         ),
         "matches_last_season": st.column_config.NumberColumn(
-            "Games (Last)", format="%d"
+            "Matches (Last)", format="%d"
         ),
         "position_pts_avg_last_season": st.column_config.NumberColumn(
-            "Pos Avg", format="%.2f", help="Position average last season (rookie prior)"
+            "Pos Avg",
+            format="%.2f",
+            help="Position average last season (rookie prior)",
         ),
         "shrinking_parameter": st.column_config.NumberColumn(
             "k",
@@ -150,20 +189,26 @@ def _render_baseline() -> None:
         "shrinking_weight_this_season": st.column_config.NumberColumn(
             "Wt (This)",
             format="%.2f",
-            help="Weight on this-season data = games / (games + k)",
+            help="Weight on this-season data = matches / (matches + k)",
         ),
         "shrinking_method": st.column_config.TextColumn(
             "Method",
             help="weighted_seasons = returning; rookie_shrinkage = new player",
         ),
         "baseline_pts": st.column_config.NumberColumn(
-            "Baseline", format="%.2f", help="Final shrinkage-blended estimate"
+            "Baseline",
+            format="%.2f",
+            help="Final shrinkage-blended estimate",
         ),
         "baseline_rank_pos": st.column_config.NumberColumn(
-            "Rk (Pos)", format="%d", help="Rank within position"
+            "Rk (Pos)",
+            format="%d",
+            help="Rank within position",
         ),
         "baseline_rank_gen": st.column_config.NumberColumn(
-            "Rk (All)", format="%d", help="Rank across all positions"
+            "Rk (All)",
+            format="%d",
+            help="Rank across all positions",
         ),
         "pts_avg_home": st.column_config.NumberColumn(
             "Home Avg",
@@ -171,10 +216,13 @@ def _render_baseline() -> None:
             help="Shrinkage-blended baseline for home matches",
         ),
         "matches_home_this_season": st.column_config.NumberColumn(
-            "Home G (This)", format="%d"
+            "Home G (This)",
+            format="%d",
         ),
         "baseline_rank_pos_home": st.column_config.NumberColumn(
-            "Rk Home (Pos)", format="%d", help="Rank by home baseline within position"
+            "Rk Home (Pos)",
+            format="%d",
+            help="Rank by home baseline within position",
         ),
         "pts_avg_away": st.column_config.NumberColumn(
             "Away Avg",
@@ -182,10 +230,13 @@ def _render_baseline() -> None:
             help="Shrinkage-blended baseline for away matches",
         ),
         "matches_away_this_season": st.column_config.NumberColumn(
-            "Away G (This)", format="%d"
+            "Away G (This)",
+            format="%d",
         ),
         "baseline_rank_pos_away": st.column_config.NumberColumn(
-            "Rk Away (Pos)", format="%d", help="Rank by away baseline within position"
+            "Rk Away (Pos)",
+            format="%d",
+            help="Rank by away baseline within position",
         ),
     }
 
@@ -206,22 +257,37 @@ def _render_form_trend() -> None:
         return
 
     col_config = {
-        "player_name": st.column_config.TextColumn("Player", width="medium"),
-        "position": st.column_config.TextColumn("Position", width="small"),
-        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
+        "player_name": st.column_config.TextColumn(
+            "Player",
+            width="medium",
+        ),
+        "position": st.column_config.TextColumn(
+            "Position",
+            width="small",
+        ),
+        "club_logo_url": st.column_config.ImageColumn(
+            "Club",
+            width="small",
+        ),
         "ewm_alpha": st.column_config.NumberColumn(
             "Alpha",
             format="%.2f",
             help="EWM decay factor (higher = more weight on recent matches)",
         ),
         "ewm_points": st.column_config.NumberColumn(
-            "EWM", format="%.2f", help="Exponentially-weighted mean score"
+            "EWM",
+            format="%.2f",
+            help="Exponentially-weighted mean score",
         ),
         "last3_avg_points": st.column_config.NumberColumn(
-            "Last 3 Avg", format="%.2f", help="Simple average of last 3 matches played"
+            "Last 3 Avg",
+            format="%.2f",
+            help="Simple average of last 3 matches played",
         ),
         "season_avg_points": st.column_config.NumberColumn(
-            "Season Avg", format="%.2f", help="Season-to-date simple average"
+            "Season Avg",
+            format="%.2f",
+            help="Season-to-date simple average",
         ),
         "trend_ratio_last3": st.column_config.NumberColumn(
             "Trend L3",
@@ -229,7 +295,8 @@ def _render_form_trend() -> None:
             help="Last-3 avg / season avg. >1 = improving, <1 = declining",
         ),
         "form_bucket_last3": st.column_config.TextColumn(
-            "Form (L3)", help="UP / FLAT / DOWN based on last-3 trend ratio"
+            "Form (L3)",
+            help="UP / FLAT / DOWN based on last-3 trend ratio",
         ),
         "trend_ratio_ewm": st.column_config.NumberColumn(
             "Trend EWM",
@@ -237,7 +304,8 @@ def _render_form_trend() -> None:
             help="EWM / season avg. >1 = improving, <1 = declining",
         ),
         "form_bucket_ewm": st.column_config.TextColumn(
-            "Form (EWM)", help="UP / FLAT / DOWN based on EWM trend ratio"
+            "Form (EWM)",
+            help="UP / FLAT / DOWN based on EWM trend ratio",
         ),
     }
 
@@ -258,14 +326,27 @@ def _render_regression() -> None:
         return
 
     col_config = {
-        "player_name": st.column_config.TextColumn("Player", width="medium"),
-        "position": st.column_config.TextColumn("Position", width="small"),
-        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
+        "player_name": st.column_config.TextColumn(
+            "Player",
+            width="medium",
+        ),
+        "position": st.column_config.TextColumn(
+            "Position",
+            width="small",
+        ),
+        "club_logo_url": st.column_config.ImageColumn(
+            "Club",
+            width="small",
+        ),
         "ewm_points": st.column_config.NumberColumn(
-            "EWM", format="%.2f", help="Recent form (exponentially weighted)"
+            "EWM",
+            format="%.2f",
+            help="Recent form (exponentially weighted)",
         ),
         "baseline_pts": st.column_config.NumberColumn(
-            "Baseline", format="%.2f", help="Stabilized expected output"
+            "Baseline",
+            format="%.2f",
+            help="Stabilized expected output",
         ),
         "performance_gap": st.column_config.NumberColumn(
             "Gap",
@@ -278,7 +359,8 @@ def _render_regression() -> None:
             help="Goals + assists share of points. High = regression risk.",
         ),
         "consistency_rating": st.column_config.TextColumn(
-            "Consistency", help="HIGH / MED / LOW based on CV"
+            "Consistency",
+            help="HIGH / MED / LOW based on CV",
         ),
         "regression_score": st.column_config.NumberColumn(
             "Regr Score",
@@ -286,10 +368,12 @@ def _render_regression() -> None:
             help="Composite signal: gap x (1 + GA share) / consistency",
         ),
         "signal_label": st.column_config.TextColumn(
-            "Signal", help="SELL_HIGH / BUY_LOW / NEUTRAL"
+            "Signal",
+            help="SELL_HIGH / BUY_LOW / NEUTRAL",
         ),
         "confidence_flag": st.column_config.TextColumn(
-            "Confidence", help="LOW_SAMPLE if <5 games played this season"
+            "Confidence",
+            help="LOW_SAMPLE if <5 matches played this season",
         ),
     }
 
@@ -310,26 +394,46 @@ def _render_value_profile() -> None:
         return
 
     col_config = {
-        "player_name": st.column_config.TextColumn("Player", width="medium"),
-        "position": st.column_config.TextColumn("Position", width="small"),
-        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
+        "player_name": st.column_config.TextColumn(
+            "Player",
+            width="medium",
+        ),
+        "position": st.column_config.TextColumn(
+            "Position",
+            width="small",
+        ),
+        "club_logo_url": st.column_config.ImageColumn(
+            "Club",
+            width="small",
+        ),
         "par_points": st.column_config.NumberColumn(
-            "PAR", format="%+.2f", help="Points Above Replacement"
+            "PAR",
+            format="%+.2f",
+            help="Points Above Replacement",
         ),
         "baseline_pts": st.column_config.NumberColumn(
-            "Baseline", format="%.2f", help="Stabilized expected output"
+            "Baseline",
+            format="%.2f",
+            help="Stabilized expected output",
         ),
         "pts_floor": st.column_config.NumberColumn(
-            "Floor (P20)", format="%.1f", help="20th-percentile score"
+            "Floor (P20)",
+            format="%.1f",
+            help="20th-percentile score",
         ),
         "pts_median": st.column_config.NumberColumn(
-            "Median (P50)", format="%.1f", help="Median score"
+            "Median (P50)",
+            format="%.1f",
+            help="Median score",
         ),
         "pts_ceiling": st.column_config.NumberColumn(
-            "Ceiling (P80)", format="%.1f", help="80th-percentile score"
+            "Ceiling (P80)",
+            format="%.1f",
+            help="80th-percentile score",
         ),
         "consistency_rating": st.column_config.TextColumn(
-            "Consistency", help="HIGH / MED / LOW based on CV"
+            "Consistency",
+            help="HIGH / MED / LOW based on CV",
         ),
         "availability": st.column_config.NumberColumn(
             "Avail%",
@@ -380,7 +484,10 @@ def _render_round_by_round() -> None:
     display_cols = [c for c in display_cols if c in df.columns]
 
     scout_col_config = {
-        c: st.column_config.NumberColumn(c.replace("scout_", "").upper(), format="%.0f")
+        c: st.column_config.NumberColumn(
+            c.replace("scout_", "").upper(),
+            format="%.0f",
+        )
         for c in scout_cols
     }
 
@@ -389,18 +496,39 @@ def _render_round_by_round() -> None:
         use_container_width=True,
         hide_index=True,
         column_config={
-            "round": st.column_config.NumberColumn("Rd", format="%d"),
-            "player_name": st.column_config.TextColumn("Player", width="medium"),
-            "position": st.column_config.TextColumn("Position", width="small"),
-            "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
-            "club": st.column_config.TextColumn("Club", width="small"),
+            "round": st.column_config.NumberColumn(
+                "Rd",
+                format="%d",
+            ),
+            "player_name": st.column_config.TextColumn(
+                "Player",
+                width="medium",
+            ),
+            "position": st.column_config.TextColumn(
+                "Position",
+                width="small",
+            ),
+            "club_logo_url": st.column_config.ImageColumn(
+                "Club",
+                width="small",
+            ),
+            "club": st.column_config.TextColumn(
+                "Club",
+                width="small",
+            ),
             "points_total": st.column_config.NumberColumn(
-                "Total", format="%.1f", help="Total points including G/A"
+                "Total",
+                format="%.1f",
+                help="Total points including G/A",
             ),
             "points_base": st.column_config.NumberColumn(
-                "Base", format="%.1f", help="Points excluding goals and assists"
+                "Base",
+                format="%.1f",
+                help="Points excluding goals and assists",
             ),
-            "did_play": st.column_config.CheckboxColumn("Played?"),
+            "did_play": st.column_config.CheckboxColumn(
+                "Played?",
+            ),
             **scout_col_config,
         },
     )

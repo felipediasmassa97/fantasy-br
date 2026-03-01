@@ -9,7 +9,7 @@ Two distinct windows are used:
   2. Played window (last 5 played matches): determines stat averages.
      "Across all played matches up to now, what are the last 5 averages?"
 
-This separation avoids diluting stats for players who missed games
+This separation avoids diluting stats for players who missed matches
 while still capturing their availability accurately.
 
 Enriched with z-scores and DVS via scouting_enrichment macro.

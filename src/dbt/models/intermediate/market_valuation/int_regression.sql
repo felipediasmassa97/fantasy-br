@@ -15,8 +15,8 @@ Signal labels:
   - NEUTRAL: otherwise
 
 Confidence flag:
-  - LOW_SAMPLE: < 5 games this season (unreliable signal)
-  - OK: >= 5 games
+  - LOW_SAMPLE: < 5 matches this season (unreliable signal)
+  - OK: >= 5 matches
 */
 
 select

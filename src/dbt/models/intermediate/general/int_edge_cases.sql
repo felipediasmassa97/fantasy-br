@@ -14,9 +14,9 @@ with player_summary as (
         club_logo_url,
         -- Season-level counts
         countif(season = 2025) as rounds_last_season,
-        countif(season = 2025 and has_played) as games_last_season,
+        countif(season = 2025 and has_played) as matches_last_season,
         countif(season = 2026) as rounds_this_season,
-        countif(season = 2026 and has_played) as games_this_season,
+        countif(season = 2026 and has_played) as matches_this_season,
         -- First/last appearance
         min(if(season = 2026, round_id, null)) as first_round_seen,
         max(if(season = 2026, round_id, null)) as last_round_seen,
@@ -47,8 +47,8 @@ select
     ps.club_logo_url,
     -- Has reliable last season data (same threshold as int_baseline: >=5 matches, >30% availability)
     coalesce(lsq.matches_last >= 5 and lsq.avail_last > 0.30, false) as has_last_season_data,
-    ps.games_last_season,
-    ps.games_this_season,
+    ps.matches_last_season,
+    ps.matches_this_season,
     ps.first_round_seen,
     ps.last_round_seen,
     -- Missing data flags (true = has missing data)

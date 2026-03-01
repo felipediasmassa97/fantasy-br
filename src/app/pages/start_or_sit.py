@@ -25,12 +25,23 @@ def _render_main() -> None:
         return
 
     col_config = {
-        "player_name": st.column_config.TextColumn("Player", width="medium"),
-        "position": st.column_config.TextColumn(
-            "Position", width="small", help="GK / CB / FB / MD / AT"
+        "player_name": st.column_config.TextColumn(
+            "Player",
+            width="medium",
         ),
-        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
-        "club": st.column_config.TextColumn("Club", width="small"),
+        "position": st.column_config.TextColumn(
+            "Position",
+            width="small",
+            help="GK / CB / FB / MD / AT",
+        ),
+        "club_logo_url": st.column_config.ImageColumn(
+            "Club",
+            width="small",
+        ),
+        "club": st.column_config.TextColumn(
+            "Club",
+            width="small",
+        ),
         "map_score": st.column_config.NumberColumn(
             "MAP",
             format="%.2f",
@@ -51,7 +62,8 @@ def _render_main() -> None:
             help="Consistency: LOW (<0.5 CV) / MED / HIGH (>1.0 CV)",
         ),
         "is_home_next": st.column_config.CheckboxColumn(
-            "Home?", help="Player's club is the home team next round"
+            "Home?",
+            help="Player's club is the home team next round",
         ),
     }
 
@@ -72,14 +84,25 @@ def _render_map_breakdown() -> None:
         return
 
     col_config = {
-        "player_name": st.column_config.TextColumn("Player", width="medium"),
-        "position": st.column_config.TextColumn("Position", width="small"),
-        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
+        "player_name": st.column_config.TextColumn(
+            "Player",
+            width="medium",
+        ),
+        "position": st.column_config.TextColumn(
+            "Position",
+            width="small",
+        ),
+        "club_logo_url": st.column_config.ImageColumn(
+            "Club",
+            width="small",
+        ),
         "opponent_club": st.column_config.TextColumn(
-            "Opponent", help="Club faced next round"
+            "Opponent",
+            help="Club faced next round",
         ),
         "is_home": st.column_config.CheckboxColumn(
-            "Home?", help="Player's club is the home team"
+            "Home?",
+            help="Player's club is the home team",
         ),
         "baseline_pts": st.column_config.NumberColumn(
             "Baseline",
@@ -112,10 +135,14 @@ def _render_map_breakdown() -> None:
             help="Final MAP score = baseline x form x venue x MPAP",
         ),
         "map_rank_pos": st.column_config.NumberColumn(
-            "Rk (Pos)", format="%d", help="Rank within same position"
+            "Rk (Pos)",
+            format="%d",
+            help="Rank within same position",
         ),
         "map_rank_gen": st.column_config.NumberColumn(
-            "Rk (All)", format="%d", help="Rank across all positions"
+            "Rk (All)",
+            format="%d",
+            help="Rank across all positions",
         ),
     }
 
@@ -136,20 +163,37 @@ def _render_mpap_debug() -> None:
         return
 
     col_config = {
-        "opponent_logo_url": st.column_config.ImageColumn("Club", width="small"),
-        "opponent_club": st.column_config.TextColumn("Opponent", width="small"),
-        "position": st.column_config.TextColumn("Position", width="small"),
+        "opponent_logo_url": st.column_config.ImageColumn(
+            "Club",
+            width="small",
+        ),
+        "opponent_club": st.column_config.TextColumn(
+            "Opponent",
+            width="small",
+        ),
+        "position": st.column_config.TextColumn(
+            "Position",
+            width="small",
+        ),
         "matches_in_sample_this_season": st.column_config.NumberColumn(
-            "Games (This)", format="%d", help="Matches in sample this season"
+            "Matches (This)",
+            format="%d",
+            help="Matches in sample this season",
         ),
         "matches_in_sample_last_season": st.column_config.NumberColumn(
-            "Games (Last)", format="%d", help="Matches in sample last season"
+            "Matches (Last)",
+            format="%d",
+            help="Matches in sample last season",
         ),
         "pts_allowed_this_season_avg": st.column_config.NumberColumn(
-            "Allowed (This)", format="%.2f", help="Avg points allowed this season"
+            "Allowed (This)",
+            format="%.2f",
+            help="Avg points allowed this season",
         ),
         "pts_allowed_last_season_avg": st.column_config.NumberColumn(
-            "Allowed (Last)", format="%.2f", help="Avg points allowed last season"
+            "Allowed (Last)",
+            format="%.2f",
+            help="Avg points allowed last season",
         ),
         "pts_allowed_avg": st.column_config.NumberColumn(
             "Allowed (Blended)",
@@ -190,11 +234,21 @@ def _render_home_away() -> None:
         return
 
     col_config = {
-        "player_name": st.column_config.TextColumn("Player", width="medium"),
-        "position": st.column_config.TextColumn("Position", width="small"),
-        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
+        "player_name": st.column_config.TextColumn(
+            "Player",
+            width="medium",
+        ),
+        "position": st.column_config.TextColumn(
+            "Position",
+            width="small",
+        ),
+        "club_logo_url": st.column_config.ImageColumn(
+            "Club",
+            width="small",
+        ),
         "matches_home_this_season": st.column_config.NumberColumn(
-            "H Games (This)", format="%d"
+            "H Matches (This)",
+            format="%d",
         ),
         "avg_points_home_this_season": st.column_config.NumberColumn(
             "H Avg (This)",
@@ -202,7 +256,8 @@ def _render_home_away() -> None:
             help="Average points in home matches this season",
         ),
         "matches_away_this_season": st.column_config.NumberColumn(
-            "A Games (This)", format="%d"
+            "A Matches (This)",
+            format="%d",
         ),
         "avg_points_away_this_season": st.column_config.NumberColumn(
             "A Avg (This)",
@@ -210,7 +265,8 @@ def _render_home_away() -> None:
             help="Average points in away matches this season",
         ),
         "matches_home_last_season": st.column_config.NumberColumn(
-            "H Games (Last)", format="%d"
+            "H Matches (Last)",
+            format="%d",
         ),
         "avg_points_home_last_season": st.column_config.NumberColumn(
             "H Avg (Last)",
@@ -218,7 +274,8 @@ def _render_home_away() -> None:
             help="Average points in home matches last season",
         ),
         "matches_away_last_season": st.column_config.NumberColumn(
-            "A Games (Last)", format="%d"
+            "A Matches (Last)",
+            format="%d",
         ),
         "avg_points_away_last_season": st.column_config.NumberColumn(
             "A Avg (Last)",
@@ -269,26 +326,47 @@ def _render_distribution() -> None:
         return
 
     col_config = {
-        "player_name": st.column_config.TextColumn("Player", width="medium"),
-        "position": st.column_config.TextColumn("Position", width="small"),
-        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
+        "player_name": st.column_config.TextColumn(
+            "Player",
+            width="medium",
+        ),
+        "position": st.column_config.TextColumn(
+            "Position",
+            width="small",
+        ),
+        "club_logo_url": st.column_config.ImageColumn(
+            "Club",
+            width="small",
+        ),
         "matches_played": st.column_config.NumberColumn(
-            "Games", format="%d", help="Matches included in distribution"
+            "Matches",
+            format="%d",
+            help="Matches included in distribution",
         ),
         "pts_floor": st.column_config.NumberColumn(
-            "Floor (P20)", format="%.1f", help="20th-percentile score"
+            "Floor (P20)",
+            format="%.1f",
+            help="20th-percentile score",
         ),
         "pts_median": st.column_config.NumberColumn(
-            "Median (P50)", format="%.1f", help="Median score"
+            "Median (P50)",
+            format="%.1f",
+            help="Median score",
         ),
         "pts_ceiling": st.column_config.NumberColumn(
-            "Ceiling (P80)", format="%.1f", help="80th-percentile score"
+            "Ceiling (P80)",
+            format="%.1f",
+            help="80th-percentile score",
         ),
         "pts_avg": st.column_config.NumberColumn(
-            "Mean", format="%.2f", help="Simple mean of scores in sample"
+            "Mean",
+            format="%.2f",
+            help="Simple mean of scores in sample",
         ),
         "pts_stddev": st.column_config.NumberColumn(
-            "Std Dev", format="%.2f", help="Standard deviation of scores"
+            "Std Dev",
+            format="%.2f",
+            help="Standard deviation of scores",
         ),
         "cv_points": st.column_config.NumberColumn(
             "CV",
@@ -355,7 +433,10 @@ def _render_round_by_round() -> None:
     display_cols = [c for c in display_cols if c in df.columns]
 
     scout_col_config = {
-        c: st.column_config.NumberColumn(c.replace("scout_", "").upper(), format="%.0f")
+        c: st.column_config.NumberColumn(
+            c.replace("scout_", "").upper(),
+            format="%.0f",
+        )
         for c in scout_cols
     }
 
@@ -364,22 +445,54 @@ def _render_round_by_round() -> None:
         use_container_width=True,
         hide_index=True,
         column_config={
-            "round": st.column_config.NumberColumn("Rd", format="%d"),
-            "match_id": st.column_config.NumberColumn("Match", format="%d"),
-            "player_name": st.column_config.TextColumn("Player", width="medium"),
-            "position": st.column_config.TextColumn("Position", width="small"),
-            "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
-            "club": st.column_config.TextColumn("Club", width="small"),
-            "opponent_logo_url": st.column_config.ImageColumn("Opp", width="small"),
-            "opponent_club": st.column_config.TextColumn("Opponent", width="small"),
-            "is_home": st.column_config.CheckboxColumn("Home?"),
+            "round": st.column_config.NumberColumn(
+                "Rd",
+                format="%d",
+            ),
+            "match_id": st.column_config.NumberColumn(
+                "Match",
+                format="%d",
+            ),
+            "player_name": st.column_config.TextColumn(
+                "Player",
+                width="medium",
+            ),
+            "position": st.column_config.TextColumn(
+                "Position",
+                width="small",
+            ),
+            "club_logo_url": st.column_config.ImageColumn(
+                "Club",
+                width="small",
+            ),
+            "club": st.column_config.TextColumn(
+                "Club",
+                width="small",
+            ),
+            "opponent_logo_url": st.column_config.ImageColumn(
+                "Opp",
+                width="small",
+            ),
+            "opponent_club": st.column_config.TextColumn(
+                "Opponent",
+                width="small",
+            ),
+            "is_home": st.column_config.CheckboxColumn(
+                "Home?",
+            ),
             "points_total": st.column_config.NumberColumn(
-                "Total", format="%.1f", help="Total points including G/A"
+                "Total",
+                format="%.1f",
+                help="Total points including G/A",
             ),
             "points_base": st.column_config.NumberColumn(
-                "Base", format="%.1f", help="Points excluding goals and assists"
+                "Base",
+                format="%.1f",
+                help="Points excluding goals and assists",
             ),
-            "did_play": st.column_config.CheckboxColumn("Played?"),
+            "did_play": st.column_config.CheckboxColumn(
+                "Played?",
+            ),
             **scout_col_config,
         },
     )
@@ -395,29 +508,55 @@ def _render_edge_cases() -> None:
         return
 
     col_config = {
-        "player_name": st.column_config.TextColumn("Player", width="medium"),
-        "position": st.column_config.TextColumn("Position", width="small"),
-        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
-        "club": st.column_config.TextColumn("Club", width="small"),
-        "has_last_season_data": st.column_config.CheckboxColumn(
-            "Last Szn?", help="Player has enough last-season data to serve as a prior"
+        "player_name": st.column_config.TextColumn(
+            "Player",
+            width="medium",
         ),
-        "games_last_season": st.column_config.NumberColumn("Games (Last)", format="%d"),
-        "games_this_season": st.column_config.NumberColumn("Games (This)", format="%d"),
+        "position": st.column_config.TextColumn(
+            "Position",
+            width="small",
+        ),
+        "club_logo_url": st.column_config.ImageColumn(
+            "Club",
+            width="small",
+        ),
+        "club": st.column_config.TextColumn(
+            "Club",
+            width="small",
+        ),
+        "has_last_season_data": st.column_config.CheckboxColumn(
+            "Last Szn?",
+            help="Player has enough last-season data to serve as a prior",
+        ),
+        "matches_last_season": st.column_config.NumberColumn(
+            "Matches (Last)",
+            format="%d",
+        ),
+        "matches_this_season": st.column_config.NumberColumn(
+            "Matches (This)",
+            format="%d",
+        ),
         "first_round_seen": st.column_config.NumberColumn(
-            "First Rd", format="%d", help="First round the player appeared"
+            "First Rd",
+            format="%d",
+            help="First round the player appeared",
         ),
         "last_round_seen": st.column_config.NumberColumn(
-            "Last Rd", format="%d", help="Most recent round the player appeared"
+            "Last Rd",
+            format="%d",
+            help="Most recent round the player appeared",
         ),
         "missing_home_away_flag": st.column_config.CheckboxColumn(
-            "Missing H/A?", help="Home/away split data is missing"
+            "Missing H/A?",
+            help="Home/away split data is missing",
         ),
         "missing_opponent_flag": st.column_config.CheckboxColumn(
-            "Missing Opp?", help="Opponent mapping is missing"
+            "Missing Opp?",
+            help="Opponent mapping is missing",
         ),
         "missing_points_flag": st.column_config.CheckboxColumn(
-            "Missing Pts?", help="Points data could not be computed"
+            "Missing Pts?",
+            help="Points data could not be computed",
         ),
     }
 

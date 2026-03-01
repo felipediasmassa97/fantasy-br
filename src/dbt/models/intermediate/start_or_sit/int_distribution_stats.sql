@@ -4,12 +4,12 @@ Distribution Stats: Floor / Median / Ceiling + Consistency
 Score distribution analysis per player, blended with position-level data for small samples.
 
 Percentile definitions:
-  - Floor (20th percentile): Bad-but-normal game
-  - Median (50th percentile): Typical game
-  - Ceiling (80th percentile): Great-but-realistic game
+  - Floor (20th percentile): Bad-but-normal match
+  - Median (50th percentile): Typical match
+  - Ceiling (80th percentile): Great-but-realistic match
 
-Small-sample fix: If < 10 games, blend with position-level distribution.
-  blend_weight = (10 - matches) / 10, so 0 games = 100% position, 10+ games = 0% position.
+Small-sample fix: If < 10 matches, blend with position-level distribution.
+  blend_weight = (10 - matches) / 10, so 0 matches = 100% position, 10+ matches = 0% position.
 
 Consistency metrics (derived from blended stats):
   - CV (Coefficient of Variation) = stddev / mean. Lower = more stable.
@@ -95,7 +95,7 @@ player_percentiles_deduped as (
     from player_percentiles
 ),
 
--- Blend player stats with position stats if < 10 games
+-- Blend player stats with position stats if < 10 matches
 blended_stats as (
     select
         pp.as_of_round_id,
@@ -113,7 +113,7 @@ blended_stats as (
         ps.pos_floor,
         ps.pos_median,
         ps.pos_ceiling,
-        -- blend_weight: 0 if >= 10 games (pure player data), up to 1.0 if 0 games (pure position data)
+        -- blend_weight: 0 if >= 10 matches (pure player data), up to 1.0 if 0 matches (pure position data)
         case
             when pp.matches_played >= 10 then 0.0
             else (10.0 - pp.matches_played) / 10.0
@@ -155,8 +155,8 @@ select
         else 1.0 / (1.0 + bs.pts_stddev / bs.pts_avg)
     end as consistency_rating,
     bs.blend_weight,
-    -- Boom rate: fraction of games scoring >= 8 points
+    -- Boom rate: fraction of matches scoring >= 8 points
     case when bs.matches_played > 0 then bs.boom_count * 1.0 / bs.matches_played end as boom_rate,
-    -- Bust rate: fraction of games scoring <= 2 points
+    -- Bust rate: fraction of matches scoring <= 2 points
     case when bs.matches_played > 0 then bs.bust_count * 1.0 / bs.matches_played end as bust_rate
 from blended_stats as bs

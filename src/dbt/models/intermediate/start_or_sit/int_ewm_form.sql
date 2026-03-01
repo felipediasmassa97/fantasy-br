@@ -1,16 +1,16 @@
 /*
 EWM Form: Recency-Weighted Form (Exponentially Weighted Mean Points)
 
-A player's current form giving more weight to recent games and less to old ones.
-More stable than simple "last 3 games" average, reacts faster than season average.
+A player's current form giving more weight to recent matches and less to old ones.
+More stable than simple "last 3 matches" average, reacts faster than season average.
 
 Calculation:
-- Take all played games (this season only, by as_of_round)
-- Assign decay weights: weight = (1-alpha)^game_age where game_age=0 for most recent
+- Take all played matches (this season only, by as_of_round)
+- Assign decay weights: weight = (1-alpha)^match_age where match_age=0 for most recent
 - EWM = sum(points * weight) / sum(weight)
 - Alpha = 0.25 (standard value, higher = reacts faster)
 
-Half-life with alpha=0.25: ~2.4 games (after ~2-3 games, old data is half as important)
+Half-life with alpha=0.25: ~2.4 matches (after ~2-3 matches, old data is half as important)
 */
 
 with all_rounds as (
@@ -19,7 +19,7 @@ with all_rounds as (
     where season = 2026
 ),
 
--- All played matches per player with game age (0 = most recent)
+-- All played matches per player with match age (0 = most recent)
 player_matches as (
     select
         r.as_of_round_id,
@@ -30,7 +30,7 @@ player_matches as (
         row_number() over (
             partition by r.as_of_round_id, p.id
             order by p.round_id desc
-        ) - 1 as game_age  -- 0 = most recent, 1 = second most recent, etc.
+        ) - 1 as match_age  -- 0 = most recent, 1 = second most recent, etc.
     from {{ ref('int_players') }} as p
     cross join all_rounds as r
     where
@@ -40,16 +40,16 @@ player_matches as (
 ),
 
 -- Calculate EWM with alpha = 0.25 (decay = 0.75)
--- Weight = (1 - alpha)^game_age = 0.75^game_age
+-- Weight = (1 - alpha)^match_age = 0.75^match_age
 ewm_calc as (
     select
         as_of_round_id,
         id,
         pts_round,
-        game_age,
+        match_age,
         round_id,
-        pow(0.75, game_age) as weight,
-        pts_round * pow(0.75, game_age) as weighted_pts
+        pow(0.75, match_age) as weight,
+        pts_round * pow(0.75, match_age) as weighted_pts
     from player_matches
 ),
 

@@ -162,7 +162,7 @@ def load_ss_round_by_round(round_id: int) -> list[dict]:
 
 def load_ss_edge_cases() -> list[dict]:
     """Load edge cases and missing data."""
-    return load_analytics("ss_edge_cases", None, "games_this_season")
+    return load_analytics("ss_edge_cases", None, "matches_this_season")
 
 
 def load_mv_main(round_id: int) -> list[dict]:

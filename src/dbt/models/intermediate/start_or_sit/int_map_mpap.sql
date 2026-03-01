@@ -6,7 +6,7 @@ Not "is this defense good?" but "How well does this club defend against this typ
 Uses both this-season and last-season data, blended via sample-size shrinkage.
 
 Calculation:
-1. This season: avg points conceded by opponent to position (all games up to as_of_round)
+1. This season: avg points conceded by opponent to position (all matches up to as_of_round)
 2. Last season: avg points conceded by opponent to position (full season 2025)
 3. Blended: shrinkage-weighted average (k=5 threshold for full this-season confidence)
 4. mpap_ratio = blended / league_avg (pre-clamp)
@@ -40,7 +40,7 @@ next_match as (
         on m.season = 2026 and m.round_id = r.as_of_round_id + 1
 ),
 
--- This season: avg points conceded per opponent per position (all games up to as_of_round)
+-- This season: avg points conceded per opponent per position (all matches up to as_of_round)
 -- "conceding club" = the opponent that allowed the points
 conceded_this_season as (
     select
@@ -48,7 +48,7 @@ conceded_this_season as (
         p.opponent_id as conceding_club_id,
         p.position,
         avg(if(p.has_played, p.pts_round, null)) as pts_allowed_this_season_avg,
-        count(distinct if(p.has_played, p.round_id, null)) as games_this_season
+        count(distinct if(p.has_played, p.round_id, null)) as matches_this_season
     from {{ ref('int_players') }} as p
     cross join all_rounds as r
     where
@@ -64,7 +64,7 @@ conceded_last_season as (
         p.opponent_id as conceding_club_id,
         p.position,
         avg(if(p.has_played, p.pts_round, null)) as pts_allowed_last_season_avg,
-        count(distinct if(p.has_played, p.round_id, null)) as games_last_season
+        count(distinct if(p.has_played, p.round_id, null)) as matches_last_season
     from {{ ref('int_players') }} as p
     where
         p.season = 2025
@@ -95,21 +95,21 @@ select
     oc.logo_url as opponent_logo_url,
     -- This-season concession data
     ct.pts_allowed_this_season_avg,
-    coalesce(ct.games_this_season, 0) as games_this_season,
+    coalesce(ct.matches_this_season, 0) as matches_this_season,
     -- Last-season concession data
     cl.pts_allowed_last_season_avg,
-    coalesce(cl.games_last_season, 0) as games_last_season,
-    -- Blended concession average with shrinkage (k=5 games for full this-season confidence)
+    coalesce(cl.matches_last_season, 0) as matches_last_season,
+    -- Blended concession average with shrinkage (k=5 matches for full this-season confidence)
     case
         when ct.pts_allowed_this_season_avg is null and cl.pts_allowed_last_season_avg is null then null
         when cl.pts_allowed_last_season_avg is null then ct.pts_allowed_this_season_avg
         when ct.pts_allowed_this_season_avg is null then cl.pts_allowed_last_season_avg
         else
-            -- If player has 5 or more games this season, use this season avg
-            -- If no games this season, use last season avg
-            -- If in between, blend them with a shrinkage factor that increases with more games this season
-            least(coalesce(ct.games_this_season, 0) / 5.0, 1.0) * ct.pts_allowed_this_season_avg
-            + (1.0 - least(coalesce(ct.games_this_season, 0) / 5.0, 1.0)) * cl.pts_allowed_last_season_avg
+            -- If player has 5 or more matches this season, use this season avg
+            -- If no matches this season, use last season avg
+            -- If in between, blend them with a shrinkage factor that increases with more matches this season
+            least(coalesce(ct.matches_this_season, 0) / 5.0, 1.0) * ct.pts_allowed_this_season_avg
+            + (1.0 - least(coalesce(ct.matches_this_season, 0) / 5.0, 1.0)) * cl.pts_allowed_last_season_avg
     end as pts_allowed_avg,
     lap.league_avg_pts,
     -- MPAP ratio: blended / league_avg (pre-clamp, for debugging)
@@ -121,8 +121,8 @@ select
                 when cl.pts_allowed_last_season_avg is null then ct.pts_allowed_this_season_avg
                 when ct.pts_allowed_this_season_avg is null then cl.pts_allowed_last_season_avg
                 else
-                    least(coalesce(ct.games_this_season, 0) / 5.0, 1.0) * ct.pts_allowed_this_season_avg
-                    + (1.0 - least(coalesce(ct.games_this_season, 0) / 5.0, 1.0)) * cl.pts_allowed_last_season_avg
+                    least(coalesce(ct.matches_this_season, 0) / 5.0, 1.0) * ct.pts_allowed_this_season_avg
+                    + (1.0 - least(coalesce(ct.matches_this_season, 0) / 5.0, 1.0)) * cl.pts_allowed_last_season_avg
             end
         ) / lap.league_avg_pts
     end as mpap_ratio,
@@ -135,8 +135,8 @@ select
                 when cl.pts_allowed_last_season_avg is null then ct.pts_allowed_this_season_avg
                 when ct.pts_allowed_this_season_avg is null then cl.pts_allowed_last_season_avg
                 else
-                    least(coalesce(ct.games_this_season, 0) / 5.0, 1.0) * ct.pts_allowed_this_season_avg
-                    + (1.0 - least(coalesce(ct.games_this_season, 0) / 5.0, 1.0)) * cl.pts_allowed_last_season_avg
+                    least(coalesce(ct.matches_this_season, 0) / 5.0, 1.0) * ct.pts_allowed_this_season_avg
+                    + (1.0 - least(coalesce(ct.matches_this_season, 0) / 5.0, 1.0)) * cl.pts_allowed_last_season_avg
             end
         ) / lap.league_avg_pts))
     end as mpap_multiplier

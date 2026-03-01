@@ -20,7 +20,7 @@ select
     e.ewm_pts,
     -- Regression candidate score
     reg.regression_score,
-    -- Availability: games played / rounds where player was listed this season
+    -- Availability: matches played / rounds where player was listed this season
     case
         when b.rounds_listed_this_season is null or b.rounds_listed_this_season = 0 then null
         else b.matches_this_season * 1.0 / b.rounds_listed_this_season
