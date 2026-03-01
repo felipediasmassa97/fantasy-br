@@ -138,9 +138,9 @@ select
     bs.pts_avg,
     bs.pts_stddev,
     -- Blended percentiles: weighted average of player and position stats
-    (1 - bs.blend_weight) * bs.raw_floor + bs.blend_weight * coalesce(bs.pos_floor, bs.raw_floor) as floor_pts,
-    (1 - bs.blend_weight) * bs.raw_median + bs.blend_weight * coalesce(bs.pos_median, bs.raw_median) as median_pts,
-    (1 - bs.blend_weight) * bs.raw_ceiling + bs.blend_weight * coalesce(bs.pos_ceiling, bs.raw_ceiling) as ceiling_pts,
+    (1 - bs.blend_weight) * bs.raw_floor + bs.blend_weight * coalesce(bs.pos_floor, bs.raw_floor) as pts_floor,
+    (1 - bs.blend_weight) * bs.raw_median + bs.blend_weight * coalesce(bs.pos_median, bs.raw_median) as pts_median,
+    (1 - bs.blend_weight) * bs.raw_ceiling + bs.blend_weight * coalesce(bs.pos_ceiling, bs.raw_ceiling) as pts_ceiling,
     -- Range: ceiling - floor (measure of volatility)
     ((1 - bs.blend_weight) * bs.raw_ceiling + bs.blend_weight * coalesce(bs.pos_ceiling, bs.raw_ceiling))
     - ((1 - bs.blend_weight) * bs.raw_floor + bs.blend_weight * coalesce(bs.pos_floor, bs.raw_floor)) as pts_range,
@@ -156,7 +156,7 @@ select
     end as consistency_rating,
     bs.blend_weight,
     -- Boom rate: fraction of games scoring >= 8 points
-    case when bs.matches_played > 0 then bs.boom_count * 1.0 / bs.matches_played end as boom_rate_ge_8,
+    case when bs.matches_played > 0 then bs.boom_count * 1.0 / bs.matches_played end as boom_rate,
     -- Bust rate: fraction of games scoring <= 2 points
-    case when bs.matches_played > 0 then bs.bust_count * 1.0 / bs.matches_played end as bust_rate_le_2
+    case when bs.matches_played > 0 then bs.bust_count * 1.0 / bs.matches_played end as bust_rate
 from blended_stats as bs

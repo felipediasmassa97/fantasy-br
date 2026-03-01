@@ -7,8 +7,10 @@ See int_form_trend for calculation details.
 
 select
     as_of_round_id,
-    name as player_name,
     id as player_id,
+    name as player_name,
+    club,
+    club_logo_url,
     position,
     ewm_alpha,
     ewm_pts as ewm_points,

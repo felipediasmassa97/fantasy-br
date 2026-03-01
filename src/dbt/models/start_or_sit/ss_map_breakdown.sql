@@ -7,11 +7,12 @@ Allows users to see exactly how each component affects the final projection.
 
 select
     as_of_round_id,
-    name as player_name,
     id as player_id,
+    name as player_name,
     position,
-    club as team,
-    opponent_team,
+    club,
+    club_logo_url,
+    opponent_club,
     is_home_next as is_home,
     baseline_pts,
     ewm_pts as ewm_form_points,

@@ -6,12 +6,14 @@ Thin mart: detailed PAR computation with replacement level context.
 
 select
     b.as_of_round_id,
-    b.name as player_name,
     b.id as player_id,
+    b.name as player_name,
+    b.club,
+    b.club_logo_url,
     b.position,
     b.baseline_pts,
     rl.drafted_count as drafted_players_in_position,
-    rl.replacement_level as replacement_level_points_pos,
+    rl.replacement_level as replacement_level_pts,
     b.baseline_pts - rl.replacement_level as par_points,
     -- PAR rank within position
     row_number() over (

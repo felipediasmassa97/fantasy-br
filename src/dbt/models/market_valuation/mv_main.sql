@@ -7,8 +7,8 @@ Joins PAR, baseline, EWM, regression, and distribution data.
 
 select
     b.as_of_round_id,
-    b.id,
-    b.name,
+    b.id as player_id,
+    b.name as player_name,
     b.club,
     b.club_logo_url,
     b.position,

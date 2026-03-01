@@ -7,14 +7,15 @@ Shows how opponent strength is measured and blended across seasons.
 
 select
     o.as_of_round_id,
-    oc.abbreviation as opponent_team,
+    oc.abbreviation as opponent_club,
+    oc.logo_url as opponent_logo_url,
     o.position,
-    o.games_this_season as games_in_sample_this_season,
-    o.games_last_season as games_in_sample_last_season,
-    o.pts_allowed_this_season_avg as points_allowed_this_season_avg,
-    o.pts_allowed_last_season_avg as points_allowed_last_season_avg,
-    o.pts_allowed_avg as points_allowed_avg,
-    o.league_avg_pts as league_avg_allowed_pos,
+    o.games_this_season as matches_in_sample_this_season,
+    o.games_last_season as matches_in_sample_last_season,
+    o.pts_allowed_this_season_avg,
+    o.pts_allowed_last_season_avg,
+    o.pts_allowed_avg,
+    o.league_avg_pts as pts_allowed_avg_league,
     o.mpap_ratio,
     o.mpap_multiplier,
     o.as_of_round_id as last_updated_round

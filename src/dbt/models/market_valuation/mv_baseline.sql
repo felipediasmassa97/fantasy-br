@@ -8,14 +8,16 @@ home/away venue splits sourced from int_home_away.
 
 select
     b.as_of_round_id,
-    b.name as player_name,
     b.id as player_id,
+    b.name as player_name,
     b.position,
-    b.player_pts_avg_this_season as avg_points_this_season,
-    b.matches_this_season as games_this_season,
-    b.player_pts_avg_last_season as avg_points_last_season,
-    b.matches_last_season as games_last_season,
-    b.position_pts_avg_last_season as position_avg_last_season,
+    b.club,
+    b.club_logo_url,
+    b.player_pts_avg_this_season as pts_avg_this_season,
+    b.matches_this_season,
+    b.player_pts_avg_last_season as pts_avg_last_season,
+    b.matches_last_season,
+    b.position_pts_avg_last_season,
     -- Shrinkage parameter k=5; weight = matches_this_season / (matches_this_season + 5)
     5 as shrinking_parameter,
     b.shrinking_weight_this_season,

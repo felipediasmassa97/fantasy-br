@@ -7,17 +7,19 @@ See int_distribution_stats for calculation details.
 
 select
     as_of_round_id,
-    name as player_name,
     id as player_id,
+    name as player_name,
     position,
-    matches_played as n_games_total_used,
-    floor_pts as floor_p20,
-    median_pts as median_p50,
-    ceiling_pts as ceiling_p80,
-    pts_avg as mean_points_used,
-    pts_stddev as std_points_used,
+    club,
+    club_logo_url,
+    matches_played as matches_played,
+    pts_floor,
+    pts_median,
+    pts_ceiling,
+    pts_avg,
+    pts_stddev,
     cv as cv_points,
     consistency_rating,
-    boom_rate_ge_8,
-    bust_rate_le_2
+    boom_rate,
+    bust_rate
 from {{ ref('int_distribution_stats') }}

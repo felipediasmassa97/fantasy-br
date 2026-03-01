@@ -43,7 +43,8 @@ select
     ps.id as player_id,
     ps.name as player_name,
     ps.position,
-    ps.club as team,
+    ps.club,
+    ps.club_logo_url,
     -- Has reliable last season data (same threshold as int_baseline: >=5 matches, >30% availability)
     coalesce(lsq.matches_last >= 5 and lsq.avail_last > 0.30, false) as has_last_season_data,
     ps.games_last_season,

@@ -194,12 +194,12 @@ select
     case
         when baseline_pts is null or baseline_pts = 0 or pts_avg_home is null then null
         else greatest(0.85, least(1.15, pts_avg_home / baseline_pts))
-    end as home_multiplier,
+    end as multiplier_home,
     -- Away multiplier: clamped +-15%
     case
         when baseline_pts is null or baseline_pts = 0 or pts_avg_away is null then null
         else greatest(0.85, least(1.15, pts_avg_away / baseline_pts))
-    end as away_multiplier,
+    end as multiplier_away,
     -- Delta: positive means player performs better at home
     coalesce(pts_avg_home, 0) - coalesce(pts_avg_away, 0) as home_away_delta
 from with_averages

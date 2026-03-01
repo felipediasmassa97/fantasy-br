@@ -6,10 +6,11 @@ See int_edge_cases for computation.
 */
 
 select
-    player_name,
     player_id,
+    player_name,
     position,
-    team,
+    club,
+    club_logo_url,
     has_last_season_data,
     games_last_season,
     games_this_season,

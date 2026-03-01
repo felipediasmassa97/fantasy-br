@@ -2,7 +2,7 @@
 MAP Component 4: MPAP (Matchup Points Allowed by Position)
 
 MPAP measures how many fantasy points the upcoming opponent allows to a specific position.
-Not "is this defense good?" but "How well does this team defend against this type of player?"
+Not "is this defense good?" but "How well does this club defend against this type of player?"
 Uses both this-season and last-season data, blended via sample-size shrinkage.
 
 Calculation:
@@ -41,11 +41,11 @@ next_match as (
 ),
 
 -- This season: avg points conceded per opponent per position (all games up to as_of_round)
--- "conceding team" = the opponent that allowed the points
+-- "conceding club" = the opponent that allowed the points
 conceded_this_season as (
     select
         r.as_of_round_id,
-        p.opponent_id as conceding_team_id,
+        p.opponent_id as conceding_club_id,
         p.position,
         avg(if(p.has_played, p.pts_round, null)) as pts_allowed_this_season_avg,
         count(distinct if(p.has_played, p.round_id, null)) as games_this_season
@@ -61,7 +61,7 @@ conceded_this_season as (
 -- Last season: avg points conceded per opponent per position (full season 2025)
 conceded_last_season as (
     select
-        p.opponent_id as conceding_team_id,
+        p.opponent_id as conceding_club_id,
         p.position,
         avg(if(p.has_played, p.pts_round, null)) as pts_allowed_last_season_avg,
         count(distinct if(p.has_played, p.round_id, null)) as games_last_season
@@ -90,8 +90,9 @@ select
     b.position,
     nm.opponent_id,
     nm.is_home_next,
-    -- Opponent team name for display
-    oc.abbreviation as opponent_team,
+    -- Opponent club name for display
+    oc.abbreviation as opponent_club,
+    oc.logo_url as opponent_logo_url,
     -- This-season concession data
     ct.pts_allowed_this_season_avg,
     coalesce(ct.games_this_season, 0) as games_this_season,
@@ -156,12 +157,12 @@ left join {{ ref('stg_clubs') }} as oc on nm.opponent_id = oc.id
 left join conceded_this_season as ct
     on
         b.as_of_round_id = ct.as_of_round_id
-        and nm.opponent_id = ct.conceding_team_id
+        and nm.opponent_id = ct.conceding_club_id
         and b.position = ct.position
 -- Last-season concession
 left join conceded_last_season as cl
     on
-        nm.opponent_id = cl.conceding_team_id
+        nm.opponent_id = cl.conceding_club_id
         and b.position = cl.position
 -- League average
 left join league_avg_by_position as lap
