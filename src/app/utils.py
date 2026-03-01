@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 PROJECT_ID = "fantasy-br"
 DATASET_ID = "fdmdev_fantasy_br"
 DEFAULT_USER_EMAIL = "firstname.lastname@google.com"  # fixit remove
+FIRESTORE_DATABASE = "fantasy-br-dev"
 
 TIME_PERIODS = {
     "This Season": "sct_this_season",
@@ -180,160 +181,110 @@ def load_scouting_data(view_name: str, round_id: int | None = None) -> list[dict
     """Load scouting data from a BigQuery view."""
     if view_name == "sct_last_season" or round_id is None:
         return _query(f"""
-            SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.{view_name}`
+            SELECT *
+            FROM `{PROJECT_ID}.{DATASET_ID}.{view_name}`
             ORDER BY adp_gen_avg ASC NULLS LAST
         """)  # noqa: S608
     return _query(f"""
-        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.{view_name}`
+        SELECT *
+        FROM `{PROJECT_ID}.{DATASET_ID}.{view_name}`
         WHERE as_of_round_id = {round_id}
         ORDER BY adp_gen_avg ASC NULLS LAST
     """)  # noqa: S608
 
 
-# Start or Sit loaders
-# fixit refactor to reduce code duplication (e.g., single function with view name and
-# as_of_round_id parameter)
-
-
 @st.cache_data(ttl=300)
+def load_analytics(view: str, as_of_round_id: str | None, order_by: str) -> list[dict]:
+    """Load analytics."""
+    where_clause = ""
+    if as_of_round_id is not None:
+        where_clause = f"WHERE as_of_round_id = {as_of_round_id}"
+
+    return _query(f"""
+        SELECT *
+        FROM `{PROJECT_ID}.{DATASET_ID}.{view}`
+        {where_clause}
+        ORDER BY {order_by} DESC NULLS LAST
+    """)  # noqa: S608
+
+
 def load_ss_main(round_id: int) -> list[dict]:
     """Load Start or Sit main tab data."""
-    return _query(f"""
-        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.ss_main`
-        WHERE as_of_round_id = {round_id}
-        ORDER BY map_score DESC NULLS LAST
-    """)  # noqa: S608
+    return load_analytics("ss_main", round_id, "map_score")
 
 
-@st.cache_data(ttl=300)
 def load_ss_map_breakdown(round_id: int) -> list[dict]:
     """Load MAP breakdown data."""
-    return _query(f"""
-        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.ss_map_breakdown`
-        WHERE as_of_round_id = {round_id}
-        ORDER BY map_points DESC NULLS LAST
-    """)  # noqa: S608
+    return load_analytics("ss_map_breakdown", round_id, "map_points")
 
 
-@st.cache_data(ttl=300)
 def load_ss_mpap_debug(round_id: int) -> list[dict]:
     """Load MPAP debug data."""
-    return _query(f"""
-        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.ss_mpap_debug`
-        WHERE as_of_round_id = {round_id}
-        ORDER BY mpap_multiplier DESC NULLS LAST
-    """)  # noqa: S608
+    return load_analytics("ss_mpap_debug", round_id, "mpap_multiplier")
 
 
-@st.cache_data(ttl=300)
 def load_ss_splits(round_id: int) -> list[dict]:
     """Load player home/away splits."""
-    return _query(f"""
-        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.ss_splits`
-        WHERE as_of_round_id = {round_id}
-        ORDER BY home_away_delta DESC NULLS LAST
-    """)  # noqa: S608
+    return load_analytics("ss_splits", round_id, "home_away_delta")
 
 
-@st.cache_data(ttl=300)
 def load_ss_distribution(round_id: int) -> list[dict]:
     """Load distribution and volatility data."""
-    return _query(f"""
-        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.ss_distribution`
-        WHERE as_of_round_id = {round_id}
-        ORDER BY median_p50 DESC NULLS LAST
-    """)  # noqa: S608
+    return load_analytics("ss_distribution", round_id, "median_p50")
 
 
-@st.cache_data(ttl=300)
 def load_ss_round_by_round(round_id: int) -> list[dict]:
     """Load round-by-round raw data."""
-    return _query(f"""
-        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.ss_round_by_round`
-        WHERE round <= {round_id}
-        ORDER BY round DESC, points_total DESC NULLS LAST
-    """)  # noqa: S608
+    return load_analytics("ss_round_by_round", round_id, "points_total")
 
 
-@st.cache_data(ttl=300)
 def load_ss_edge_cases() -> list[dict]:
     """Load edge cases and missing data."""
-    return _query(f"""
-        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.ss_edge_cases`
-        ORDER BY games_this_season ASC
-    """)  # noqa: S608
-
-
-# Market Valuation loaders
-# fixit refactor to reduce code duplication (e.g., single function with view name and
-# as_of_round_id parameter)
+    return load_analytics("ss_edge_cases", None, "games_this_season")
 
 
 @st.cache_data(ttl=300)
 def load_mv_main(round_id: int) -> list[dict]:
     """Load Market Valuation main tab data."""
-    return _query(f"""
-        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.mv_main`
-        WHERE as_of_round_id = {round_id}
-        ORDER BY par DESC NULLS LAST
-    """)  # noqa: S608
+    return load_analytics("mv_main", round_id, "par")
 
 
 @st.cache_data(ttl=300)
 def load_mv_par_breakdown(round_id: int) -> list[dict]:
     """Load PAR breakdown data."""
-    return _query(f"""
-        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.mv_par_breakdown`
-        WHERE as_of_round_id = {round_id}
-        ORDER BY par_points DESC NULLS LAST
-    """)  # noqa: S608
+    return load_analytics("mv_par_breakdown", round_id, "par_points")
 
 
 @st.cache_data(ttl=300)
 def load_mv_stabilized(round_id: int) -> list[dict]:
     """Load stabilized mean and shrinkage data."""
-    return _query(f"""
-        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.mv_stabilized`
-        WHERE as_of_round_id = {round_id}
-        ORDER BY stabilized_mean_points DESC NULLS LAST
-    """)  # noqa: S608
+    return load_analytics("mv_stabilized", round_id, "stabilized_mean_points")
 
 
 @st.cache_data(ttl=300)
 def load_mv_form_trend(round_id: int) -> list[dict]:
     """Load form and trend data."""
-    return _query(f"""
-        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.mv_form_trend`
-        WHERE as_of_round_id = {round_id}
-        ORDER BY ewm_points DESC NULLS LAST
-    """)  # noqa: S608
+    return load_analytics("mv_form_trend", round_id, "ewm_points")
 
 
 @st.cache_data(ttl=300)
 def load_mv_regression(round_id: int) -> list[dict]:
     """Load regression candidate data."""
-    return _query(f"""
-        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.mv_regression`
-        WHERE as_of_round_id = {round_id}
-        ORDER BY regression_score DESC NULLS LAST
-    """)  # noqa: S608
+    return load_analytics("mv_regression", round_id, "regression_score")
 
 
 @st.cache_data(ttl=300)
 def load_mv_value_profile(round_id: int) -> list[dict]:
     """Load value profile data."""
-    return _query(f"""
-        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.mv_value_profile`
-        WHERE as_of_round_id = {round_id}
-        ORDER BY par_points DESC NULLS LAST
-    """)  # noqa: S608
+    return load_analytics("mv_value_profile", round_id, "par_points")
 
 
 @st.cache_data(ttl=300)
 def load_mv_round_by_round(round_id: int) -> list[dict]:
     """Load MV round-by-round raw data."""
     return _query(f"""
-        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.mv_round_by_round`
+        SELECT *
+        FROM `{PROJECT_ID}.{DATASET_ID}.mv_round_by_round`
         WHERE round <= {round_id}
         ORDER BY round DESC, points_total DESC NULLS LAST
     """)  # noqa: S608
@@ -425,23 +376,11 @@ def style_dataframe(
     return styler
 
 
-# ---------------------------------------------------------------------------
-# User email helper
-# ---------------------------------------------------------------------------
-
-
 def get_user_email() -> str:
     """Return the current user's email (from auth or default placeholder)."""
     if hasattr(st, "user") and st.user.is_logged_in:
         return st.user.email  # type: ignore[return-value]
     return DEFAULT_USER_EMAIL
-
-
-# ---------------------------------------------------------------------------
-# Squad & Team persistence (Firestore)
-# ---------------------------------------------------------------------------
-
-FIRESTORE_DATABASE = "fantasy-br-dev"
 
 
 @st.cache_resource
