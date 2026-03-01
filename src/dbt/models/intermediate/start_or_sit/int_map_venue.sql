@@ -61,7 +61,7 @@ combined as (
         tha.pts_avg_away_this_season,
         tha.matches_home_this_season,
         tha.matches_away_this_season
-    from {{ ref('int_map_baseline') }} as b
+    from {{ ref('int_baseline') }} as b
     left join last_season_home_away_avg as lha on b.id = lha.id
     left join this_season_home_away_avg as tha on b.as_of_round_id = tha.as_of_round_id and b.id = tha.id
 ),

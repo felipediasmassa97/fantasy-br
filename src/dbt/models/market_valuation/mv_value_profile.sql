@@ -12,7 +12,7 @@ select
     b.position,
     -- Value
     b.baseline_pts - rl.replacement_level as par_points,
-    b.baseline_pts as stabilized_mean_points,
+    b.baseline_pts,
     -- Distribution
     d.floor_pts as floor_p20,
     d.median_pts as median_p50,
@@ -25,7 +25,7 @@ select
     end as availability_rate,
     -- G/A dependency
     coalesce(ga.ga_share, 0) as ga_dependency
-from {{ ref('int_map_baseline') }} as b
+from {{ ref('int_baseline') }} as b
 inner join {{ ref('int_replacement_levels') }} as rl
     on b.as_of_round_id = rl.as_of_round_id and b.position = rl.position
 left join {{ ref('int_distribution_stats') }} as d

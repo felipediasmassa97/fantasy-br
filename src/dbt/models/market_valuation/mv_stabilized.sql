@@ -1,7 +1,7 @@
 /*
 Market Valuation: Stabilized Mean & Shrinkage (Subtab)
 
-# fixit is this really needed? isn't the logic in int_map_baseline enough? maybe we can just expose the relevant fields there and skip this extra model?
+# fixit is this really needed? isn't the logic in int_baseline enough? maybe we can just expose the relevant fields there and skip this extra model?
 
 Thin mart: detailed baseline/stabilized mean with shrinkage parameters.
 Shows how the baseline is constructed from multi-season data.
@@ -31,4 +31,4 @@ select
         partition by as_of_round_id
         order by baseline_pts desc nulls last
     ) as stabilized_rank_gen
-from {{ ref('int_map_baseline') }}
+from {{ ref('int_baseline') }}

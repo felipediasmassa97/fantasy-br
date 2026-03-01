@@ -139,7 +139,7 @@ select
             end
         ) / lap.league_avg_pts))
     end as mpap_multiplier
-from {{ ref('int_map_baseline') }} as b
+from {{ ref('int_baseline') }} as b
 -- Get player's current club to find next opponent
 left join (
     select distinct

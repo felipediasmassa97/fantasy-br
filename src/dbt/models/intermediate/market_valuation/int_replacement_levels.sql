@@ -21,7 +21,7 @@ with baseline as (
         as_of_round_id,
         position,
         baseline_pts
-    from {{ ref('int_map_baseline') }}
+    from {{ ref('int_baseline') }}
     where baseline_pts is not null
 ),
 

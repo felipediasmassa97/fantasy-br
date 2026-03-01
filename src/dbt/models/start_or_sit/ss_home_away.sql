@@ -1,7 +1,7 @@
 /*
 Start or Sit: Player Home vs Away (Subtab)
 
-Thin mart: home/away performance breakdown from int_map_venue + int_map_baseline.
+Thin mart: home/away performance breakdown from int_map_venue + int_baseline.
 Shows split averages, delta, and multipliers per player.
 */
 
@@ -22,6 +22,6 @@ select
     v.home_away_delta,
     v.home_multiplier as home_away_multiplier_home,
     v.away_multiplier as home_away_multiplier_away
-from {{ ref('int_map_baseline') }} as b
+from {{ ref('int_baseline') }} as b
 left join {{ ref('int_map_venue') }} as v
     on b.as_of_round_id = v.as_of_round_id and b.id = v.id

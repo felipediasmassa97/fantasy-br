@@ -95,7 +95,7 @@ select
         when b.baseline_pts is null or b.baseline_pts = 0 or e.ewm_pts is null then null
         else greatest(0.8, least(1.2, e.ewm_pts / b.baseline_pts))
     end as form_multiplier
-from {{ ref('int_map_baseline') }} as b
+from {{ ref('int_baseline') }} as b
 left join ewm_agg as e
     on
         b.as_of_round_id = e.as_of_round_id

@@ -182,9 +182,9 @@ src/dbt/
 │   ├── sources.yml               # raw BigQuery source table definitions
 │   ├── staging/                  # Views: stg_players, stg_clubs, stg_matches, stg_positions
 │   ├── intermediate/
-│   │   ├── general/              # int_players, int_round_by_round, int_edge_cases, int_ga_dependency
+│   │   ├── general/              # int_players, int_baseline, int_round_by_round, int_edge_cases, int_ga_dependency
 │   │   ├── scouting/             # int_sct_*_stats (7 models, one per time window)
-│   │   ├── start_or_sit/         # int_map_baseline, int_map_venue, int_map_mpap,
+│   │   ├── start_or_sit/         # int_map_venue, int_map_mpap,
 │   │   │                         # int_ewm_form, int_distribution_stats, int_map_score
 │   │   └── market_valuation/     # int_replacement_levels, int_form_trend, int_regression
 │   ├── scouting/                 # sct_last_1, sct_last_5, sct_last_5_home, sct_last_5_away,
@@ -216,13 +216,13 @@ src/dbt/
 **General:**
 
 - `int_players` — base enriched player data per round (scout per-round deltas, opponent, is_home)
+- `int_baseline` — stabilized mean via shrinkage blending (this + last season, k=5)
 - `int_round_by_round` — season 2026 round-level data with opponent name
 - `int_edge_cases` — per-player data quality flags
 - `int_ga_dependency` — goal + assist share of total points
 
 **Start or Sit (MAP = Matchup Adjusted Projection):**
 
-- `int_map_baseline` — stabilized mean via shrinkage blending (this + last season, k=5)
 - `int_map_venue` — home/away averages, delta, multiplier
 - `int_map_mpap` — matchup-adjusted points allowed per position (blended seasons, k=5)
 - `int_ewm_form` — EWM form with multiplier clamped 0.8–1.2

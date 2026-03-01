@@ -15,7 +15,7 @@ select
     -- PAR: value over replacement
     b.baseline_pts - rl.replacement_level as par,
     -- Stabilized mean (= baseline_pts)
-    b.baseline_pts as stabilized_mean,
+    b.baseline_pts,
     -- Recency-weighted form
     e.ewm_pts,
     -- Regression candidate score
@@ -25,7 +25,7 @@ select
         when b.rounds_listed_this_season is null or b.rounds_listed_this_season = 0 then null
         else b.matches_this_season * 1.0 / b.rounds_listed_this_season
     end as availability
-from {{ ref('int_map_baseline') }} as b
+from {{ ref('int_baseline') }} as b
 left join {{ ref('int_replacement_levels') }} as rl
     on b.as_of_round_id = rl.as_of_round_id and b.position = rl.position
 left join {{ ref('int_ewm_form') }} as e

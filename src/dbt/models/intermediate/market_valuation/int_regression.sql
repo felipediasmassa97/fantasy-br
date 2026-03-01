@@ -4,7 +4,7 @@ Regression Candidate Score (Market Valuation)
 Identifies players likely to regress toward their true talent level.
 
 Components:
-  - performance_gap = ewm_pts - stabilized_mean (positive = outperforming)
+  - performance_gap = ewm_pts - baseline_pts (positive = outperforming)
   - ga_share: high G/A dependency amplifies regression risk
   - consistency_rating: inconsistent players are more regression-prone
   - regression_score combines these signals: performance_gap * (1 + ga_share) * (1 / consistency_rating)
@@ -27,7 +27,7 @@ select
     b.club_logo_url,
     b.position,
     -- Inputs
-    b.baseline_pts as stabilized_mean_pts,
+    b.baseline_pts,
     e.ewm_pts,
     -- Performance gap: positive = currently exceeding expected output
     coalesce(e.ewm_pts, 0) - coalesce(b.baseline_pts, 0) as performance_gap,
@@ -62,7 +62,7 @@ select
         when b.matches_this_season < 5 then 'LOW_SAMPLE'
         else 'OK'
     end as confidence_flag
-from {{ ref('int_map_baseline') }} as b
+from {{ ref('int_baseline') }} as b
 left join {{ ref('int_ewm_form') }} as e
     on b.as_of_round_id = e.as_of_round_id and b.id = e.id
 left join {{ ref('int_ga_dependency') }} as ga

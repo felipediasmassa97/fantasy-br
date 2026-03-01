@@ -9,7 +9,7 @@
     - [ ] Refactor mart models logic to intermediate models to reduce complexity (mart models should be very simple, minimum CTEs)
     - [ ] Define columns to show in each mart model (no need for excessive columns)
     - [ ] Format SQL code
-    - [ ] Standardize naming: baseline points vs stabilized mean -> decide one term only, apply for everything
+    - [x] Standardize naming: baseline points vs stabilized mean -> decide one term only, apply for everything
   - KPIs
     - [x] Add last 10 matches view
     - [x] Last 5 home matches and last 5 away matches KPIs

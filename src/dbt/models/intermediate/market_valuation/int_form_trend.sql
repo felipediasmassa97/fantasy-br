@@ -6,7 +6,7 @@ Derives trend ratios and a form bucket for quick directional assessment.
 
 Trend ratios:
   - trend_ratio_last3 = last3_avg / season_avg (> 1 = improving)
-  - trend_ratio_ewm = ewm_pts / stabilized_mean (> 1 = hot)
+  - trend_ratio_ewm = ewm_pts / baseline_pts (> 1 = hot)
 
 Form bucket:
   - UP: trend_ratio_ewm > 1.10 (significantly above baseline)
@@ -63,7 +63,7 @@ select
     ra.last3_avg_pts,
     -- Season / baseline
     b.pts_avg_this_season as season_avg_pts,
-    b.baseline_pts as stabilized_mean_pts,
+    b.baseline_pts,
     -- Trend ratios
     case
         when b.pts_avg_this_season is null or b.pts_avg_this_season = 0 then null
@@ -80,14 +80,14 @@ select
         when ra.last3_avg_pts / b.pts_avg_this_season < 0.90 then 'DECLINING'
         else 'FLAT'
     end as form_bucket_last3,
-    -- Form bucket EWM: HOT / COLD / WARM vs stabilized mean
+    -- Form bucket EWM: HOT / COLD / WARM vs baseline
     case
         when b.baseline_pts is null or b.baseline_pts = 0 or e.ewm_pts is null then null
         when e.ewm_pts / b.baseline_pts > 1.10 then 'HOT'
         when e.ewm_pts / b.baseline_pts < 0.90 then 'COLD'
         else 'WARM'
     end as form_bucket_ewm
-from {{ ref('int_map_baseline') }} as b
+from {{ ref('int_baseline') }} as b
 left join {{ ref('int_ewm_form') }} as e
     on b.as_of_round_id = e.as_of_round_id and b.id = e.id
 left join recent_avgs as ra

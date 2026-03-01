@@ -13,7 +13,7 @@ select
     club as team,
     opponent_team,
     is_home_next as is_home,
-    baseline_pts as baseline_points,
+    baseline_pts,
     ewm_pts as ewm_form_points,
     form_multiplier,
     venue_multiplier as home_away_multiplier,

@@ -28,7 +28,7 @@ with player_summary as (
     group by id, name, position, club, club_logo_url
 ),
 
--- Check if player has last season data (same criteria as int_map_baseline)
+-- Check if player has last season data (same criteria as int_baseline)
 last_season_quality as (
     select
         id,
@@ -44,7 +44,7 @@ select
     ps.name as player_name,
     ps.position,
     ps.club as team,
-    -- Has reliable last season data (same threshold as baseline: >=5 matches, >30% availability)
+    -- Has reliable last season data (same threshold as int_baseline: >=5 matches, >30% availability)
     coalesce(lsq.matches_last >= 5 and lsq.avail_last > 0.30, false) as has_last_season_data,
     ps.games_last_season,
     ps.games_this_season,

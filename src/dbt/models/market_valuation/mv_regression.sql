@@ -11,7 +11,7 @@ select
     id as player_id,
     position,
     ewm_pts as ewm_points,
-    stabilized_mean_pts as stabilized_mean_points,
+    baseline_pts,
     performance_gap,
     ga_share as goal_assist_share,
     consistency_rating,

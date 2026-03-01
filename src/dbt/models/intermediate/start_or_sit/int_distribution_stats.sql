@@ -121,7 +121,7 @@ blended_stats as (
         pp.boom_count,
         pp.bust_count
     from player_percentiles_deduped as pp
-    inner join {{ ref('int_map_baseline') }} as b
+    inner join {{ ref('int_baseline') }} as b
         on pp.as_of_round_id = b.as_of_round_id and pp.id = b.id
     left join position_stats_deduped as ps
         on pp.as_of_round_id = ps.as_of_round_id and b.position = ps.position

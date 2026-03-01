@@ -58,7 +58,7 @@ this_season_player_avg as (
     group by r.as_of_round_id, p.id, p.name, p.club, p.club_logo_url, p.position
 ),
 
--- Combine and calculate baseline
+-- Combine and calculate stabilized points using shrinkage (baseline)
 combined as (
     select
         ts.as_of_round_id,
@@ -96,6 +96,7 @@ select
     availability_last_season,
     position_pts_avg,
     has_last_season_data,
+    -- Stabilized points using shrinkage (baseline)
     -- Shrinkage: weight = n / (n + k) where k=5
     -- prior = last_season_avg (returning) or position_avg (rookie)
     case
@@ -115,10 +116,10 @@ select
     case
         when has_last_season_data then 'weighted_seasons'
         else 'rookie_shrinkage'
-    end as baseline_method,
+    end as shrinking_method,
     -- Shrinkage weight: grows from 0 toward 1 as matches_this_season increases
     case
         when pts_avg_this_season is null then 0.0
         else matches_this_season / (matches_this_season + 5.0)
-    end as weight_this_season
+    end as shrinking_weight_this_season
 from combined
