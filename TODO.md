@@ -6,53 +6,42 @@
   - Performance
     - [ ] Improve performance (choose intermediate views to materialize?)
   - Refactoring
-    - [ ] Refactor mart models logic to intermediate models to reduce complexity (mart models should be very simple, minimum CTEs)
-    - [ ] Define columns to show in each mart model (no need for excessive columns)
-    - [ ] Format SQL code
-    - [x] Standardize naming: baseline points vs stabilized mean -> decide one term only, apply for everything
+    - [ ] Re-evaluate SQLFluff rules in pyproject.toml
+
   - KPIs
-    - [x] Add last 10 matches view
-    - [x] Last 5 home matches and last 5 away matches KPIs
-    - [x] Adapt views for "as of round" data
-    - [ ] Address fixits
-    - [ ] Remove red card and own goal from base average
-    - [ ] Add Matchup-Adjusted Projection (MAP)
-      - [ ] Add player baseline
-      - [ ] Add home-away effect
-      - [ ] Add form effect
-      - [ ] Add opponent strength effect
-    - [ ] Add PoE (points over expected) to Start/Sit (cumulative PoE + last 5 PoE)
-    - [ ] Add trade fairness delta
+    - [ ] !!! Remove red card and own goal from base average
+    - [ ] !!! Add PoE (points over expected) to Start/Sit (cumulative PoE + last 5 PoE)
+    - [ ] !!! Add trade fairness delta
     - [ ] Add ELO or Power Index for each player
     - [ ] Update ELO or Power Index each week (start with base ELO maybe)
   - Scouts
-    - [ ] Show scouts for home games
-    - [ ] Show scouts for away games
+    - [ ] !!! Show scouts for home matches
+    - [ ] !!! Show scouts for away matches
   - Validation
     - [ ] Validate scouting
     - [ ] Add tests for validated metrics (anchor on round 3)
   - Materialization
-    - [x] Materialize views as tables to reduce load time
-    - [ ] Materialize intermediate models as ephemeral to reduce storage and clean models
-    - [ ] Evaluate materializing some models as incremental to reduce computing
+    - [ ] !!! Materialize intermediate models as ephemeral to reduce storage and clean models
 
 - Streamlit App
-  - [x] Add clubs logos
-  - [x] Add tooltips for all metrics
-  - [x] Add G/A per match to detailed metrics
-  - [ ] Refactor files
-  - [ ] Add theming
-  - [ ] Add tooltips (clear, with intuition on metric definition, must say whether higher is better or worse, must disclaim premises and assumptions)
-  - [ ] Refactor configuration (column configs may be in dedicated files)
-  - [ ] Add authentication (login)
-  - [ ] Add user-specific squads (persist in database)
-  - [ ] Add trade-fairness page (select players for trade)
-  - [ ] Add "My Squad" (using user info from auth)
-  - [ ] Add "My Team" (subset of my squad)
-  - [ ] Add toggles for my team and my squad on visualizations
-  - [ ] Add "My Opponent Squad" - goal: estimate points, evaluate trades
-  - [ ] Add "My Opponent Team" - goal: estimate points
-  - [ ] Add trade fairness delta (select groups of players from both sides and check overall PAR delta)
+  - Refactoring
+    - [x] Move sidebar to main.py instead of page-level
+    - [x] Refactor scouting page
+    - [ ] !!! Refactor squad and team page
+    - [ ] Remove noqa and apply best practices
+  - [ ] !!! Add theming
+  - [ ] Improve tooltips (clear, with intuition on metric definition, must say whether higher is better or worse, must disclaim premises and assumptions)
+  - [ ] !!! Add trade-fairness page (select players for trade)
+  - [ ] !!! Add trade fairness delta (select groups of players from both sides and check overall PAR delta)
+  - !!! Auth
+    - [ ] Add authentication (login)
+  - !!! Squad and Team
+    - [ ] Add user-specific squads (persist in database)
+    - [ ] Add "My Squad" (using user info from auth)
+    - [ ] Add "My Team" (subset of my squad)
+    - [ ] Add toggles for my team and my squad on visualizations
+    - [ ] Add "My Opponent Squad" - goal: estimate points, evaluate trades
+    - [ ] Add "My Opponent Team" - goal: estimate points
 
 - Text Files
   - [ ] Improve pyproject.toml

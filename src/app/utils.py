@@ -67,8 +67,6 @@ COLUMN_CONFIG = {
     },
 }
 
-# fixit update views names
-
 
 @st.cache_resource
 def get_client() -> bigquery.Client:
@@ -79,15 +77,15 @@ def get_client() -> bigquery.Client:
     return bigquery.Client(project=PROJECT_ID, credentials=credentials)
 
 
+@st.cache_data(ttl=600)
 def _query(sql: str) -> list[dict]:
     """Execute query and return list of dicts."""
     client = get_client()
     return [dict(row) for row in client.query(sql).result()]
 
 
-@st.cache_data(ttl=300)
 def load_available_rounds() -> list[int]:
-    """Load available rounds from BigQuery."""
+    """Load available rounds."""
     return [
         int(r["as_of_round_id"])
         for r in _query(f"""
@@ -98,9 +96,36 @@ def load_available_rounds() -> list[int]:
     ]
 
 
-@st.cache_data(ttl=300)
+def load_positions() -> list[dict]:
+    """Load positions."""
+    return sorted(
+        r["position"]
+        for r in _query(f"""
+            SELECT DISTINCT
+                id,
+                abbreviation as position
+            FROM `{PROJECT_ID}.{DATASET_ID}.stg_positions`
+            ORDER BY id
+        """)  # noqa: S608
+    )
+
+
+def load_clubs() -> list[dict]:
+    """Load clubs."""
+    return sorted(
+        r["club"]
+        for r in _query(f"""
+            SELECT DISTINCT
+                abbreviation,
+                name as club
+            FROM `{PROJECT_ID}.{DATASET_ID}.stg_clubs`
+            ORDER by id
+        """)  # noqa: S608
+    )
+
+
 def load_scouting_data(view_name: str, round_id: int | None = None) -> list[dict]:
-    """Load scouting data from a BigQuery view."""
+    """Load scouting data from a view."""
     if view_name == "sct_last_season" or round_id is None:
         return _query(f"""
             SELECT *
@@ -115,7 +140,6 @@ def load_scouting_data(view_name: str, round_id: int | None = None) -> list[dict
     """)  # noqa: S608
 
 
-@st.cache_data(ttl=300)
 def load_analytics(view: str, as_of_round_id: str | None, order_by: str) -> list[dict]:
     """Load analytics."""
     where_clause = ""
@@ -195,7 +219,6 @@ def load_mv_value_profile(round_id: int) -> list[dict]:
     return load_analytics("mv_value_profile", round_id, "par_points")
 
 
-@st.cache_data(ttl=300)
 def load_mv_round_by_round(round_id: int) -> list[dict]:
     """Load MV round-by-round raw data."""
     return _query(f"""
@@ -206,9 +229,8 @@ def load_mv_round_by_round(round_id: int) -> list[dict]:
     """)  # noqa: S608
 
 
-@st.cache_data(ttl=3600)
 def load_scout_points() -> dict[str, tuple[str, float]]:
-    """Load scout points from BigQuery."""
+    """Load scout points."""
     return {
         row["code"]: (row["description_en"], float(row["points"]))
         for row in _query(f"""
@@ -240,11 +262,50 @@ def get_scout_groups(
     return offensive, defensive, negative
 
 
+def render_sidebar_filters(*, render_rounds: bool = True) -> None:
+    """Render shared sidebar filters and persist selections to session_state."""
+    with st.sidebar:
+        st.header("Filters")
+
+        if render_rounds:
+            rounds = load_available_rounds()
+            st.selectbox(
+                "Round",
+                options=rounds,
+                index=0,
+                key="filter_round_id",
+            )
+
+        st.text_input("Player Name", key="filter_name")
+
+        positions = [
+            {"id": 0, "position": "All"},
+            *load_positions(),
+        ]
+        st.selectbox(
+            "Position",
+            options=positions,
+            format_func=lambda x: x["position"],
+            key="filter_position",
+        )
+
+        clubs = [
+            {"id": 0, "club": "All"},
+            *load_clubs(),
+        ]
+        st.selectbox(
+            "Club",
+            options=clubs,
+            format_func=lambda x: x["club"],
+            key="filter_club",
+        )
+
+
 def filter_data(data: list[dict]) -> list[dict]:
     """Apply filters to data."""
     filter_name = st.session_state.get("filter_name")
-    filter_club = st.session_state.get("filter_club")
     filter_position = st.session_state.get("filter_position")
+    filter_club = st.session_state.get("filter_club")
 
     filtered = data
 
@@ -254,10 +315,14 @@ def filter_data(data: list[dict]) -> list[dict]:
             for row in filtered
             if filter_name.lower() in row.get("player_name", "").lower()
         ]
-    if filter_club and filter_club != "All":
-        filtered = [row for row in filtered if row.get("club") == filter_club]
-    if filter_position and filter_position != "All":
-        filtered = [row for row in filtered if row.get("position") == filter_position]
+    if filter_club and filter_club["club"] != "All":
+        filtered = [row for row in filtered if row.get("club") == filter_club["club"]]
+    if filter_position and filter_position["position"] != "All":
+        filtered = [
+            row
+            for row in filtered
+            if row.get("position") == filter_position["position"]
+        ]
     return filtered
 
 

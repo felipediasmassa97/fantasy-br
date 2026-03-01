@@ -7,9 +7,9 @@ from utils import (
     TIME_PERIODS,
     filter_data,
     get_scout_groups,
-    load_available_rounds,
     load_scout_points,
     load_scouting_data,
+    render_sidebar_filters,
     style_dataframe,
 )
 
@@ -704,50 +704,32 @@ def main() -> None:
     st.title("🔍 Scouting")
     st.caption("Player rankings, detailed metrics, and comparison tools")
 
-    # Sidebar filters
+    # Page-specific sidebar: Time Period selector
     with st.sidebar:
-        st.header("Filters")
-
         selected_period = st.selectbox(
             "Time Period",
             options=list(TIME_PERIODS.keys()),
             index=0,
             help="Select the time window for calculating statistics",
         )
-        view_name = TIME_PERIODS[selected_period]
+    view_name = TIME_PERIODS[selected_period]
 
-        # Only show round filter for current season KPIs
-        selected_round = None
-        if selected_period != "Last Season":
-            available_rounds = load_available_rounds()
-            selected_round = st.selectbox(
-                "As of Round",
-                options=available_rounds,
-                index=0,
-                format_func=lambda x: f"Round {x}",
-                help="View KPIs as if this was the latest round",
-            )
+    render_sidebar_filters(render_rounds=selected_period != "Last Season")
 
-        with st.spinner("Loading data..."):
-            data = load_scouting_data(view_name, selected_round)
-            scout_points = load_scout_points()
-            scout_groups = get_scout_groups(scout_points)
+    # Load data; round only applies when not viewing last season
+    with st.spinner("Loading data..."):
+        data = load_scouting_data(
+            view_name, round_id=st.session_state.get("filter_round_id")
+        )
+        scout_points = load_scout_points()
+        scout_groups = get_scout_groups(scout_points)
 
-        # Convert availability to percentage
-        for row in data:
-            if row.get("availability") is not None:
-                row["availability"] = row["availability"] * 100
+    # Convert availability to percentage
+    for row in data:
+        if row.get("availability") is not None:
+            row["availability"] = row["availability"] * 100
 
-        clubs = sorted({row["club"] for row in data if row.get("club")})
-        positions = ["GK", "CB", "FB", "MD", "AT"]
-
-        st.divider()
-
-        name_filter = st.text_input("Player Name", placeholder="Search...")
-        position_filter = st.selectbox("Position", options=["All", *positions])
-        club_filter = st.selectbox("Club", options=["All", *clubs])
-
-    filtered_data = filter_data(data, name_filter, club_filter, position_filter)
+    filtered_data = filter_data(data)
 
     # Main tabs
     tab1, tab2, tab3 = st.tabs(

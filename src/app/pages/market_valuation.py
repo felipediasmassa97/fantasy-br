@@ -12,6 +12,7 @@ from utils import (
     load_mv_regression,
     load_mv_round_by_round,
     load_mv_value_profile,
+    render_sidebar_filters,
 )
 
 
@@ -543,18 +544,7 @@ def main() -> None:
         st.warning("No rounds available.")
         return
 
-    st.selectbox("Select Round", rounds, index=0, key="filter_round_id")
-
-    # Load data here to initialize sidebar
-    data = load_mv_main(st.session_state.get("filter_round_id"))
-
-    # Sidebar
-    st.sidebar.header("Filters")
-    st.sidebar.text_input("Player Name", "", key="filter_name")
-    clubs = sorted({row.get("club") for row in data if row.get("club")})
-    st.sidebar.selectbox("Club", ["All", *clubs], key="filter_club")
-    positions = sorted({row.get("position", "") for row in data if row.get("position")})
-    st.sidebar.selectbox("Position", ["All", *positions], key="filter_position")
+    render_sidebar_filters()
 
     tabs = st.tabs(
         [
