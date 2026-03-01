@@ -1,7 +1,5 @@
 """Start or Sit page - MAP projection with component breakdown and diagnostics."""
 
-# fixit evaluate, refactor, standardize and improve
-
 import pandas as pd
 import streamlit as st
 from utils import (
@@ -9,16 +7,16 @@ from utils import (
     load_available_rounds,
     load_ss_distribution,
     load_ss_edge_cases,
+    load_ss_home_away,
     load_ss_main,
     load_ss_map_breakdown,
     load_ss_mpap_debug,
     load_ss_round_by_round,
-    load_ss_splits,
 )
 
-# ---------------------------------------------------------------------------
-# Tab renderers
-# ---------------------------------------------------------------------------
+# fixit move each load_* function to its _render_*
+# fixit add tooltips
+# fixit update column names
 
 
 def _render_main(data: list[dict]) -> None:
@@ -32,7 +30,7 @@ def _render_main(data: list[dict]) -> None:
         "name": st.column_config.TextColumn("Player", width="medium"),
         "position": st.column_config.TextColumn("Pos", width="small"),
         "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
-        "club": st.column_config.TextColumn("Team", width="small"),
+        "club": st.column_config.TextColumn("Club", width="small"),
         "map_score": st.column_config.NumberColumn(
             "MAP", format="%.2f", help="Multi-factor Adjusted Projection"
         ),
@@ -76,8 +74,8 @@ def _render_map_breakdown(data: list[dict]) -> None:
         "player_name": st.column_config.TextColumn("Player", width="medium"),
         "player_id": st.column_config.NumberColumn("ID", format="%d"),
         "position": st.column_config.TextColumn("Pos", width="small"),
-        "team": st.column_config.TextColumn("Team", width="small"),
-        "opponent_team": st.column_config.TextColumn("Opp", width="small"),
+        "club": st.column_config.TextColumn("Club", width="small"),
+        "opponent_club": st.column_config.TextColumn("Opponent", width="small"),
         "is_home": st.column_config.CheckboxColumn("Home?"),
         "baseline_points": st.column_config.NumberColumn("Baseline", format="%.2f"),
         "ewm_form_points": st.column_config.NumberColumn("EWM Form", format="%.2f"),
@@ -104,7 +102,7 @@ def _render_mpap_debug(data: list[dict]) -> None:
         return
 
     col_config = {
-        "opponent_team": st.column_config.TextColumn("Opponent", width="small"),
+        "opponent_club": st.column_config.TextColumn("Opponent", width="small"),
         "position": st.column_config.TextColumn("Pos", width="small"),
         "games_in_sample_this_season": st.column_config.NumberColumn(
             "Games (This)", format="%d"
@@ -134,8 +132,8 @@ def _render_mpap_debug(data: list[dict]) -> None:
     st.dataframe(rows, width="stretch", hide_index=True, column_config=col_config)
 
 
-def _render_splits(data: list[dict]) -> None:
-    """Player Splits subtab: home vs away performance."""
+def _render_home_away(data: list[dict]) -> None:
+    """Player Home-Away subtab: home vs away performance."""
     st.subheader("Home vs Away Splits")
     if not data:
         st.info("No data available for this round.")
@@ -145,7 +143,7 @@ def _render_splits(data: list[dict]) -> None:
         "player_name": st.column_config.TextColumn("Player", width="medium"),
         "player_id": st.column_config.NumberColumn("ID", format="%d"),
         "position": st.column_config.TextColumn("Pos", width="small"),
-        "team": st.column_config.TextColumn("Team", width="small"),
+        "club": st.column_config.TextColumn("Club", width="small"),
         "games_home_this_season": st.column_config.NumberColumn(
             "Home G (This)", format="%d"
         ),
@@ -228,8 +226,8 @@ def _render_round_by_round(data: list[dict]) -> None:
         "player_name",
         "player_id",
         "position",
-        "team",
-        "opponent_team",
+        "club",
+        "opponent_club",
         "is_home",
         "points_total",
         "points_base",
@@ -255,8 +253,8 @@ def _render_round_by_round(data: list[dict]) -> None:
             "player_name": st.column_config.TextColumn("Player", width="medium"),
             "player_id": st.column_config.NumberColumn("ID", format="%d"),
             "position": st.column_config.TextColumn("Pos", width="small"),
-            "team": st.column_config.TextColumn("Team", width="small"),
-            "opponent_team": st.column_config.TextColumn("Opp", width="small"),
+            "club": st.column_config.TextColumn("Club", width="small"),
+            "opponent_club": st.column_config.TextColumn("Opponent", width="small"),
             "is_home": st.column_config.CheckboxColumn("Home?"),
             "points_total": st.column_config.NumberColumn("Total", format="%.1f"),
             "points_base": st.column_config.NumberColumn("Base", format="%.1f"),
@@ -278,7 +276,7 @@ def _render_edge_cases(data: list[dict]) -> None:
         "player_name": st.column_config.TextColumn("Player", width="medium"),
         "player_id": st.column_config.NumberColumn("ID", format="%d"),
         "position": st.column_config.TextColumn("Pos", width="small"),
-        "team": st.column_config.TextColumn("Team", width="small"),
+        "club": st.column_config.TextColumn("Club", width="small"),
         "has_last_season_data": st.column_config.CheckboxColumn("Has Last Szn?"),
         "games_last_season": st.column_config.NumberColumn("Games (Last)", format="%d"),
         "games_this_season": st.column_config.NumberColumn("Games (This)", format="%d"),
@@ -294,34 +292,18 @@ def _render_edge_cases(data: list[dict]) -> None:
     st.dataframe(rows, width="stretch", hide_index=True, column_config=col_config)
 
 
-# ---------------------------------------------------------------------------
-# Sidebar filters
-# ---------------------------------------------------------------------------
-
-
 def _sidebar_filters(data: list[dict]) -> tuple[str, str, str]:
     """Render sidebar filters and return (name, club, position)."""
     st.sidebar.header("Filters")
     name_filter = st.sidebar.text_input("Player Name", "")
 
-    clubs = sorted(
-        {
-            row.get("club", row.get("team", ""))
-            for row in data
-            if row.get("club") or row.get("team")
-        }
-    )
+    clubs = sorted({row.get("club") for row in data if row.get("club")})
     club_filter = st.sidebar.selectbox("Club", ["All", *clubs])
 
     positions = sorted({row.get("position", "") for row in data if row.get("position")})
     position_filter = st.sidebar.selectbox("Position", ["All", *positions])
 
     return name_filter, club_filter, position_filter
-
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 
 
 def main() -> None:
@@ -364,8 +346,8 @@ def main() -> None:
         _render_mpap_debug(data)
 
     with tabs[3]:
-        data = load_ss_splits(selected_round)
-        _render_splits(filter_data(data, name_f, club_f, pos_f))
+        data = load_ss_home_away(selected_round)
+        _render_home_away(filter_data(data, name_f, club_f, pos_f))
 
     with tabs[4]:
         data = load_ss_distribution(selected_round)

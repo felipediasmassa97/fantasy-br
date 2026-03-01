@@ -65,87 +65,9 @@ COLUMN_CONFIG = {
         "tooltip": "G/A average points per match. Higher is better.",
         "format": "%+.1f",
     },
-    "z_score_pos_avg": {
-        "tooltip": "Z-Score: how many standard deviations above or below top position "
-        "players mean. "
-        ">0 is above average. "
-        "Based on average points. "
-        "Higher is better.",
-        "format": "%+.2f",
-    },
-    "z_score_gen_avg": {
-        "tooltip": "Z-Score: how many standard deviations above or below top 200 "
-        "players mean. "
-        ">0 is above average. "
-        "Based on average points. "
-        "Higher is better.",
-        "format": "%+.2f",
-    },
-    "z_score_pos_base": {
-        "tooltip": "Z-Score: how many standard deviations above or below top position "
-        "players mean. "
-        ">0 is above average. "
-        "Based on base average points. "
-        "Higher is better.",
-        "format": "%+.2f",
-    },
-    "z_score_gen_base": {
-        "tooltip": "Z-Score: how many standard deviations above or below top 200 "
-        "players mean. "
-        ">0 is above average. "
-        "Based on base average points. "
-        "Higher is better.",
-        "format": "%+.2f",
-    },
-    "dvs_pos_avg": {
-        "tooltip": "Draft Value Score: z-score adjusted by availability factor. "
-        "Within position and based on average points. "
-        "Higher is better.",
-        "format": "%+.2f",
-    },
-    "dvs_gen_avg": {
-        "tooltip": "Draft Value Score: z-score adjusted by availability factor. "
-        "Across positions and based on average points. "
-        "Higher is better.",
-        "format": "%+.2f",
-    },
-    "dvs_pos_base": {
-        "tooltip": "Draft Value Score: z-score adjusted by availability factor. "
-        "Within position and based on base average points. "
-        "Higher is better.",
-        "format": "%+.2f",
-    },
-    "dvs_gen_base": {
-        "tooltip": "Draft Value Score: z-score adjusted by availability factor. "
-        "Across positions and based on base average points. "
-        "Higher is better.",
-        "format": "%+.2f",
-    },
-    "adp_pos_avg": {
-        "tooltip": "Average Draft Position: rank within position. "
-        "Based on DVS Avg. "
-        "Lower is better.",
-        "format": "%d",
-    },
-    "adp_gen_avg": {
-        "tooltip": "Average Draft Position: rank across positions. "
-        "Based on DVS Avg. "
-        "Lower is better.",
-        "format": "%d",
-    },
-    "adp_pos_base": {
-        "tooltip": "Average Draft Position: rank within position. "
-        "Based on DVS Base. "
-        "Lower is better.",
-        "format": "%d",
-    },
-    "adp_gen_base": {
-        "tooltip": "Average Draft Position: rank across positions. "
-        "Based on DVS Base. "
-        "Lower is better.",
-        "format": "%d",
-    },
 }
+
+# fixit update views names
 
 
 @st.cache_resource
@@ -223,9 +145,9 @@ def load_ss_mpap_debug(round_id: int) -> list[dict]:
     return load_analytics("ss_mpap_debug", round_id, "mpap_multiplier")
 
 
-def load_ss_splits(round_id: int) -> list[dict]:
+def load_ss_home_away(round_id: int) -> list[dict]:
     """Load player home/away splits."""
-    return load_analytics("ss_splits", round_id, "home_away_delta")
+    return load_analytics("ss_home_away", round_id, "home_away_delta")
 
 
 def load_ss_distribution(round_id: int) -> list[dict]:

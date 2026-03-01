@@ -1,7 +1,5 @@
 """Market Valuation page - PAR, stabilized mean, form, regression signals."""
 
-# fixit evaluate, refactor, standardize and improve
-
 import pandas as pd
 import streamlit as st
 from utils import (
@@ -16,9 +14,9 @@ from utils import (
     load_mv_value_profile,
 )
 
-# ---------------------------------------------------------------------------
-# Tab renderers
-# ---------------------------------------------------------------------------
+# fixit move each load_* function to its _render_*
+# fixit add tooltips
+# fixit update column names
 
 
 def _render_main(data: list[dict]) -> None:
@@ -32,7 +30,7 @@ def _render_main(data: list[dict]) -> None:
         "name": st.column_config.TextColumn("Player", width="medium"),
         "position": st.column_config.TextColumn("Pos", width="small"),
         "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
-        "club": st.column_config.TextColumn("Team", width="small"),
+        "club": st.column_config.TextColumn("Club", width="small"),
         "par": st.column_config.NumberColumn(
             "PAR", format="%+.2f", help="Points Above Replacement"
         ),
@@ -243,7 +241,7 @@ def _render_round_by_round(data: list[dict]) -> None:
         "player_name",
         "player_id",
         "position",
-        "team",
+        "club",
         "points_total",
         "points_base",
         "goals",
@@ -264,7 +262,7 @@ def _render_round_by_round(data: list[dict]) -> None:
             "player_name": st.column_config.TextColumn("Player", width="medium"),
             "player_id": st.column_config.NumberColumn("ID", format="%d"),
             "position": st.column_config.TextColumn("Pos", width="small"),
-            "team": st.column_config.TextColumn("Team", width="small"),
+            "club": st.column_config.TextColumn("Club", width="small"),
             "points_total": st.column_config.NumberColumn("Total", format="%.1f"),
             "points_base": st.column_config.NumberColumn("Base", format="%.1f"),
             "goals": st.column_config.NumberColumn("G", format="%d"),
@@ -274,23 +272,12 @@ def _render_round_by_round(data: list[dict]) -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# Sidebar filters
-# ---------------------------------------------------------------------------
-
-
 def _sidebar_filters(data: list[dict]) -> tuple[str, str, str]:
     """Render sidebar filters and return (name, club, position)."""
     st.sidebar.header("Filters")
     name_filter = st.sidebar.text_input("Player Name", "", key="mv_name")
 
-    clubs = sorted(
-        {
-            row.get("club", row.get("team", ""))
-            for row in data
-            if row.get("club") or row.get("team")
-        }
-    )
+    clubs = sorted({row.get("club") for row in data if row.get("club")})
     club_filter = st.sidebar.selectbox("Club", ["All", *clubs], key="mv_club")
 
     positions = sorted({row.get("position", "") for row in data if row.get("position")})
@@ -299,11 +286,6 @@ def _sidebar_filters(data: list[dict]) -> tuple[str, str, str]:
     )
 
     return name_filter, club_filter, position_filter
-
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 
 
 def main() -> None:
