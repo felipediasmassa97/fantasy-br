@@ -14,7 +14,7 @@ format-sql  = "scripts:format_sql"
 lint-app    = "scripts:lint_app"
 format-app  = "scripts:format_app"
 
-[dependency-groups]
+[project.optional-dependencies]
 app = [
   "db-dtypes>=1.0",
   "google-cloud-bigquery>=3.0",
@@ -50,6 +50,7 @@ ignore = [
 [tool.pytest.ini_options]
 log_cli_level = "INFO"
 
+# fixit reevaluate sqlfluff rules
 [tool.sqlfluff.core]
 dialect = "bigquery"
 templater = "jinja"
@@ -71,6 +72,9 @@ apply_dbt_builtins = true
 # Stub for scouting_enrichment custom macro so jinja templater can parse the files.
 # The real macro generates enrichment CTEs + a final SELECT; this mimics that shape.
 scouting_enrichment = "{% macro scouting_enrichment(by_round=true) %}enriched as (select * from player_pts limit 0)\nselect * from enriched{% endmacro %}"
+# Stubs for shrink_blend/shrink_weight — real macros return inline SQL expressions.
+shrink_blend = "{% macro shrink_blend(n_expr, this_avg_expr, prior_avg_expr, k=5) %}null{% endmacro %}"
+shrink_weight = "{% macro shrink_weight(n_expr, k=5) %}0.0{% endmacro %}"
 
 [tool.sqlfluff.rules.aliasing.table]
 aliasing = "explicit"

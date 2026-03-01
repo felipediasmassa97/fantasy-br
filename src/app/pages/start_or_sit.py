@@ -602,6 +602,7 @@ def main() -> None:
     with tabs[4]:
         _render_distribution()
     with tabs[5]:
+        # fixit failing on this tab (Unrecognized name: as_of_round_id)
         _render_round_by_round()
     with tabs[6]:
         _render_edge_cases()

@@ -72,7 +72,7 @@ Your objective is to develop analytics aiming to maximize performance on Panela 
 ### Key Concepts
 
 - **Temporada (Season)**: Calendar year (e.g., 2025, 2026)
-- **Rodada (Round)**: Game week in the season (1-38 rounds per season)
+- **Rodada (Round)**: Match week in the season (1-38 rounds per season)
 - **Atleta (Player)**: Football player with stats per round
 - **Scout**: Player actions that affect scoring
 - **Participant**: Human participants of a Cartola FC or Panela FC league, acting as general managers
@@ -173,32 +173,34 @@ Historical season data (2025, 2026) is stored as dbt seeds.
 ```
 src/dbt/
 ├── macros/
-│   ├── scouting_enrichment.sql   # generates z-score + DVS enrichment CTEs
-│   ├── stats_by_round.sql        # position/general stat benchmarks
+│   ├── shrink_blend.sql             # shrinkage blending for baseline points
+│   ├── scouting_enrichment.sql      # generates z-score + DVS enrichment CTEs
+│   ├── stats_by_round.sql           # position/general stat benchmarks
 │   ├── z_score_position.sql
 │   ├── z_score_general.sql
 │   └── dvs.sql
 ├── models/
-│   ├── sources.yml               # raw BigQuery source table definitions
-│   ├── staging/                  # Views: stg_players, stg_clubs, stg_matches, stg_positions
+│   ├── sources.yml                  # raw BigQuery source table definitions
+│   ├── staging/                     # stg_players, stg_clubs, stg_matches, stg_positions
 │   ├── intermediate/
-│   │   ├── general/              # int_players, int_baseline, int_round_by_round, int_edge_cases, int_ga_dependency
-│   │   ├── scouting/             # int_sct_*_stats (7 models, one per time window)
-│   │   ├── start_or_sit/         # int_map_venue, int_map_mpap,
-│   │   │                         # int_ewm_form, int_distribution_stats, int_map_score
-│   │   └── market_valuation/     # int_replacement_levels, int_form_trend, int_regression
-│   ├── scouting/                 # sct_last_1, sct_last_5, sct_last_5_home, sct_last_5_away,
-│   │                             # sct_last_10, sct_this_season, sct_last_season
-│   ├── start_or_sit/             # ss_main, ss_map_breakdown, ss_mpap_debug, ss_splits,
-│   │                             # ss_distribution, ss_round_by_round, ss_edge_cases
-│   └── market_valuation/         # mv_main, mv_par_breakdown, mv_stabilized, mv_form_trend,
-│                                 # mv_regression, mv_value_profile, mv_round_by_round
+│   │   ├── general/                 # int_players, int_baseline, int_home_away,
+│   │   │                            #   int_round_by_round, int_edge_cases, int_ga_dependency
+│   │   ├── scouting/                # int_sct_*_stats (7 models, one per time window)
+│   │   ├── start_or_sit/            # int_map_mpap, int_ewm_form, int_distribution_stats,
+│   │   │                            #   int_map_score
+│   │   └── market_valuation/        # int_replacement_levels, int_form_trend, int_regression
+│   ├── scouting/                    # sct_last_1, sct_last_5, sct_last_5_home, sct_last_5_away,
+│   │                                #   sct_last_10, sct_this_season, sct_last_season
+│   ├── start_or_sit/                # ss_main, ss_map_breakdown, ss_mpap_debug, ss_splits,
+│   │                                #   ss_distribution, ss_round_by_round, ss_edge_cases
+│   └── market_valuation/            # mv_main, mv_par_breakdown, mv_stabilized, mv_form_trend,
+│                                    #   mv_regression, mv_value_profile, mv_round_by_round
 ├── seeds/
 │   ├── raw_players_legacy_2025.csv
 │   ├── raw_players_legacy_2026.csv
-│   └── scout_points.csv          # scout code → points mapping
-├── dbt_project.yml               # staging=view, intermediate=view, marts=table
-└── profiles.yml                  # local/dev/demo/prod profile definitions
+│   └── scout_points.csv             # scout code → points mapping
+├── dbt_project.yml                  # staging=view, intermediate=view, marts=table
+└── profiles.yml                     # local/dev/demo/prod profile definitions
 ```
 
 #### Materialization Strategy
@@ -217,13 +219,13 @@ src/dbt/
 
 - `int_players` — base enriched player data per round (scout per-round deltas, opponent, is_home)
 - `int_baseline` — stabilized mean via shrinkage blending (this + last season, k=5)
+- `int_home_away` — home/away averages, delta, multiplier
 - `int_round_by_round` — season 2026 round-level data with opponent name
 - `int_edge_cases` — per-player data quality flags
 - `int_ga_dependency` — goal + assist share of total points
 
 **Start or Sit (MAP = Matchup Adjusted Projection):**
 
-- `int_map_venue` — home/away averages, delta, multiplier
 - `int_map_mpap` — matchup-adjusted points allowed per position (blended seasons, k=5)
 - `int_ewm_form` — EWM form with multiplier clamped 0.8–1.2
 - `int_distribution_stats` — P20/P50/P80, CV, consistency rating, boom/bust rates
