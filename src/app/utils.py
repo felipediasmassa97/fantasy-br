@@ -152,7 +152,7 @@ def load_ss_home_away(round_id: int) -> list[dict]:
 
 def load_ss_distribution(round_id: int) -> list[dict]:
     """Load distribution and volatility data."""
-    return load_analytics("ss_distribution", round_id, "median_p50")
+    return load_analytics("ss_distribution", round_id, "pts_median")
 
 
 def load_ss_round_by_round(round_id: int) -> list[dict]:
@@ -165,37 +165,31 @@ def load_ss_edge_cases() -> list[dict]:
     return load_analytics("ss_edge_cases", None, "games_this_season")
 
 
-@st.cache_data(ttl=300)
 def load_mv_main(round_id: int) -> list[dict]:
     """Load Market Valuation main tab data."""
     return load_analytics("mv_main", round_id, "par")
 
 
-@st.cache_data(ttl=300)
 def load_mv_par_breakdown(round_id: int) -> list[dict]:
     """Load PAR breakdown data."""
     return load_analytics("mv_par_breakdown", round_id, "par_points")
 
 
-@st.cache_data(ttl=300)
-def load_mv_stabilized(round_id: int) -> list[dict]:
-    """Load stabilized mean and shrinkage data."""
-    return load_analytics("mv_stabilized", round_id, "stabilized_mean_points")
+def load_mv_baseline(round_id: int) -> list[dict]:
+    """Load baseline (stabilized mean, shrinkage, and home/away splits) data."""
+    return load_analytics("mv_baseline", round_id, "baseline_pts")
 
 
-@st.cache_data(ttl=300)
 def load_mv_form_trend(round_id: int) -> list[dict]:
     """Load form and trend data."""
     return load_analytics("mv_form_trend", round_id, "ewm_points")
 
 
-@st.cache_data(ttl=300)
 def load_mv_regression(round_id: int) -> list[dict]:
     """Load regression candidate data."""
     return load_analytics("mv_regression", round_id, "regression_score")
 
 
-@st.cache_data(ttl=300)
 def load_mv_value_profile(round_id: int) -> list[dict]:
     """Load value profile data."""
     return load_analytics("mv_value_profile", round_id, "par_points")
@@ -246,24 +240,24 @@ def get_scout_groups(
     return offensive, defensive, negative
 
 
-def filter_data(
-    data: list[dict],
-    name_filter: str,
-    club_filter: str,
-    position_filter: str,
-) -> list[dict]:
+def filter_data(data: list[dict]) -> list[dict]:
     """Apply filters to data."""
+    filter_name = st.session_state.get("filter_name")
+    filter_club = st.session_state.get("filter_club")
+    filter_position = st.session_state.get("filter_position")
+
     filtered = data
-    if name_filter:
+
+    if filter_name:
         filtered = [
             row
             for row in filtered
-            if name_filter.lower() in row.get("name", "").lower()
+            if filter_name.lower() in row.get("player_name", "").lower()
         ]
-    if club_filter != "All":
-        filtered = [row for row in filtered if row.get("club") == club_filter]
-    if position_filter != "All":
-        filtered = [row for row in filtered if row.get("position") == position_filter]
+    if filter_club and filter_club != "All":
+        filtered = [row for row in filtered if row.get("club") == filter_club]
+    if filter_position and filter_position != "All":
+        filtered = [row for row in filtered if row.get("position") == filter_position]
     return filtered
 
 

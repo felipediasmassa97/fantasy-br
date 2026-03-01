@@ -1,237 +1,366 @@
-"""Market Valuation page - PAR, stabilized mean, form, regression signals."""
+"""Market Valuation page."""
 
 import pandas as pd
 import streamlit as st
 from utils import (
     filter_data,
     load_available_rounds,
+    load_mv_baseline,
     load_mv_form_trend,
     load_mv_main,
     load_mv_par_breakdown,
     load_mv_regression,
     load_mv_round_by_round,
-    load_mv_stabilized,
     load_mv_value_profile,
 )
 
-# fixit move each load_* function to its _render_*
-# fixit add tooltips
-# fixit update column names
 
-
-def _render_main(data: list[dict]) -> None:
+def _render_main() -> None:
     """Render main consolidated tab with key valuation columns."""
     st.subheader("Market Valuation Overview")
+
+    data = filter_data(load_mv_main(st.session_state.get("filter_round_id")))
     if not data:
         st.info("No data available for this round.")
         return
 
     col_config = {
-        "name": st.column_config.TextColumn("Player", width="medium"),
-        "position": st.column_config.TextColumn("Pos", width="small"),
-        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
-        "club": st.column_config.TextColumn("Club", width="small"),
-        "par": st.column_config.NumberColumn(
-            "PAR", format="%+.2f", help="Points Above Replacement"
+        "player_name": st.column_config.TextColumn("Player", width="medium"),
+        "position": st.column_config.TextColumn(
+            "Position", width="small", help="GK / CB / FB / MD / AT"
         ),
-        "stabilized_mean": st.column_config.NumberColumn(
-            "Stabilized", format="%.2f", help="Shrinkage-blended baseline"
+        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
+        "par": st.column_config.NumberColumn(
+            "PAR",
+            format="%+.2f",
+            help="Points Above Replacement — baseline minus position replacement level",
+        ),
+        "baseline_pts": st.column_config.NumberColumn(
+            "Baseline",
+            format="%.2f",
+            help="Shrinkage-blended expected output (k=5). Used as stabilized mean.",
         ),
         "ewm_pts": st.column_config.NumberColumn(
-            "EWM", format="%.2f", help="Exponentially weighted mean"
+            "EWM Form",
+            format="%.2f",
+            help="Exponentially-weighted form (higher alpha = more recency bias)",
         ),
         "regression_score": st.column_config.NumberColumn(
-            "Regr Score", format="%+.2f", help="Regression candidate signal"
+            "Regr Score",
+            format="%+.2f",
+            help="Positive = overperforming (sell high), negative = underperforming",
         ),
         "availability": st.column_config.NumberColumn(
-            "Avail%", format="%.0f%%", help="Games played / total rounds"
+            "Avail%",
+            format="%.0f%%",
+            help="% of listed rounds where player actually played",
         ),
     }
 
-    display_cols = [
-        "name",
-        "position",
-        "club_logo_url",
-        "club",
-        "par",
-        "stabilized_mean",
-        "ewm_pts",
-        "regression_score",
-        "availability",
-    ]
+    display_cols = list(col_config.keys())
     rows = [{k: row.get(k) for k in display_cols} for row in data]
-
-    # Convert availability from fraction to percentage for display
     for row in rows:
         if row.get("availability") is not None:
             row["availability"] = row["availability"] * 100
 
-    st.dataframe(rows, width="stretch", hide_index=True, column_config=col_config)
+    st.dataframe(
+        rows, use_container_width=True, hide_index=True, column_config=col_config
+    )
 
 
-def _render_par_breakdown(data: list[dict]) -> None:
+def _render_par_breakdown() -> None:
     """PAR Breakdown subtab."""
     st.subheader("PAR Breakdown & Replacement Level")
+
+    data = filter_data(load_mv_par_breakdown(st.session_state.get("filter_round_id")))
     if not data:
         st.info("No data available for this round.")
         return
 
     col_config = {
         "player_name": st.column_config.TextColumn("Player", width="medium"),
-        "player_id": st.column_config.NumberColumn("ID", format="%d"),
-        "position": st.column_config.TextColumn("Pos", width="small"),
-        "baseline_points": st.column_config.NumberColumn("Baseline", format="%.2f"),
-        "replacement_percentile_used": st.column_config.NumberColumn(
-            "Repl Pct", format="%.2f"
+        "position": st.column_config.TextColumn("Position", width="small"),
+        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
+        "baseline_pts": st.column_config.NumberColumn(
+            "Baseline", format="%.2f", help="Shrinkage-blended expected output"
         ),
-        "replacement_level_points_pos": st.column_config.NumberColumn(
-            "Repl Level", format="%.2f"
+        "drafted_players_in_position": st.column_config.NumberColumn(
+            "Drafted",
+            format="%d",
+            help="Expected number of players rostered at this position across 10 teams",
         ),
-        "par_points": st.column_config.NumberColumn("PAR", format="%+.2f"),
-        "par_rank_pos": st.column_config.NumberColumn("Rank (Pos)", format="%d"),
-        "par_rank_gen": st.column_config.NumberColumn("Rank (All)", format="%d"),
-        "position_depth_flag": st.column_config.TextColumn(
-            "Depth", help="DEEP / MODERATE / SCARCE"
+        "replacement_level_pts": st.column_config.NumberColumn(
+            "Repl Level",
+            format="%.2f",
+            help="Average baseline of the 5 best undrafted players at this position",
+        ),
+        "par_points": st.column_config.NumberColumn(
+            "PAR",
+            format="%+.2f",
+            help="Points Above Replacement = baseline - replacement level",
+        ),
+        "par_rank_pos": st.column_config.NumberColumn(
+            "Rk (Pos)", format="%d", help="PAR rank within same position"
+        ),
+        "par_rank_gen": st.column_config.NumberColumn(
+            "Rk (All)", format="%d", help="PAR rank across all positions"
         ),
     }
 
     display_cols = list(col_config.keys())
     rows = [{k: row.get(k) for k in display_cols} for row in data]
-    st.dataframe(rows, width="stretch", hide_index=True, column_config=col_config)
+    st.dataframe(
+        rows, use_container_width=True, hide_index=True, column_config=col_config
+    )
 
 
-def _render_stabilized(data: list[dict]) -> None:
-    """Stabilized Mean & Shrinkage subtab."""
-    st.subheader("Stabilized Mean & Shrinkage")
+def _render_baseline() -> None:
+    """Baseline (Stabilized Mean & Shrinkage) subtab."""
+    st.subheader("Baseline — Stabilized Mean & Shrinkage")
+
+    data = filter_data(load_mv_baseline(st.session_state.get("filter_round_id")))
     if not data:
         st.info("No data available for this round.")
         return
 
     col_config = {
         "player_name": st.column_config.TextColumn("Player", width="medium"),
-        "player_id": st.column_config.NumberColumn("ID", format="%d"),
-        "position": st.column_config.TextColumn("Pos", width="small"),
-        "avg_points_this_season": st.column_config.NumberColumn(
-            "Avg (This)", format="%.2f"
+        "position": st.column_config.TextColumn("Position", width="small"),
+        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
+        "pts_avg_this_season": st.column_config.NumberColumn(
+            "Avg (This)", format="%.2f", help="Raw average this season"
         ),
-        "games_this_season": st.column_config.NumberColumn("Games (This)", format="%d"),
-        "avg_points_last_season": st.column_config.NumberColumn(
-            "Avg (Last)", format="%.2f"
+        "matches_this_season": st.column_config.NumberColumn(
+            "Games (This)", format="%d"
         ),
-        "games_last_season": st.column_config.NumberColumn("Games (Last)", format="%d"),
-        "position_avg_last_season": st.column_config.NumberColumn(
-            "Pos Avg", format="%.2f"
+        "pts_avg_last_season": st.column_config.NumberColumn(
+            "Avg (Last)", format="%.2f", help="Raw average last season"
         ),
-        "shrink_k_used": st.column_config.NumberColumn("k", format="%d"),
-        "weight_this_season": st.column_config.NumberColumn("Wt (This)", format="%.2f"),
-        "stabilized_mean_points": st.column_config.NumberColumn(
-            "Stabilized", format="%.2f"
+        "matches_last_season": st.column_config.NumberColumn(
+            "Games (Last)", format="%d"
         ),
-        "stabilized_rank_pos": st.column_config.NumberColumn("Rank (Pos)", format="%d"),
+        "position_pts_avg_last_season": st.column_config.NumberColumn(
+            "Pos Avg", format="%.2f", help="Position average last season (rookie prior)"
+        ),
+        "shrinking_parameter": st.column_config.NumberColumn(
+            "k",
+            format="%d",
+            help="Shrinkage constant: higher k -> slower convergence to this season",
+        ),
+        "shrinking_weight_this_season": st.column_config.NumberColumn(
+            "Wt (This)",
+            format="%.2f",
+            help="Weight on this-season data = games / (games + k)",
+        ),
+        "shrinking_method": st.column_config.TextColumn(
+            "Method",
+            help="weighted_seasons = returning; rookie_shrinkage = new player",
+        ),
+        "baseline_pts": st.column_config.NumberColumn(
+            "Baseline", format="%.2f", help="Final shrinkage-blended estimate"
+        ),
+        "baseline_rank_pos": st.column_config.NumberColumn(
+            "Rk (Pos)", format="%d", help="Rank within position"
+        ),
+        "baseline_rank_gen": st.column_config.NumberColumn(
+            "Rk (All)", format="%d", help="Rank across all positions"
+        ),
+        "pts_avg_home": st.column_config.NumberColumn(
+            "Home Avg",
+            format="%.2f",
+            help="Shrinkage-blended baseline for home matches",
+        ),
+        "matches_home_this_season": st.column_config.NumberColumn(
+            "Home G (This)", format="%d"
+        ),
+        "baseline_rank_pos_home": st.column_config.NumberColumn(
+            "Rk Home (Pos)", format="%d", help="Rank by home baseline within position"
+        ),
+        "pts_avg_away": st.column_config.NumberColumn(
+            "Away Avg",
+            format="%.2f",
+            help="Shrinkage-blended baseline for away matches",
+        ),
+        "matches_away_this_season": st.column_config.NumberColumn(
+            "Away G (This)", format="%d"
+        ),
+        "baseline_rank_pos_away": st.column_config.NumberColumn(
+            "Rk Away (Pos)", format="%d", help="Rank by away baseline within position"
+        ),
     }
 
     display_cols = list(col_config.keys())
     rows = [{k: row.get(k) for k in display_cols} for row in data]
-    st.dataframe(rows, width="stretch", hide_index=True, column_config=col_config)
+    st.dataframe(
+        rows, use_container_width=True, hide_index=True, column_config=col_config
+    )
 
 
-def _render_form_trend(data: list[dict]) -> None:
+def _render_form_trend() -> None:
     """Form & Trend subtab."""
     st.subheader("Form (EWM) & Trend")
+
+    data = filter_data(load_mv_form_trend(st.session_state.get("filter_round_id")))
     if not data:
         st.info("No data available for this round.")
         return
 
     col_config = {
         "player_name": st.column_config.TextColumn("Player", width="medium"),
-        "player_id": st.column_config.NumberColumn("ID", format="%d"),
-        "position": st.column_config.TextColumn("Pos", width="small"),
-        "ewm_alpha": st.column_config.NumberColumn("Alpha", format="%.2f"),
-        "ewm_points": st.column_config.NumberColumn("EWM", format="%.2f"),
-        "last3_avg_points": st.column_config.NumberColumn("Last 3", format="%.2f"),
-        "last5_avg_points": st.column_config.NumberColumn("Last 5", format="%.2f"),
-        "season_avg_points": st.column_config.NumberColumn("Season Avg", format="%.2f"),
-        "trend_ratio_last3": st.column_config.NumberColumn("Trend L3", format="%.3f"),
-        "trend_ratio_ewm": st.column_config.NumberColumn("Trend EWM", format="%.3f"),
-        "form_bucket": st.column_config.TextColumn("Form", help="UP / FLAT / DOWN"),
+        "position": st.column_config.TextColumn("Position", width="small"),
+        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
+        "ewm_alpha": st.column_config.NumberColumn(
+            "Alpha",
+            format="%.2f",
+            help="EWM decay factor (higher = more weight on recent matches)",
+        ),
+        "ewm_points": st.column_config.NumberColumn(
+            "EWM", format="%.2f", help="Exponentially-weighted mean score"
+        ),
+        "last3_avg_points": st.column_config.NumberColumn(
+            "Last 3 Avg", format="%.2f", help="Simple average of last 3 matches played"
+        ),
+        "season_avg_points": st.column_config.NumberColumn(
+            "Season Avg", format="%.2f", help="Season-to-date simple average"
+        ),
+        "trend_ratio_last3": st.column_config.NumberColumn(
+            "Trend L3",
+            format="%.3f",
+            help="Last-3 avg / season avg. >1 = improving, <1 = declining",
+        ),
+        "form_bucket_last3": st.column_config.TextColumn(
+            "Form (L3)", help="UP / FLAT / DOWN based on last-3 trend ratio"
+        ),
+        "trend_ratio_ewm": st.column_config.NumberColumn(
+            "Trend EWM",
+            format="%.3f",
+            help="EWM / season avg. >1 = improving, <1 = declining",
+        ),
+        "form_bucket_ewm": st.column_config.TextColumn(
+            "Form (EWM)", help="UP / FLAT / DOWN based on EWM trend ratio"
+        ),
     }
 
     display_cols = list(col_config.keys())
     rows = [{k: row.get(k) for k in display_cols} for row in data]
-    st.dataframe(rows, width="stretch", hide_index=True, column_config=col_config)
+    st.dataframe(
+        rows, use_container_width=True, hide_index=True, column_config=col_config
+    )
 
 
-def _render_regression(data: list[dict]) -> None:
+def _render_regression() -> None:
     """Regression Candidate subtab."""
     st.subheader("Regression Candidates")
+
+    data = filter_data(load_mv_regression(st.session_state.get("filter_round_id")))
     if not data:
         st.info("No data available for this round.")
         return
 
     col_config = {
         "player_name": st.column_config.TextColumn("Player", width="medium"),
-        "player_id": st.column_config.NumberColumn("ID", format="%d"),
-        "position": st.column_config.TextColumn("Pos", width="small"),
-        "ewm_points": st.column_config.NumberColumn("EWM", format="%.2f"),
-        "stabilized_mean_points": st.column_config.NumberColumn(
-            "Stabilized", format="%.2f"
+        "position": st.column_config.TextColumn("Position", width="small"),
+        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
+        "ewm_points": st.column_config.NumberColumn(
+            "EWM", format="%.2f", help="Recent form (exponentially weighted)"
         ),
-        "performance_gap": st.column_config.NumberColumn("Gap", format="%+.2f"),
-        "goal_assist_share": st.column_config.NumberColumn("GA Share", format="%.2f"),
-        "consistency_rating": st.column_config.TextColumn("Consistency"),
-        "regression_score": st.column_config.NumberColumn("Regr Score", format="%+.2f"),
+        "baseline_pts": st.column_config.NumberColumn(
+            "Baseline", format="%.2f", help="Stabilized expected output"
+        ),
+        "performance_gap": st.column_config.NumberColumn(
+            "Gap",
+            format="%+.2f",
+            help="EWM minus baseline. Positive = over, negative = underperforming",
+        ),
+        "goal_assist_share": st.column_config.NumberColumn(
+            "GA Share",
+            format="%.2f",
+            help="Goals + assists share of points. High = regression risk.",
+        ),
+        "consistency_rating": st.column_config.TextColumn(
+            "Consistency", help="HIGH / MED / LOW based on CV"
+        ),
+        "regression_score": st.column_config.NumberColumn(
+            "Regr Score",
+            format="%+.2f",
+            help="Composite signal: gap x (1 + GA share) / consistency",
+        ),
         "signal_label": st.column_config.TextColumn(
             "Signal", help="SELL_HIGH / BUY_LOW / NEUTRAL"
         ),
         "confidence_flag": st.column_config.TextColumn(
-            "Confidence", help="LOW_SAMPLE if <5 games"
+            "Confidence", help="LOW_SAMPLE if <5 games played this season"
         ),
     }
 
     display_cols = list(col_config.keys())
     rows = [{k: row.get(k) for k in display_cols} for row in data]
-    st.dataframe(rows, width="stretch", hide_index=True, column_config=col_config)
+    st.dataframe(
+        rows, use_container_width=True, hide_index=True, column_config=col_config
+    )
 
 
-def _render_value_profile(data: list[dict]) -> None:
+def _render_value_profile() -> None:
     """Value Profile subtab."""
-    st.subheader("Value Profile - Risk vs Reward")
+    st.subheader("Value Profile — Risk vs Reward")
+
+    data = filter_data(load_mv_value_profile(st.session_state.get("filter_round_id")))
     if not data:
         st.info("No data available for this round.")
         return
 
     col_config = {
         "player_name": st.column_config.TextColumn("Player", width="medium"),
-        "player_id": st.column_config.NumberColumn("ID", format="%d"),
-        "position": st.column_config.TextColumn("Pos", width="small"),
-        "par_points": st.column_config.NumberColumn("PAR", format="%+.2f"),
-        "stabilized_mean_points": st.column_config.NumberColumn(
-            "Stabilized", format="%.2f"
+        "position": st.column_config.TextColumn("Position", width="small"),
+        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
+        "par_points": st.column_config.NumberColumn(
+            "PAR", format="%+.2f", help="Points Above Replacement"
         ),
-        "floor_p20": st.column_config.NumberColumn("Floor (P20)", format="%.1f"),
-        "median_p50": st.column_config.NumberColumn("Median (P50)", format="%.1f"),
-        "ceiling_p80": st.column_config.NumberColumn("Ceiling (P80)", format="%.1f"),
-        "consistency_rating": st.column_config.TextColumn("Consistency"),
-        "availability_rate": st.column_config.NumberColumn("Avail%", format="%.0f%%"),
-        "ga_dependency": st.column_config.NumberColumn("GA Dep", format="%.2f"),
+        "baseline_pts": st.column_config.NumberColumn(
+            "Baseline", format="%.2f", help="Stabilized expected output"
+        ),
+        "pts_floor": st.column_config.NumberColumn(
+            "Floor (P20)", format="%.1f", help="20th-percentile score"
+        ),
+        "pts_median": st.column_config.NumberColumn(
+            "Median (P50)", format="%.1f", help="Median score"
+        ),
+        "pts_ceiling": st.column_config.NumberColumn(
+            "Ceiling (P80)", format="%.1f", help="80th-percentile score"
+        ),
+        "consistency_rating": st.column_config.TextColumn(
+            "Consistency", help="HIGH / MED / LOW based on CV"
+        ),
+        "availability": st.column_config.NumberColumn(
+            "Avail%",
+            format="%.0f%%",
+            help="% of listed rounds where player actually played",
+        ),
+        "ga_dependency": st.column_config.NumberColumn(
+            "GA Dep",
+            format="%.2f",
+            help="G+A share of expected points (regression risk indicator).",
+        ),
     }
 
     display_cols = list(col_config.keys())
     rows = [{k: row.get(k) for k in display_cols} for row in data]
-
-    # Convert availability from fraction to percentage
     for row in rows:
-        if row.get("availability_rate") is not None:
-            row["availability_rate"] = row["availability_rate"] * 100
+        if row.get("availability") is not None:
+            row["availability"] = row["availability"] * 100
 
-    st.dataframe(rows, width="stretch", hide_index=True, column_config=col_config)
+    st.dataframe(
+        rows, use_container_width=True, hide_index=True, column_config=col_config
+    )
 
 
-def _render_round_by_round(data: list[dict]) -> None:
+def _render_round_by_round() -> None:
     """Round-by-Round Raw subtab."""
     st.subheader("Round-by-Round Raw Data")
+
+    data = filter_data(load_mv_round_by_round(st.session_state.get("filter_round_id")))
     if not data:
-        st.info("No data available.")
+        st.info("No data available for this round.")
         return
 
     df = pd.DataFrame(data)
@@ -239,53 +368,42 @@ def _render_round_by_round(data: list[dict]) -> None:
     display_cols = [
         "round",
         "player_name",
-        "player_id",
         "position",
+        "club_logo_url",
         "club",
         "points_total",
         "points_base",
-        "goals",
-        "assists",
         "did_play",
     ]
-
     scout_cols = [c for c in df.columns if c.startswith("scout_")]
-    display_cols.extend(scout_cols)
+    display_cols.extend(sorted(scout_cols))
     display_cols = [c for c in display_cols if c in df.columns]
+
+    scout_col_config = {
+        c: st.column_config.NumberColumn(c.replace("scout_", "").upper(), format="%.0f")
+        for c in scout_cols
+    }
 
     st.dataframe(
         df[display_cols],
-        width="stretch",
+        use_container_width=True,
         hide_index=True,
         column_config={
-            "round": st.column_config.NumberColumn("Round", format="%d"),
+            "round": st.column_config.NumberColumn("Rd", format="%d"),
             "player_name": st.column_config.TextColumn("Player", width="medium"),
-            "player_id": st.column_config.NumberColumn("ID", format="%d"),
-            "position": st.column_config.TextColumn("Pos", width="small"),
+            "position": st.column_config.TextColumn("Position", width="small"),
+            "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
             "club": st.column_config.TextColumn("Club", width="small"),
-            "points_total": st.column_config.NumberColumn("Total", format="%.1f"),
-            "points_base": st.column_config.NumberColumn("Base", format="%.1f"),
-            "goals": st.column_config.NumberColumn("G", format="%d"),
-            "assists": st.column_config.NumberColumn("A", format="%d"),
+            "points_total": st.column_config.NumberColumn(
+                "Total", format="%.1f", help="Total points including G/A"
+            ),
+            "points_base": st.column_config.NumberColumn(
+                "Base", format="%.1f", help="Points excluding goals and assists"
+            ),
             "did_play": st.column_config.CheckboxColumn("Played?"),
+            **scout_col_config,
         },
     )
-
-
-def _sidebar_filters(data: list[dict]) -> tuple[str, str, str]:
-    """Render sidebar filters and return (name, club, position)."""
-    st.sidebar.header("Filters")
-    name_filter = st.sidebar.text_input("Player Name", "", key="mv_name")
-
-    clubs = sorted({row.get("club") for row in data if row.get("club")})
-    club_filter = st.sidebar.selectbox("Club", ["All", *clubs], key="mv_club")
-
-    positions = sorted({row.get("position", "") for row in data if row.get("position")})
-    position_filter = st.sidebar.selectbox(
-        "Position", ["All", *positions], key="mv_pos"
-    )
-
-    return name_filter, club_filter, position_filter
 
 
 def main() -> None:
@@ -297,17 +415,24 @@ def main() -> None:
         st.warning("No rounds available.")
         return
 
-    selected_round = st.selectbox("Select Round", rounds, index=0, key="mv_round")
+    st.selectbox("Select Round", rounds, index=0, key="filter_round_id")
 
-    # Pre-load main data for filters
-    main_data = load_mv_main(selected_round)
-    name_f, club_f, pos_f = _sidebar_filters(main_data)
+    # Load data here to initialize sidebar
+    data = load_mv_main(st.session_state.get("filter_round_id"))
+
+    # Sidebar
+    st.sidebar.header("Filters")
+    st.sidebar.text_input("Player Name", "", key="filter_name")
+    clubs = sorted({row.get("club") for row in data if row.get("club")})
+    st.sidebar.selectbox("Club", ["All", *clubs], key="filter_club")
+    positions = sorted({row.get("position", "") for row in data if row.get("position")})
+    st.sidebar.selectbox("Position", ["All", *positions], key="filter_position")
 
     tabs = st.tabs(
         [
             "Main",
             "PAR Breakdown",
-            "Stabilized Mean",
+            "Baseline",
             "Form & Trend",
             "Regression",
             "Value Profile",
@@ -316,28 +441,16 @@ def main() -> None:
     )
 
     with tabs[0]:
-        _render_main(filter_data(main_data, name_f, club_f, pos_f))
-
+        _render_main()
     with tabs[1]:
-        data = load_mv_par_breakdown(selected_round)
-        _render_par_breakdown(filter_data(data, name_f, club_f, pos_f))
-
+        _render_par_breakdown()
     with tabs[2]:
-        data = load_mv_stabilized(selected_round)
-        _render_stabilized(filter_data(data, name_f, club_f, pos_f))
-
+        _render_baseline()
     with tabs[3]:
-        data = load_mv_form_trend(selected_round)
-        _render_form_trend(filter_data(data, name_f, club_f, pos_f))
-
+        _render_form_trend()
     with tabs[4]:
-        data = load_mv_regression(selected_round)
-        _render_regression(filter_data(data, name_f, club_f, pos_f))
-
+        _render_regression()
     with tabs[5]:
-        data = load_mv_value_profile(selected_round)
-        _render_value_profile(filter_data(data, name_f, club_f, pos_f))
-
+        _render_value_profile()
     with tabs[6]:
-        data = load_mv_round_by_round(selected_round)
-        _render_round_by_round(filter_data(data, name_f, club_f, pos_f))
+        _render_round_by_round()
