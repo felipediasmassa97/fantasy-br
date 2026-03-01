@@ -62,12 +62,12 @@ select
     -- Recent averages
     ra.last3_avg_pts,
     -- Season / baseline
-    b.pts_avg_this_season as season_avg_pts,
+    b.player_pts_avg_this_season as season_avg_pts,
     b.baseline_pts,
     -- Trend ratios
     case
-        when b.pts_avg_this_season is null or b.pts_avg_this_season = 0 then null
-        else ra.last3_avg_pts / b.pts_avg_this_season
+        when b.player_pts_avg_this_season is null or b.player_pts_avg_this_season = 0 then null
+        else ra.last3_avg_pts / b.player_pts_avg_this_season
     end as trend_ratio_last3,
     case
         when b.baseline_pts is null or b.baseline_pts = 0 then null
@@ -75,9 +75,9 @@ select
     end as trend_ratio_ewm,
     -- Form bucket last 3: IMPROVING / DECLINING / FLAT vs season average
     case
-        when b.pts_avg_this_season is null or b.pts_avg_this_season = 0 or ra.last3_avg_pts is null then null
-        when ra.last3_avg_pts / b.pts_avg_this_season > 1.10 then 'IMPROVING'
-        when ra.last3_avg_pts / b.pts_avg_this_season < 0.90 then 'DECLINING'
+        when b.player_pts_avg_this_season is null or b.player_pts_avg_this_season = 0 or ra.last3_avg_pts is null then null
+        when ra.last3_avg_pts / b.player_pts_avg_this_season > 1.10 then 'IMPROVING'
+        when ra.last3_avg_pts / b.player_pts_avg_this_season < 0.90 then 'DECLINING'
         else 'FLAT'
     end as form_bucket_last3,
     -- Form bucket EWM: HOT / COLD / WARM vs baseline

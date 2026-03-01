@@ -79,7 +79,7 @@ select
     e.oldest_round,
     e.newest_round,
     b.baseline_pts,
-    b.pts_avg_this_season,
+    b.player_pts_avg_this_season as pts_avg_this_season,
     -- EWM vs baseline ratio (how hot/cold is the player based on recent weighted form)
     case
         when b.baseline_pts is null or b.baseline_pts = 0 then null
@@ -87,8 +87,8 @@ select
     end as ewm_vs_baseline_ratio,
     -- EWM vs season average (is recent form better or worse than season average)
     case
-        when b.pts_avg_this_season is null or b.pts_avg_this_season = 0 then null
-        else e.ewm_pts / b.pts_avg_this_season
+        when b.player_pts_avg_this_season is null or b.player_pts_avg_this_season = 0 then null
+        else e.ewm_pts / b.player_pts_avg_this_season
     end as ewm_vs_season_ratio,
     -- Form multiplier: EWM-based, clamped 0.8-1.2 (replaces simple last-5 avg form for MAP)
     case
