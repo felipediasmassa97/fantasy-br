@@ -22,6 +22,6 @@ select
     v.home_away_delta,
     v.home_multiplier as home_away_multiplier_home,
     v.away_multiplier as home_away_multiplier_away
-from {{ ref('int_map_baseline') }} b
-left join {{ ref('int_map_venue') }} v
+from {{ ref('int_map_baseline') }} as b
+left join {{ ref('int_map_venue') }} as v
     on b.as_of_round_id = v.as_of_round_id and b.id = v.id

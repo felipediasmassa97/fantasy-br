@@ -30,9 +30,10 @@ player_matches as (
         p.id,
         p.position,
         p.pts_round
-    from {{ ref('int_players') }} p
-    cross join all_rounds r
-    where p.season = 2026 
+    from {{ ref('int_players') }} as p
+    cross join all_rounds as r
+    where
+        p.season = 2026
         and p.round_id <= r.as_of_round_id
         and p.has_played = true
 ),
@@ -113,16 +114,16 @@ blended_stats as (
         ps.pos_median,
         ps.pos_ceiling,
         -- blend_weight: 0 if >= 10 games (pure player data), up to 1.0 if 0 games (pure position data)
-        case 
+        case
             when pp.matches_played >= 10 then 0.0
             else (10.0 - pp.matches_played) / 10.0
         end as blend_weight,
         pp.boom_count,
         pp.bust_count
-    from player_percentiles_deduped pp
-    inner join {{ ref('int_map_baseline') }} b
+    from player_percentiles_deduped as pp
+    inner join {{ ref('int_map_baseline') }} as b
         on pp.as_of_round_id = b.as_of_round_id and pp.id = b.id
-    left join position_stats_deduped ps
+    left join position_stats_deduped as ps
         on pp.as_of_round_id = ps.as_of_round_id and b.position = ps.position
 )
 
@@ -155,7 +156,7 @@ select
     end as consistency_rating,
     bs.blend_weight,
     -- Boom rate: fraction of games scoring >= 8 points
-    case when bs.matches_played > 0 then bs.boom_count * 1.0 / bs.matches_played else null end as boom_rate_ge_8,
+    case when bs.matches_played > 0 then bs.boom_count * 1.0 / bs.matches_played end as boom_rate_ge_8,
     -- Bust rate: fraction of games scoring <= 2 points
-    case when bs.matches_played > 0 then bs.bust_count * 1.0 / bs.matches_played else null end as bust_rate_le_2
-from blended_stats bs
+    case when bs.matches_played > 0 then bs.bust_count * 1.0 / bs.matches_played end as bust_rate_le_2
+from blended_stats as bs

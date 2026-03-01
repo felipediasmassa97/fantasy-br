@@ -29,9 +29,10 @@ round_status as (
         p.club_logo_url,
         p.position,
         p.has_played
-    from {{ ref('int_players') }} p
-    cross join all_rounds r
-    where p.season = 2026
+    from {{ ref('int_players') }} as p
+    cross join all_rounds as r
+    where
+        p.season = 2026
         and p.round_id = r.as_of_round_id
 ),
 
@@ -43,16 +44,33 @@ last_played_stats as (
         p.id,
         p.pts_round,
         p.base_round,
-        p.scout_G, p.scout_A, p.scout_FT, p.scout_FD, p.scout_FF, p.scout_FS, p.scout_PS,
-        p.scout_DS, p.scout_SG, p.scout_DE, p.scout_DP,
-        p.scout_FC, p.scout_PC, p.scout_CA, p.scout_CV, p.scout_GC, p.scout_GS, p.scout_I, p.scout_PP,
+        p.scout_G,
+        p.scout_A,
+        p.scout_FT,
+        p.scout_FD,
+        p.scout_FF,
+        p.scout_FS,
+        p.scout_PS,
+        p.scout_DS,
+        p.scout_SG,
+        p.scout_DE,
+        p.scout_DP,
+        p.scout_FC,
+        p.scout_PC,
+        p.scout_CA,
+        p.scout_CV,
+        p.scout_GC,
+        p.scout_GS,
+        p.scout_I,
+        p.scout_PP,
         row_number() over (
             partition by r.as_of_round_id, p.id
             order by p.round_id desc
         ) as rn
-    from {{ ref('int_players') }} p
-    cross join all_rounds r
-    where p.season = 2026
+    from {{ ref('int_players') }} as p
+    cross join all_rounds as r
+    where
+        p.season = 2026
         and p.has_played = true
         and p.round_id <= r.as_of_round_id
 ),
@@ -91,11 +109,12 @@ player_pts as (
         lp.scout_GS as avg_GS,
         lp.scout_I as avg_I,
         lp.scout_PP as avg_PP
-    from round_status s
-    left join last_played_stats lp
-        on s.as_of_round_id = lp.as_of_round_id
-        and s.id = lp.id
-        and lp.rn = 1  -- only the most recent played match
+    from round_status as s
+    left join last_played_stats as lp
+        on
+            s.as_of_round_id = lp.as_of_round_id
+            and s.id = lp.id
+            and lp.rn = 1  -- only the most recent played match
 ),
 
 -- Enrichment: z-scores and DVS (see scouting_enrichment macro for details)

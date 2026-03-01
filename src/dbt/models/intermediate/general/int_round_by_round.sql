@@ -38,6 +38,6 @@ select
     p.scout_GS,
     p.scout_I,
     p.scout_PP
-from {{ ref('int_players') }} p
-left join {{ ref('stg_clubs') }} oc on p.opponent_id = oc.id
+from {{ ref('int_players') }} as p
+left join {{ ref('stg_clubs') }} as oc on p.opponent_id = oc.id
 where p.season = 2026

@@ -30,17 +30,19 @@ round_windows as (
             partition by r1.as_of_round_id
             order by r2.round_id desc
         ) as round_rank
-    from all_rounds r1
+    from all_rounds as r1
     cross join (
         select distinct round_id
         from {{ ref('int_players') }}
         where season = 2026
-    ) r2
+    ) as r2
     where r2.round_id <= r1.as_of_round_id
 ),
 
 last_n_calendar_rounds as (
-    select as_of_round_id, round_id
+    select
+        as_of_round_id,
+        round_id
     from round_windows
     where round_rank <= 5
 ),
@@ -60,14 +62,20 @@ player_rounds as (
             partition by lr.as_of_round_id, p.id
             order by p.round_id desc
         ) as round_rank
-    from {{ ref('int_players') }} p
-    inner join last_n_calendar_rounds lr on p.round_id = lr.round_id
+    from {{ ref('int_players') }} as p
+    inner join last_n_calendar_rounds as lr on p.round_id = lr.round_id
     where p.season = 2026
 ),
 
 -- Most recent player info (name, club may change mid-season via transfers)
 latest_info as (
-    select as_of_round_id, id, name, club, club_logo_url, position
+    select
+        as_of_round_id,
+        id,
+        name,
+        club,
+        club_logo_url,
+        position
     from player_rounds
     where round_rank = 1
 ),
@@ -91,16 +99,33 @@ last_n_played as (
         p.id,
         p.pts_round,
         p.base_round,
-        p.scout_G, p.scout_A, p.scout_FT, p.scout_FD, p.scout_FF, p.scout_FS, p.scout_PS,
-        p.scout_DS, p.scout_SG, p.scout_DE, p.scout_DP,
-        p.scout_FC, p.scout_PC, p.scout_CA, p.scout_CV, p.scout_GC, p.scout_GS, p.scout_I, p.scout_PP,
+        p.scout_G,
+        p.scout_A,
+        p.scout_FT,
+        p.scout_FD,
+        p.scout_FF,
+        p.scout_FS,
+        p.scout_PS,
+        p.scout_DS,
+        p.scout_SG,
+        p.scout_DE,
+        p.scout_DP,
+        p.scout_FC,
+        p.scout_PC,
+        p.scout_CA,
+        p.scout_CV,
+        p.scout_GC,
+        p.scout_GS,
+        p.scout_I,
+        p.scout_PP,
         row_number() over (
             partition by r.as_of_round_id, p.id
             order by p.round_id desc
         ) as played_rank
-    from {{ ref('int_players') }} p
-    cross join all_rounds r
-    where p.season = 2026
+    from {{ ref('int_players') }} as p
+    cross join all_rounds as r
+    where
+        p.season = 2026
         and p.has_played = true
         and p.round_id <= r.as_of_round_id
 ),
@@ -149,13 +174,29 @@ player_pts as (
         p.pts_avg,
         p.base_avg,
         a.availability,
-        p.avg_G, p.avg_A, p.avg_FT, p.avg_FD, p.avg_FF, p.avg_FS, p.avg_PS,
-        p.avg_DS, p.avg_SG, p.avg_DE, p.avg_DP,
-        p.avg_FC, p.avg_PC, p.avg_CA, p.avg_CV, p.avg_GC, p.avg_GS, p.avg_I, p.avg_PP
-    from availability_calc a
-    inner join latest_info l
+        p.avg_G,
+        p.avg_A,
+        p.avg_FT,
+        p.avg_FD,
+        p.avg_FF,
+        p.avg_FS,
+        p.avg_PS,
+        p.avg_DS,
+        p.avg_SG,
+        p.avg_DE,
+        p.avg_DP,
+        p.avg_FC,
+        p.avg_PC,
+        p.avg_CA,
+        p.avg_CV,
+        p.avg_GC,
+        p.avg_GS,
+        p.avg_I,
+        p.avg_PP
+    from availability_calc as a
+    inner join latest_info as l
         on a.as_of_round_id = l.as_of_round_id and a.id = l.id
-    left join pts_calc p
+    left join pts_calc as p
         on a.as_of_round_id = p.as_of_round_id and a.id = p.id
 ),
 

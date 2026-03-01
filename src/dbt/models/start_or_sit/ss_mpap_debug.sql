@@ -18,8 +18,8 @@ select
     o.mpap_ratio,
     o.mpap_multiplier,
     o.as_of_round_id as last_updated_round
-from {{ ref('int_map_mpap') }} o
-left join {{ ref('stg_clubs') }} oc on o.opponent_id = oc.id
+from {{ ref('int_map_mpap') }} as o
+left join {{ ref('stg_clubs') }} as oc on o.opponent_id = oc.id
 -- Deduplicate: show one row per opponent-position-round (not per player)
 qualify row_number() over (
     partition by o.as_of_round_id, o.opponent_id, o.position

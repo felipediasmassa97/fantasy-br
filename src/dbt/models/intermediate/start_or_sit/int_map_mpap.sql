@@ -26,8 +26,8 @@ next_match as (
         m.club_home_id as club_id,
         m.club_away_id as opponent_id,
         true as is_home_next
-    from all_rounds r
-    inner join {{ ref('stg_matches') }} m
+    from all_rounds as r
+    inner join {{ ref('stg_matches') }} as m
         on m.season = 2026 and m.round_id = r.as_of_round_id + 1
     union all
     select
@@ -35,8 +35,8 @@ next_match as (
         m.club_away_id as club_id,
         m.club_home_id as opponent_id,
         false as is_home_next
-    from all_rounds r
-    inner join {{ ref('stg_matches') }} m
+    from all_rounds as r
+    inner join {{ ref('stg_matches') }} as m
         on m.season = 2026 and m.round_id = r.as_of_round_id + 1
 ),
 
@@ -49,9 +49,10 @@ conceded_this_season as (
         p.position,
         avg(if(p.has_played, p.pts_round, null)) as pts_allowed_this_season_avg,
         count(distinct if(p.has_played, p.round_id, null)) as games_this_season
-    from {{ ref('int_players') }} p
-    cross join all_rounds r
-    where p.season = 2026
+    from {{ ref('int_players') }} as p
+    cross join all_rounds as r
+    where
+        p.season = 2026
         and p.round_id <= r.as_of_round_id
         and p.opponent_id is not null
     group by r.as_of_round_id, p.opponent_id, p.position
@@ -64,8 +65,9 @@ conceded_last_season as (
         p.position,
         avg(if(p.has_played, p.pts_round, null)) as pts_allowed_last_season_avg,
         count(distinct if(p.has_played, p.round_id, null)) as games_last_season
-    from {{ ref('int_players') }} p
-    where p.season = 2025
+    from {{ ref('int_players') }} as p
+    where
+        p.season = 2025
         and p.opponent_id is not null
     group by p.opponent_id, p.position
 ),
@@ -76,8 +78,8 @@ league_avg_by_position as (
         r.as_of_round_id,
         p.position,
         avg(if(p.has_played, p.pts_round, null)) as league_avg_pts
-    from {{ ref('int_players') }} p
-    cross join all_rounds r
+    from {{ ref('int_players') }} as p
+    cross join all_rounds as r
     where p.season = 2026 and p.round_id <= r.as_of_round_id
     group by r.as_of_round_id, p.position
 )
@@ -137,27 +139,32 @@ select
             end
         ) / lap.league_avg_pts))
     end as mpap_multiplier
-from {{ ref('int_map_baseline') }} b
+from {{ ref('int_map_baseline') }} as b
 -- Get player's current club to find next opponent
 left join (
-    select distinct id as player_id, club_id
+    select distinct
+        id as player_id,
+        club_id
     from {{ ref('int_players') }}
     where season = 2026
-) plc on b.id = plc.player_id
-left join next_match nm
+) as plc on b.id = plc.player_id
+left join next_match as nm
     on b.as_of_round_id = nm.as_of_round_id and plc.club_id = nm.club_id
 -- Opponent name
-left join {{ ref('stg_clubs') }} oc on nm.opponent_id = oc.id
+left join {{ ref('stg_clubs') }} as oc on nm.opponent_id = oc.id
 -- This-season concession
-left join conceded_this_season ct
-    on b.as_of_round_id = ct.as_of_round_id
-    and nm.opponent_id = ct.conceding_team_id
-    and b.position = ct.position
+left join conceded_this_season as ct
+    on
+        b.as_of_round_id = ct.as_of_round_id
+        and nm.opponent_id = ct.conceding_team_id
+        and b.position = ct.position
 -- Last-season concession
-left join conceded_last_season cl
-    on nm.opponent_id = cl.conceding_team_id
-    and b.position = cl.position
+left join conceded_last_season as cl
+    on
+        nm.opponent_id = cl.conceding_team_id
+        and b.position = cl.position
 -- League average
-left join league_avg_by_position lap
-    on b.as_of_round_id = lap.as_of_round_id
-    and b.position = lap.position
+left join league_avg_by_position as lap
+    on
+        b.as_of_round_id = lap.as_of_round_id
+        and b.position = lap.position

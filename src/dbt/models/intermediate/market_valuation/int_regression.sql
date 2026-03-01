@@ -38,7 +38,8 @@ select
     -- Regression score: gap amplified by G/A dependency and inconsistency
     -- Positive = sell-high candidate, Negative = buy-low candidate
     case
-        when b.baseline_pts is null or e.ewm_pts is null or d.consistency_rating is null
+        when
+            b.baseline_pts is null or e.ewm_pts is null or d.consistency_rating is null
             or d.consistency_rating = 0 then null
         else
             (e.ewm_pts - b.baseline_pts)
@@ -47,7 +48,8 @@ select
     end as regression_score,
     -- Signal label
     case
-        when b.baseline_pts is null or e.ewm_pts is null or d.consistency_rating is null
+        when
+            b.baseline_pts is null or e.ewm_pts is null or d.consistency_rating is null
             or d.consistency_rating = 0 then null
         when (e.ewm_pts - b.baseline_pts) * (1.0 + coalesce(ga.ga_share, 0)) * (1.0 / d.consistency_rating) > 2.0
             then 'SELL_HIGH'
@@ -60,10 +62,10 @@ select
         when b.matches_this_season < 5 then 'LOW_SAMPLE'
         else 'OK'
     end as confidence_flag
-from {{ ref('int_map_baseline') }} b
-left join {{ ref('int_ewm_form') }} e
+from {{ ref('int_map_baseline') }} as b
+left join {{ ref('int_ewm_form') }} as e
     on b.as_of_round_id = e.as_of_round_id and b.id = e.id
-left join {{ ref('int_ga_dependency') }} ga
+left join {{ ref('int_ga_dependency') }} as ga
     on b.as_of_round_id = ga.as_of_round_id and b.id = ga.id
-left join {{ ref('int_distribution_stats') }} d
+left join {{ ref('int_distribution_stats') }} as d
     on b.as_of_round_id = d.as_of_round_id and b.id = d.id

@@ -24,7 +24,7 @@ select
         order by b.baseline_pts - rl.replacement_level desc nulls last
     ) as par_rank_gen,
     rl.position_depth_flag
-from {{ ref('int_map_baseline') }} b
-inner join {{ ref('int_replacement_levels') }} rl
+from {{ ref('int_map_baseline') }} as b
+inner join {{ ref('int_replacement_levels') }} as rl
     on b.as_of_round_id = rl.as_of_round_id and b.position = rl.position
 where b.baseline_pts is not null

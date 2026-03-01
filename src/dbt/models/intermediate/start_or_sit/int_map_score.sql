@@ -30,7 +30,6 @@ select
     case
         when o.is_home_next = true then v.home_multiplier
         when o.is_home_next = false then v.away_multiplier
-        else null
     end as venue_multiplier,
     -- MPAP
     o.mpap_multiplier,
@@ -44,10 +43,9 @@ select
             b.baseline_pts
             * coalesce(e.form_multiplier, 1.0)
             * coalesce(
-                case 
+                case
                     when o.is_home_next = true then v.home_multiplier
                     when o.is_home_next = false then v.away_multiplier
-                    else null
                 end,
                 1.0
             )
@@ -58,14 +56,14 @@ select
         partition by b.as_of_round_id, b.position
         order by case
             when b.baseline_pts is null then null
-            else b.baseline_pts
+            else
+                b.baseline_pts
                 * coalesce(e.form_multiplier, 1.0)
                 * coalesce(
-                    case 
+                    case
                         when o.is_home_next = true then v.home_multiplier
                         when o.is_home_next = false then v.away_multiplier
-                        else null
-                    end, 
+                    end,
                     1.0
                 )
                 * coalesce(o.mpap_multiplier, 1.0)
@@ -76,23 +74,23 @@ select
         partition by b.as_of_round_id
         order by case
             when b.baseline_pts is null then null
-            else b.baseline_pts
+            else
+                b.baseline_pts
                 * coalesce(e.form_multiplier, 1.0)
                 * coalesce(
                     case
                         when o.is_home_next = true then v.home_multiplier
                         when o.is_home_next = false then v.away_multiplier
-                        else null
-                    end, 
+                    end,
                     1.0
                 )
                 * coalesce(o.mpap_multiplier, 1.0)
         end desc nulls last
     ) as map_rank_gen
-from {{ ref('int_map_baseline') }} b
-left join {{ ref('int_ewm_form') }} e
+from {{ ref('int_map_baseline') }} as b
+left join {{ ref('int_ewm_form') }} as e
     on b.as_of_round_id = e.as_of_round_id and b.id = e.id
-left join {{ ref('int_map_venue') }} v
+left join {{ ref('int_map_venue') }} as v
     on b.as_of_round_id = v.as_of_round_id and b.id = v.id
-left join {{ ref('int_map_mpap') }} o
+left join {{ ref('int_map_mpap') }} as o
     on b.as_of_round_id = o.as_of_round_id and b.id = o.id

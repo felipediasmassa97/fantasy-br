@@ -39,8 +39,8 @@ this_season_home_away_avg as (
         avg(if(p.has_played and p.is_home = false, p.pts_round, null)) as pts_avg_away_this_season,
         countif(p.has_played = true and p.is_home = true) as matches_home_this_season,
         countif(p.has_played = true and p.is_home = false) as matches_away_this_season
-    from {{ ref('int_players') }} p
-    cross join all_rounds r
+    from {{ ref('int_players') }} as p
+    cross join all_rounds as r
     where p.season = 2026 and p.round_id <= r.as_of_round_id
     group by r.as_of_round_id, p.id
 ),
@@ -61,9 +61,9 @@ combined as (
         tha.pts_avg_away_this_season,
         tha.matches_home_this_season,
         tha.matches_away_this_season
-    from {{ ref('int_map_baseline') }} b
-    left join last_season_home_away_avg lha on b.id = lha.id
-    left join this_season_home_away_avg tha on b.as_of_round_id = tha.as_of_round_id and b.id = tha.id
+    from {{ ref('int_map_baseline') }} as b
+    left join last_season_home_away_avg as lha on b.id = lha.id
+    left join this_season_home_away_avg as tha on b.as_of_round_id = tha.as_of_round_id and b.id = tha.id
 ),
 
 -- Calculate blended averages
@@ -73,22 +73,26 @@ with_averages as (
         -- Blended home/away averages (70% last season + 30% this season)
         -- Falls back to available data when one season is missing
         case
-            when pts_avg_home_this_season is null and pts_avg_this_season is null then
-                coalesce(pts_avg_home_last_season, pts_avg_last_season)
-            when pts_avg_home_last_season is null and pts_avg_last_season is null then
-                coalesce(pts_avg_home_this_season, pts_avg_this_season)
+            when pts_avg_home_this_season is null and pts_avg_this_season is null
+                then
+                    coalesce(pts_avg_home_last_season, pts_avg_last_season)
+            when pts_avg_home_last_season is null and pts_avg_last_season is null
+                then
+                    coalesce(pts_avg_home_this_season, pts_avg_this_season)
             else
-                0.7 * coalesce(pts_avg_home_last_season, pts_avg_last_season) +
-                0.3 * coalesce(pts_avg_home_this_season, pts_avg_this_season)
+                0.7 * coalesce(pts_avg_home_last_season, pts_avg_last_season)
+                + 0.3 * coalesce(pts_avg_home_this_season, pts_avg_this_season)
         end as home_avg,
         case
-            when pts_avg_away_this_season is null and pts_avg_this_season is null then
-                coalesce(pts_avg_away_last_season, pts_avg_last_season)
-            when pts_avg_away_last_season is null and pts_avg_last_season is null then
-                coalesce(pts_avg_away_this_season, pts_avg_this_season)
+            when pts_avg_away_this_season is null and pts_avg_this_season is null
+                then
+                    coalesce(pts_avg_away_last_season, pts_avg_last_season)
+            when pts_avg_away_last_season is null and pts_avg_last_season is null
+                then
+                    coalesce(pts_avg_away_this_season, pts_avg_this_season)
             else
-                0.7 * coalesce(pts_avg_away_last_season, pts_avg_last_season) +
-                0.3 * coalesce(pts_avg_away_this_season, pts_avg_this_season)
+                0.7 * coalesce(pts_avg_away_last_season, pts_avg_last_season)
+                + 0.3 * coalesce(pts_avg_away_this_season, pts_avg_this_season)
         end as away_avg
     from combined
 )

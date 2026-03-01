@@ -15,6 +15,7 @@ select
     last3_avg_pts as last3_avg_points,
     season_avg_pts as season_avg_points,
     trend_ratio_last3,
+    form_bucket_last3,
     trend_ratio_ewm,
-    form_bucket
+    form_bucket_ewm
 from {{ ref('int_form_trend') }}

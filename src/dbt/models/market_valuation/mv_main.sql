@@ -20,17 +20,16 @@ select
     e.ewm_pts,
     -- Regression candidate score
     reg.regression_score,
-    -- Availability: games played / total rounds this season
-    -- # fixit should be matches played / matches listed (rounds where player was listed)
+    -- Availability: games played / rounds where player was listed this season
     case
-        when b.matches_this_season is null then null
-        else b.matches_this_season * 1.0 / b.as_of_round_id
+        when b.rounds_listed_this_season is null or b.rounds_listed_this_season = 0 then null
+        else b.matches_this_season * 1.0 / b.rounds_listed_this_season
     end as availability
-from {{ ref('int_map_baseline') }} b
-left join {{ ref('int_replacement_levels') }} rl
+from {{ ref('int_map_baseline') }} as b
+left join {{ ref('int_replacement_levels') }} as rl
     on b.as_of_round_id = rl.as_of_round_id and b.position = rl.position
-left join {{ ref('int_ewm_form') }} e
+left join {{ ref('int_ewm_form') }} as e
     on b.as_of_round_id = e.as_of_round_id and b.id = e.id
-left join {{ ref('int_regression') }} reg
+left join {{ ref('int_regression') }} as reg
     on b.as_of_round_id = reg.as_of_round_id and b.id = reg.id
 where b.baseline_pts is not null

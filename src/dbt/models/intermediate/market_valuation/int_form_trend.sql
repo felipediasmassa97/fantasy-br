@@ -30,9 +30,10 @@ player_matches_ranked as (
             partition by r.as_of_round_id, p.id
             order by p.round_id desc
         ) as recency_rank
-    from {{ ref('int_players') }} p
-    cross join all_rounds r
-    where p.season = 2026
+    from {{ ref('int_players') }} as p
+    cross join all_rounds as r
+    where
+        p.season = 2026
         and p.round_id <= r.as_of_round_id
         and p.has_played = true
 ),
@@ -72,17 +73,22 @@ select
         when b.baseline_pts is null or b.baseline_pts = 0 then null
         else e.ewm_pts / b.baseline_pts
     end as trend_ratio_ewm,
-    -- Form bucket: quick directional indicator
-    -- # fixit add form bucket for last 3 too
-    -- # fixit change labels for form bucket values for last 3 (IMPROVING / DECLINING / FLAT)
+    -- Form bucket last 3: IMPROVING / DECLINING / FLAT vs season average
+    case
+        when b.pts_avg_this_season is null or b.pts_avg_this_season = 0 or ra.last3_avg_pts is null then null
+        when ra.last3_avg_pts / b.pts_avg_this_season > 1.10 then 'IMPROVING'
+        when ra.last3_avg_pts / b.pts_avg_this_season < 0.90 then 'DECLINING'
+        else 'FLAT'
+    end as form_bucket_last3,
+    -- Form bucket EWM: HOT / COLD / WARM vs stabilized mean
     case
         when b.baseline_pts is null or b.baseline_pts = 0 or e.ewm_pts is null then null
         when e.ewm_pts / b.baseline_pts > 1.10 then 'HOT'
         when e.ewm_pts / b.baseline_pts < 0.90 then 'COLD'
         else 'WARM'
-    end as form_bucket
-from {{ ref('int_map_baseline') }} b
-left join {{ ref('int_ewm_form') }} e
+    end as form_bucket_ewm
+from {{ ref('int_map_baseline') }} as b
+left join {{ ref('int_ewm_form') }} as e
     on b.as_of_round_id = e.as_of_round_id and b.id = e.id
-left join recent_avgs ra
+left join recent_avgs as ra
     on b.as_of_round_id = ra.as_of_round_id and b.id = ra.id

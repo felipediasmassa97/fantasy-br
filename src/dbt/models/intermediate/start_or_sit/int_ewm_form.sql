@@ -31,9 +31,10 @@ player_matches as (
             partition by r.as_of_round_id, p.id
             order by p.round_id desc
         ) - 1 as game_age  -- 0 = most recent, 1 = second most recent, etc.
-    from {{ ref('int_players') }} p
-    cross join all_rounds r
-    where p.season = 2026 
+    from {{ ref('int_players') }} as p
+    cross join all_rounds as r
+    where
+        p.season = 2026
         and p.round_id <= r.as_of_round_id
         and p.has_played = true
 ),
@@ -94,7 +95,8 @@ select
         when b.baseline_pts is null or b.baseline_pts = 0 or e.ewm_pts is null then null
         else greatest(0.8, least(1.2, e.ewm_pts / b.baseline_pts))
     end as form_multiplier
-from {{ ref('int_map_baseline') }} b
-left join ewm_agg e
-    on b.as_of_round_id = e.as_of_round_id
-    and b.id = e.id
+from {{ ref('int_map_baseline') }} as b
+left join ewm_agg as e
+    on
+        b.as_of_round_id = e.as_of_round_id
+        and b.id = e.id

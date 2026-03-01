@@ -54,6 +54,6 @@ select
     ps.missing_home_away_count > 0 as missing_home_away_flag,
     ps.missing_opponent_count > 0 as missing_opponent_flag,
     ps.missing_points_count > 0 as missing_points_flag
-from player_summary ps
-left join last_season_quality lsq on ps.id = lsq.id
+from player_summary as ps
+left join last_season_quality as lsq on ps.id = lsq.id
 where ps.rounds_this_season > 0

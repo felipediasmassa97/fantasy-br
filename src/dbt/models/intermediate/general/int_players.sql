@@ -1,6 +1,8 @@
 with scout_points as (
-    select code, points
-    from {{ ref('scout_points') }}
+    select
+        code,
+        points
+    from {{ ref('raw_scout_points') }}
 ),
 
 base_players as (
@@ -27,13 +29,14 @@ base_players as (
             when p.club_id = m.club_home_id then m.club_away_id
             when p.club_id = m.club_away_id then m.club_home_id
         end as opponent_id
-    from {{ ref('stg_players') }} p
-    left join {{ ref('stg_clubs') }} c on p.club_id = c.id
-    left join {{ ref('stg_positions') }} pos on p.position_id = pos.id
-    left join {{ ref('stg_matches') }} m
-        on p.season = m.season
-        and p.round_id = m.round_id
-        and (p.club_id = m.club_home_id or p.club_id = m.club_away_id)
+    from {{ ref('stg_players') }} as p
+    left join {{ ref('stg_clubs') }} as c on p.club_id = c.id
+    left join {{ ref('stg_positions') }} as pos on p.position_id = pos.id
+    left join {{ ref('stg_matches') }} as m
+        on
+            p.season = m.season
+            and p.round_id = m.round_id
+            and (p.club_id = m.club_home_id or p.club_id = m.club_away_id)
 ),
 
 -- Calculate per-round scout values from cumulative scout data
@@ -103,6 +106,12 @@ select
     d.scout_GS,
     d.scout_I,
     d.scout_PP
-from with_deltas d
-cross join (select points from scout_points where code = 'G') gp
-cross join (select points from scout_points where code = 'A') ap
+from with_deltas as d
+cross join (
+    select points from scout_points
+    where code = 'G'
+) as gp
+cross join (
+    select points from scout_points
+    where code = 'A'
+) as ap

@@ -27,22 +27,45 @@ ranked_matches as (
         p.pts_round,
         p.base_round,
         p.has_played,
-        p.scout_G, p.scout_A, p.scout_FT, p.scout_FD, p.scout_FF, p.scout_FS, p.scout_PS,
-        p.scout_DS, p.scout_SG, p.scout_DE, p.scout_DP,
-        p.scout_FC, p.scout_PC, p.scout_CA, p.scout_CV, p.scout_GC, p.scout_GS, p.scout_I, p.scout_PP,
+        p.scout_G,
+        p.scout_A,
+        p.scout_FT,
+        p.scout_FD,
+        p.scout_FF,
+        p.scout_FS,
+        p.scout_PS,
+        p.scout_DS,
+        p.scout_SG,
+        p.scout_DE,
+        p.scout_DP,
+        p.scout_FC,
+        p.scout_PC,
+        p.scout_CA,
+        p.scout_CV,
+        p.scout_GC,
+        p.scout_GS,
+        p.scout_I,
+        p.scout_PP,
         row_number() over (
             partition by r.as_of_round_id, p.id
             order by p.round_id desc
         ) as match_rank
-    from {{ ref('int_players') }} p
-    cross join all_rounds r
-    where p.season = 2026
+    from {{ ref('int_players') }} as p
+    cross join all_rounds as r
+    where
+        p.season = 2026
         and p.round_id <= r.as_of_round_id
 ),
 
 -- Most recent player info (name, club may change mid-season)
 latest_info as (
-    select as_of_round_id, id, name, club, club_logo_url, position
+    select
+        as_of_round_id,
+        id,
+        name,
+        club,
+        club_logo_url,
+        position
     from ranked_matches
     where match_rank = 1
 ),
@@ -79,8 +102,8 @@ player_pts as (
         avg(if(r.has_played, r.scout_GS, null)) as avg_GS,
         avg(if(r.has_played, r.scout_I, null)) as avg_I,
         avg(if(r.has_played, r.scout_PP, null)) as avg_PP
-    from ranked_matches r
-    inner join latest_info l
+    from ranked_matches as r
+    inner join latest_info as l
         on r.as_of_round_id = l.as_of_round_id and r.id = l.id
     group by r.as_of_round_id, r.id, l.name, l.club, l.club_logo_url, l.position
 ),

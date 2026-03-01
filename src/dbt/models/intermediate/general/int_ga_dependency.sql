@@ -25,9 +25,10 @@ player_ga as (
         sum(if(p.has_played, p.pts_round - p.base_round, null)) as ga_pts,
         sum(if(p.has_played, p.base_round, null)) as base_pts,
         countif(p.has_played) as games_played
-    from {{ ref('int_players') }} p
-    cross join all_rounds r
-    where p.season = 2026
+    from {{ ref('int_players') }} as p
+    cross join all_rounds as r
+    where
+        p.season = 2026
         and p.round_id <= r.as_of_round_id
     group by r.as_of_round_id, p.id
 )

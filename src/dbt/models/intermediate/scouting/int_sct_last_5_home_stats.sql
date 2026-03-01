@@ -34,16 +34,23 @@ player_home_rounds as (
             partition by r.as_of_round_id, p.id
             order by p.round_id desc
         ) as round_rank
-    from {{ ref('int_players') }} p
-    cross join all_rounds r
-    where p.season = 2026
+    from {{ ref('int_players') }} as p
+    cross join all_rounds as r
+    where
+        p.season = 2026
         and p.is_home = true  -- only home matches
         and p.round_id <= r.as_of_round_id
 ),
 
 -- Most recent player info
 latest_info as (
-    select as_of_round_id, id, name, club, club_logo_url, position
+    select
+        as_of_round_id,
+        id,
+        name,
+        club,
+        club_logo_url,
+        position
     from player_home_rounds
     where round_rank = 1
 ),
@@ -67,16 +74,33 @@ last_n_home_played as (
         p.id,
         p.pts_round,
         p.base_round,
-        p.scout_G, p.scout_A, p.scout_FT, p.scout_FD, p.scout_FF, p.scout_FS, p.scout_PS,
-        p.scout_DS, p.scout_SG, p.scout_DE, p.scout_DP,
-        p.scout_FC, p.scout_PC, p.scout_CA, p.scout_CV, p.scout_GC, p.scout_GS, p.scout_I, p.scout_PP,
+        p.scout_G,
+        p.scout_A,
+        p.scout_FT,
+        p.scout_FD,
+        p.scout_FF,
+        p.scout_FS,
+        p.scout_PS,
+        p.scout_DS,
+        p.scout_SG,
+        p.scout_DE,
+        p.scout_DP,
+        p.scout_FC,
+        p.scout_PC,
+        p.scout_CA,
+        p.scout_CV,
+        p.scout_GC,
+        p.scout_GS,
+        p.scout_I,
+        p.scout_PP,
         row_number() over (
             partition by r.as_of_round_id, p.id
             order by p.round_id desc
         ) as played_rank
-    from {{ ref('int_players') }} p
-    cross join all_rounds r
-    where p.season = 2026
+    from {{ ref('int_players') }} as p
+    cross join all_rounds as r
+    where
+        p.season = 2026
         and p.is_home = true  -- only home matches
         and p.has_played = true
         and p.round_id <= r.as_of_round_id
@@ -126,13 +150,29 @@ player_pts as (
         p.pts_avg,
         p.base_avg,
         a.availability,
-        p.avg_G, p.avg_A, p.avg_FT, p.avg_FD, p.avg_FF, p.avg_FS, p.avg_PS,
-        p.avg_DS, p.avg_SG, p.avg_DE, p.avg_DP,
-        p.avg_FC, p.avg_PC, p.avg_CA, p.avg_CV, p.avg_GC, p.avg_GS, p.avg_I, p.avg_PP
-    from availability_calc a
-    inner join latest_info l
+        p.avg_G,
+        p.avg_A,
+        p.avg_FT,
+        p.avg_FD,
+        p.avg_FF,
+        p.avg_FS,
+        p.avg_PS,
+        p.avg_DS,
+        p.avg_SG,
+        p.avg_DE,
+        p.avg_DP,
+        p.avg_FC,
+        p.avg_PC,
+        p.avg_CA,
+        p.avg_CV,
+        p.avg_GC,
+        p.avg_GS,
+        p.avg_I,
+        p.avg_PP
+    from availability_calc as a
+    inner join latest_info as l
         on a.as_of_round_id = l.as_of_round_id and a.id = l.id
-    left join pts_calc p
+    left join pts_calc as p
         on a.as_of_round_id = p.as_of_round_id and a.id = p.id
 ),
 
