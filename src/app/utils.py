@@ -32,7 +32,7 @@ SCOUTS_DEFENSIVE_CODES = ["DS", "SG", "DE", "DP"]
 SCOUTS_NEGATIVE_CODES = ["FC", "PC", "CA", "CV", "GC", "GS", "I", "PP"]
 
 COLUMN_CONFIG = {
-    "name": {
+    "player_name": {
         "tooltip": "Player name",
     },
     "position": {
@@ -91,37 +91,32 @@ def load_available_rounds() -> list[int]:
         for r in _query(f"""
             SELECT DISTINCT as_of_round_id
             FROM `{PROJECT_ID}.{DATASET_ID}.sct_this_season`
-            ORDER BY as_of_round_id DESC
+            ORDER BY as_of_round_id ASC
         """)  # noqa: S608
     ]
 
 
 def load_positions() -> list[dict]:
     """Load positions."""
-    return sorted(
-        r["position"]
-        for r in _query(f"""
-            SELECT DISTINCT
-                id,
-                abbreviation as position
-            FROM `{PROJECT_ID}.{DATASET_ID}.stg_positions`
-            ORDER BY id
-        """)  # noqa: S608
-    )
+    return _query(f"""
+        SELECT DISTINCT
+            id,
+            abbreviation as position
+        FROM `{PROJECT_ID}.{DATASET_ID}.stg_positions`
+        WHERE abbreviation <> "HC"
+        ORDER BY id
+    """)  # noqa: S608
 
 
 def load_clubs() -> list[dict]:
     """Load clubs."""
-    return sorted(
-        r["club"]
-        for r in _query(f"""
-            SELECT DISTINCT
-                abbreviation,
-                name as club
-            FROM `{PROJECT_ID}.{DATASET_ID}.stg_clubs`
-            ORDER by id
-        """)  # noqa: S608
-    )
+    return _query(f"""
+        SELECT DISTINCT
+            abbreviation,
+            name as club
+        FROM `{PROJECT_ID}.{DATASET_ID}.stg_clubs`
+        ORDER by name
+    """)  # noqa: S608
 
 
 def load_scouting_data(view_name: str, round_id: int | None = None) -> list[dict]:
@@ -272,7 +267,7 @@ def render_sidebar_filters(*, render_rounds: bool = True) -> None:
             st.selectbox(
                 "Round",
                 options=rounds,
-                index=0,
+                index=len(rounds) - 1,
                 key="filter_round_id",
             )
 

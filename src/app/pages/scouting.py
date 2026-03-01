@@ -13,6 +13,8 @@ from utils import (
     style_dataframe,
 )
 
+# fixit when interacting on a tab, app is reseting to first tab
+
 PAGE_COLUMN_CONFIG = {
     "z_score_pos_avg": {
         "tooltip": "Z-Score: how many standard deviations above or below top position "
@@ -102,10 +104,10 @@ def render_rankings_tab(data: list[dict]) -> None:
     st.subheader("ADP Rankings Comparison")
 
     col_config = {
-        "name": st.column_config.TextColumn(
+        "player_name": st.column_config.TextColumn(
             "Player",
             width="medium",
-            help=COLUMN_CONFIG["name"]["tooltip"],
+            help=COLUMN_CONFIG["player_name"]["tooltip"],
         ),
         "position": st.column_config.TextColumn(
             "Position",
@@ -164,7 +166,7 @@ def render_rankings_tab(data: list[dict]) -> None:
     }
 
     display_cols = [
-        "name",
+        "player_name",
         "position",
         "club_logo_url",
         "pts_avg",
@@ -219,10 +221,10 @@ def render_details_tab(
                 format=PAGE_COLUMN_CONFIG["adp_gen_base"]["format"],
                 help=PAGE_COLUMN_CONFIG["adp_gen_base"]["tooltip"],
             ),
-            "name": st.column_config.TextColumn(
+            "player_name": st.column_config.TextColumn(
                 "Player",
                 width="medium",
-                help=COLUMN_CONFIG["name"]["tooltip"],
+                help=COLUMN_CONFIG["player_name"]["tooltip"],
             ),
             "position": st.column_config.TextColumn(
                 "Position",
@@ -294,7 +296,7 @@ def render_details_tab(
         display_cols = [
             "adp_gen_avg",
             "adp_gen_base",
-            "name",
+            "player_name",
             "position",
             "club_logo_url",
             "matches_counted",
@@ -321,10 +323,10 @@ def render_details_tab(
                 format=PAGE_COLUMN_CONFIG["adp_pos_base"]["format"],
                 help=PAGE_COLUMN_CONFIG["adp_pos_base"]["tooltip"],
             ),
-            "name": st.column_config.TextColumn(
+            "player_name": st.column_config.TextColumn(
                 "Player",
                 width="medium",
-                help=COLUMN_CONFIG["name"]["tooltip"],
+                help=COLUMN_CONFIG["player_name"]["tooltip"],
             ),
             "position": st.column_config.TextColumn(
                 "Position",
@@ -396,7 +398,7 @@ def render_details_tab(
         display_cols = [
             "adp_pos_avg",
             "adp_pos_base",
-            "name",
+            "player_name",
             "position",
             "club_logo_url",
             "matches_counted",
@@ -456,7 +458,7 @@ def render_details_tab(
     if selected_rows:
         selected_idx = selected_rows[0]
         player = data[selected_idx]
-        st.subheader(f"Scout Breakdown: {player['name']}")
+        st.subheader(f"Scout Breakdown: {player['player_name']}")
         st.caption(f"{player['position']} | {player['club']}")
 
         for group_name, scouts in [
@@ -502,8 +504,8 @@ def render_comparison_tab(
 
     selected = st.multiselect(
         "Select players to compare (up to 5)",
-        options=sorted(data, key=lambda x: x["name"]),
-        format_func=lambda x: f"{x['name']} ({x['position']} - {x['club']})",
+        options=sorted(data, key=lambda x: x["player_name"]),
+        format_func=lambda x: f"{x['player_name']} ({x['position']} - {x['club']})",
         max_selections=5,
         placeholder="Search and select players...",
     )
@@ -639,7 +641,7 @@ def render_comparison_tab(
     cols = st.columns([1.5] + [1] * len(selected))
     cols[0].markdown("**Metric**")
     for i, player in enumerate(selected):
-        cols[i + 1].markdown(f"**{player['name']}**")
+        cols[i + 1].markdown(f"**{player['player_name']}**")
         cols[i + 1].caption(f"{player['position']} | {player['club']}")
 
     for label, key, fmt, tooltip in metrics:
@@ -648,7 +650,7 @@ def render_comparison_tab(
                 cols = st.columns([1.5] + [1] * len(selected))
                 cols[0].markdown(f"**{label}**")
                 for i, player in enumerate(selected):
-                    cols[i + 1].markdown(f"**{player['name']}**")
+                    cols[i + 1].markdown(f"**{player['player_name']}**")
                     cols[i + 1].caption(f"{player['position']} | {player['club']}")
             else:
                 st.divider()
@@ -676,7 +678,7 @@ def render_comparison_tab(
         cols = st.columns([1.5] + [1] * len(selected))
         cols[0].markdown(f"**{group_name}**")
         for i, player in enumerate(selected):
-            cols[i + 1].markdown(f"**{player['name']}**")
+            cols[i + 1].markdown(f"**{player['player_name']}**")
             cols[i + 1].caption(f"{player['position']} | {player['club']}")
 
         for key, desc, pts in scouts:
