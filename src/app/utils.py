@@ -1,12 +1,19 @@
 """Shared utilities for Fantasy BR Streamlit app."""
 
+import datetime
+from typing import TYPE_CHECKING
+
 import pandas as pd
 import streamlit as st
 from google.cloud import bigquery
 from google.oauth2 import service_account
 
+if TYPE_CHECKING:
+    from google.cloud.firestore import Client as FirestoreClient
+
 PROJECT_ID = "fantasy-br"
 DATASET_ID = "fdmdev_fantasy_br"
+DEFAULT_USER_EMAIL = "firstname.lastname@google.com"  # fixit remove
 
 TIME_PERIODS = {
     "This Season": "sct_this_season",
@@ -378,15 +385,10 @@ def filter_data(
         filtered = [
             row
             for row in filtered
-            if name_filter.lower()
-            # fixit use player_name in all mart views for consistency
-            in row.get("name", row.get("player_name", "")).lower()
+            if name_filter.lower() in row.get("name", "").lower()
         ]
     if club_filter != "All":
-        # fixit use club in all mart views for consistency
-        filtered = [
-            row for row in filtered if row.get("club", row.get("team")) == club_filter
-        ]
+        filtered = [row for row in filtered if row.get("club") == club_filter]
     if position_filter != "All":
         filtered = [row for row in filtered if row.get("position") == position_filter]
     return filtered
@@ -421,3 +423,89 @@ def style_dataframe(
         if col in df.columns:
             styler = styler.map(color_zscore_dvs, subset=[col])
     return styler
+
+
+# ---------------------------------------------------------------------------
+# User email helper
+# ---------------------------------------------------------------------------
+
+
+def get_user_email() -> str:
+    """Return the current user's email (from auth or default placeholder)."""
+    if hasattr(st, "user") and st.user.is_logged_in:
+        return st.user.email  # type: ignore[return-value]
+    return DEFAULT_USER_EMAIL
+
+
+# ---------------------------------------------------------------------------
+# Squad & Team persistence (Firestore)
+# ---------------------------------------------------------------------------
+
+FIRESTORE_DATABASE = "fantasy-br-dev"
+
+
+@st.cache_resource
+def get_firestore_client() -> "FirestoreClient":
+    """Get Firestore client."""
+    from google.cloud import firestore  # noqa: PLC0415
+
+    credentials = service_account.Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+    )
+    return firestore.Client(
+        project=PROJECT_ID, credentials=credentials, database=FIRESTORE_DATABASE
+    )
+
+
+def load_squad(user_email: str) -> list[int]:
+    """Load persisted squad player IDs for a user."""
+    doc = get_firestore_client().collection("user_squads").document(user_email).get()
+    if doc.exists:
+        return doc.to_dict().get("player_ids", [])
+    return []
+
+
+def load_team(user_email: str) -> list[int]:
+    """Load persisted team player IDs for a user."""
+    doc = get_firestore_client().collection("user_teams").document(user_email).get()
+    if doc.exists:
+        return doc.to_dict().get("player_ids", [])
+    return []
+
+
+def save_squad(user_email: str, player_ids: list[int]) -> None:
+    """Persist squad for a user (replaces existing document)."""
+    get_firestore_client().collection("user_squads").document(user_email).set(
+        {
+            "player_ids": player_ids,
+            "updated_at": datetime.datetime.now(tz=datetime.UTC),
+        }
+    )
+
+
+def save_team(user_email: str, player_ids: list[int]) -> None:
+    """Persist team for a user (replaces existing document)."""
+    get_firestore_client().collection("user_teams").document(user_email).set(
+        {
+            "player_ids": player_ids,
+            "updated_at": datetime.datetime.now(tz=datetime.UTC),
+        }
+    )
+
+
+def load_latest_round_players() -> list[dict]:
+    """Load all players from the latest round (for squad selection)."""
+    return _query(f"""
+        SELECT DISTINCT
+            id AS player_id,
+            name,
+            club,
+            club_logo_url,
+            position
+        FROM `{PROJECT_ID}.{DATASET_ID}.sct_this_season`
+        WHERE as_of_round_id = (
+            SELECT MAX(as_of_round_id)
+            FROM `{PROJECT_ID}.{DATASET_ID}.sct_this_season`
+        )
+        ORDER BY position, name
+    """)  # noqa: S608
