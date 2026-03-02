@@ -25,16 +25,12 @@
 
 - Streamlit App
   - Refactoring
-    - [x] Move sidebar to main.py instead of page-level
-    - [x] Refactor scouting page
     - [ ] !!! Refactor squad and team page
     - [ ] Remove noqa and apply best practices
   - [ ] !!! Add theming
   - [ ] Improve tooltips (clear, with intuition on metric definition, must say whether higher is better or worse, must disclaim premises and assumptions)
   - [ ] !!! Add trade-fairness page (select players for trade)
   - [ ] !!! Add trade fairness delta (select groups of players from both sides and check overall PAR delta)
-  - !!! Auth
-    - [ ] Add authentication (login)
   - !!! Squad and Team
     - [ ] Add user-specific squads (persist in database)
     - [ ] Add "My Squad" (using user info from auth)
