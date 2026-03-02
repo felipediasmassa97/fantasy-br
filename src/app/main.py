@@ -3,6 +3,7 @@
 import streamlit as st
 from pages.market_valuation import main as market_valuation
 from pages.scouting import main as scouting
+from pages.squad_and_team import main as squad_and_team
 from pages.start_or_sit import main as start_or_sit
 
 st.set_page_config(
@@ -41,6 +42,12 @@ pg = st.navigation(
             title="Market Valuation",
             icon="💰",
             url_path="market-valuation",
+        ),
+        st.Page(
+            squad_and_team,
+            title="Squad and Team",
+            icon="👥",
+            url_path="squad-and-team",
         ),
     ]
 )

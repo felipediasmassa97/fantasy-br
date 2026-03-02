@@ -12,6 +12,9 @@
     - [ ] !!! Remove red card and own goal from base average
     - [ ] !!! Add PoE (points over expected) to Start/Sit (cumulative PoE + last 5 PoE)
     - [ ] !!! Add trade fairness delta
+    - [ ] Add Strength of Schedule for next 10 games (based on MPAP) -> Market Valuation metric
+    - [ ] Add Strength of Schedule for next 5 home games (based on MPAP) -> Market Valuation metric
+    - [ ] Add Strength of Schedule for next 5 away games (based on MPAP) -> Market Valuation metric
     - [ ] Add ELO or Power Index for each player
     - [ ] Update ELO or Power Index each week (start with base ELO maybe)
   - Scouts

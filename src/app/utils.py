@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 import streamlit as st
-from google.cloud import bigquery
+from google.cloud import bigquery, firestore
 from google.oauth2 import service_account
 
 if TYPE_CHECKING:
@@ -13,8 +13,7 @@ if TYPE_CHECKING:
 
 PROJECT_ID = "fantasy-br"
 DATASET_ID = "fdmdev_fantasy_br"
-DEFAULT_USER_EMAIL = "firstname.lastname@google.com"  # fixit remove
-FIRESTORE_DATABASE = "fantasy-br-dev"
+FIRESTORE_DATABASE = "fantasy-br-dev-squads-teams"
 
 TIME_PERIODS = {
     "This Season": "sct_this_season",
@@ -353,17 +352,16 @@ def style_dataframe(
 
 
 def get_user_email() -> str:
-    """Return the current user's email (from auth or default placeholder)."""
+    """Return the current user's email."""
     if hasattr(st, "user") and st.user.is_logged_in:
-        return st.user.email  # type: ignore[return-value]
-    return DEFAULT_USER_EMAIL
+        return st.user.email
+    msg = "User is not authenticated. Email is required for data persistence."
+    raise ValueError(msg)
 
 
 @st.cache_resource
 def get_firestore_client() -> "FirestoreClient":
     """Get Firestore client."""
-    from google.cloud import firestore  # noqa: PLC0415
-
     credentials = service_account.Credentials.from_service_account_info(
         st.secrets["gcp_service_account"],
     )
@@ -380,14 +378,6 @@ def load_squad(user_email: str) -> list[int]:
     return []
 
 
-def load_team(user_email: str) -> list[int]:
-    """Load persisted team player IDs for a user."""
-    doc = get_firestore_client().collection("user_teams").document(user_email).get()
-    if doc.exists:
-        return doc.to_dict().get("player_ids", [])
-    return []
-
-
 def save_squad(user_email: str, player_ids: list[int]) -> None:
     """Persist squad for a user (replaces existing document)."""
     get_firestore_client().collection("user_squads").document(user_email).set(
@@ -396,6 +386,14 @@ def save_squad(user_email: str, player_ids: list[int]) -> None:
             "updated_at": datetime.datetime.now(tz=datetime.UTC),
         }
     )
+
+
+def load_team(user_email: str) -> list[int]:
+    """Load persisted team player IDs for a user."""
+    doc = get_firestore_client().collection("user_teams").document(user_email).get()
+    if doc.exists:
+        return doc.to_dict().get("player_ids", [])
+    return []
 
 
 def save_team(user_email: str, player_ids: list[int]) -> None:
@@ -408,12 +406,12 @@ def save_team(user_email: str, player_ids: list[int]) -> None:
     )
 
 
-def load_latest_round_players() -> list[dict]:
+def load_players() -> list[dict]:
     """Load all players from the latest round (for squad selection)."""
     return _query(f"""
         SELECT DISTINCT
-            id AS player_id,
-            name,
+            player_id,
+            player_name,
             club,
             club_logo_url,
             position
@@ -422,5 +420,5 @@ def load_latest_round_players() -> list[dict]:
             SELECT MAX(as_of_round_id)
             FROM `{PROJECT_ID}.{DATASET_ID}.sct_this_season`
         )
-        ORDER BY position, name
+        ORDER BY position, player_name
     """)  # noqa: S608
