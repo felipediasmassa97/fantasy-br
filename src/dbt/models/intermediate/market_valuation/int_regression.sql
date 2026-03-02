@@ -22,19 +22,19 @@ Confidence flag:
 select
     b.as_of_round_id,
     b.id,
-    b.name,
+    b.player_name,
     b.club,
     b.club_logo_url,
     b.position,
     -- Inputs
     b.baseline_pts,
     e.ewm_pts,
+    -- Consistency
+    d.consistency_rating,
     -- Performance gap: positive = currently exceeding expected output
     coalesce(e.ewm_pts, 0) - coalesce(b.baseline_pts, 0) as performance_gap,
     -- GA dependency
     coalesce(ga.ga_share, 0) as ga_share,
-    -- Consistency
-    d.consistency_rating,
     -- Regression score: gap amplified by G/A dependency and inconsistency
     -- Positive = sell-high candidate, Negative = buy-low candidate
     case

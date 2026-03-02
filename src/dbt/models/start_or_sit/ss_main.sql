@@ -8,7 +8,7 @@ Shows the key decision columns for start/sit decisions.
 select
     m.as_of_round_id,
     m.id as player_id,
-    m.name as player_name,
+    m.player_name,
     m.club,
     m.club_logo_url,
     m.position,

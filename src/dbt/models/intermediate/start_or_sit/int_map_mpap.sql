@@ -19,6 +19,14 @@ with all_rounds as (
     where season = 2026
 ),
 
+player_clubs as (
+    select distinct
+        id as player_id,
+        club_id
+    from {{ ref('int_players') }}
+    where season = 2026
+),
+
 -- Next match for each club at each as_of_round (looking at as_of_round_id + 1)
 next_match as (
     select
@@ -93,11 +101,11 @@ select
     -- Opponent club name for display
     oc.abbreviation as opponent_club,
     oc.logo_url as opponent_logo_url,
-    -- This-season concession data
+    -- Concession data (this season, last season and league average)
     ct.pts_allowed_this_season_avg,
-    coalesce(ct.matches_this_season, 0) as matches_this_season,
-    -- Last-season concession data
     cl.pts_allowed_last_season_avg,
+    lap.league_avg_pts,
+    coalesce(ct.matches_this_season, 0) as matches_this_season,
     coalesce(cl.matches_last_season, 0) as matches_last_season,
     -- Blended concession average with shrinkage (k=5 matches for full this-season confidence)
     case
@@ -111,7 +119,6 @@ select
             least(coalesce(ct.matches_this_season, 0) / 5.0, 1.0) * ct.pts_allowed_this_season_avg
             + (1.0 - least(coalesce(ct.matches_this_season, 0) / 5.0, 1.0)) * cl.pts_allowed_last_season_avg
     end as pts_allowed_avg,
-    lap.league_avg_pts,
     -- MPAP ratio: blended / league_avg (pre-clamp, for debugging)
     case
         when lap.league_avg_pts is null or lap.league_avg_pts = 0 then null
@@ -142,13 +149,7 @@ select
     end as mpap_multiplier
 from {{ ref('int_baseline') }} as b
 -- Get player's current club to find next opponent
-left join (
-    select distinct
-        id as player_id,
-        club_id
-    from {{ ref('int_players') }}
-    where season = 2026
-) as plc on b.id = plc.player_id
+left join player_clubs as plc on b.id = plc.player_id
 left join next_match as nm
     on b.as_of_round_id = nm.as_of_round_id and plc.club_id = nm.club_id
 -- Opponent name

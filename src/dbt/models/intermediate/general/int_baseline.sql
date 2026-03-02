@@ -21,7 +21,7 @@ player_avg_this_season as (
     select
         r.as_of_round_id,
         p.id,
-        p.name,
+        p.player_name,
         p.club,
         p.club_logo_url,
         p.position,
@@ -31,7 +31,7 @@ player_avg_this_season as (
     from {{ ref('int_players') }} as p
     cross join all_rounds as r
     where p.season = 2026 and p.round_id <= r.as_of_round_id
-    group by r.as_of_round_id, p.id, p.name, p.club, p.club_logo_url, p.position
+    group by r.as_of_round_id, p.id, p.player_name, p.club, p.club_logo_url, p.position
 ),
 
 -- Last season averages per player (full season 2025)
@@ -63,7 +63,7 @@ combined as (
     select
         ts.as_of_round_id,
         ts.id,
-        ts.name,
+        ts.player_name,
         ts.club,
         ts.club_logo_url,
         ts.position,
@@ -84,7 +84,7 @@ combined as (
 select
     as_of_round_id,
     id,
-    name,
+    player_name,
     club,
     club_logo_url,
     position,

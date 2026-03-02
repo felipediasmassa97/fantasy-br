@@ -8,7 +8,7 @@ Shows split averages, delta, and multipliers per player.
 select
     b.as_of_round_id,
     b.id as player_id,
-    b.name as player_name,
+    b.player_name,
     b.position,
     b.club,
     b.club_logo_url,

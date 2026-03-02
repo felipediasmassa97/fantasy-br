@@ -100,7 +100,7 @@ blended_stats as (
     select
         pp.as_of_round_id,
         pp.id,
-        b.name,
+        b.player_name,
         b.club,
         b.club_logo_url,
         b.position,
@@ -113,13 +113,13 @@ blended_stats as (
         ps.pos_floor,
         ps.pos_median,
         ps.pos_ceiling,
+        pp.boom_count,
+        pp.bust_count,
         -- blend_weight: 0 if >= 10 matches (pure player data), up to 1.0 if 0 matches (pure position data)
         case
             when pp.matches_played >= 10 then 0.0
             else (10.0 - pp.matches_played) / 10.0
-        end as blend_weight,
-        pp.boom_count,
-        pp.bust_count
+        end as blend_weight
     from player_percentiles_deduped as pp
     inner join {{ ref('int_baseline') }} as b
         on pp.as_of_round_id = b.as_of_round_id and pp.id = b.id
@@ -130,13 +130,14 @@ blended_stats as (
 select
     bs.as_of_round_id,
     bs.id,
-    bs.name,
+    bs.player_name,
     bs.club,
     bs.club_logo_url,
     bs.position,
     bs.matches_played,
     bs.pts_avg,
     bs.pts_stddev,
+    bs.blend_weight,
     -- Blended percentiles: weighted average of player and position stats
     (1 - bs.blend_weight) * bs.raw_floor + bs.blend_weight * coalesce(bs.pos_floor, bs.raw_floor) as pts_floor,
     (1 - bs.blend_weight) * bs.raw_median + bs.blend_weight * coalesce(bs.pos_median, bs.raw_median) as pts_median,
@@ -154,7 +155,6 @@ select
         when bs.pts_avg is null or bs.pts_avg = 0 or bs.pts_stddev is null then null
         else 1.0 / (1.0 + bs.pts_stddev / bs.pts_avg)
     end as consistency_rating,
-    bs.blend_weight,
     -- Boom rate: fraction of matches scoring >= 8 points
     case when bs.matches_played > 0 then bs.boom_count * 1.0 / bs.matches_played end as boom_rate,
     -- Bust rate: fraction of matches scoring <= 2 points

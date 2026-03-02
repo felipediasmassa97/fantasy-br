@@ -17,7 +17,7 @@ with with_multipliers as (
     select
         b.as_of_round_id,
         b.id,
-        b.name,
+        b.player_name,
         b.club,
         b.club_logo_url,
         b.position,
@@ -28,16 +28,16 @@ with with_multipliers as (
         e.ewm_pts,
         e.form_multiplier,
         -- Venue multiplier: pick home or away based on next match
-        case
-            when o.is_home_next = true then v.multiplier_home
-            when o.is_home_next = false then v.multiplier_away
-        end as venue_multiplier,
         -- MPAP
         o.mpap_multiplier,
         o.is_home_next,
         o.opponent_id,
         o.opponent_club,
-        o.opponent_logo_url
+        o.opponent_logo_url,
+        case
+            when o.is_home_next = true then v.multiplier_home
+            when o.is_home_next = false then v.multiplier_away
+        end as venue_multiplier
     from {{ ref('int_baseline') }} as b
     left join {{ ref('int_ewm_form') }} as e
         on b.as_of_round_id = e.as_of_round_id and b.id = e.id
@@ -66,7 +66,7 @@ select
             else
                 baseline_pts
                 * coalesce(form_multiplier, 1.0)
-                * coalesce(venue_multiplier, 1.0)   
+                * coalesce(venue_multiplier, 1.0)
                 * coalesce(mpap_multiplier, 1.0)
         end desc nulls last
     ) as map_rank_pos,
@@ -78,7 +78,7 @@ select
             else
                 baseline_pts
                 * coalesce(form_multiplier, 1.0)
-                * coalesce(venue_multiplier, 1.0)   
+                * coalesce(venue_multiplier, 1.0)
                 * coalesce(mpap_multiplier, 1.0)
         end desc nulls last
     ) as map_rank_gen

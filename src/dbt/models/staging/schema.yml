@@ -10,7 +10,7 @@ models:
         description: Round number in the season
       - name: id
         description: Unique identifier
-      - name: name
+      - name: player_name
         description: Display name
       - name: club_id
         description: Foreign key to stg_clubs
@@ -34,7 +34,7 @@ models:
         description: Unique identifier
       - name: abbreviation
         description: 3-letter abbreviation
-      - name: name
+      - name: label
         description: Display name
 
   - name: stg_positions
@@ -44,7 +44,7 @@ models:
         description: Unique identifier
       - name: abbreviation
         description: 2-letter abbreviation
-      - name: name
+      - name: label
         description: Display name in Portuguese
 
   - name: stg_matches

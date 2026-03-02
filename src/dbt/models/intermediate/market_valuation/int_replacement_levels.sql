@@ -64,5 +64,5 @@ select
     position,
     drafted_count,
     replacement_level,
-    players_in_replacement_window,
+    players_in_replacement_window
 from replacement_window

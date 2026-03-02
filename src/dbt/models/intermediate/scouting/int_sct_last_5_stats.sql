@@ -21,6 +21,12 @@ with all_rounds as (
     where season = 2026
 ),
 
+round_ids as (
+    select distinct round_id
+    from {{ ref('int_players') }}
+    where season = 2026
+),
+
 -- Last 5 calendar rounds per as_of_round (for availability calculation)
 round_windows as (
     select
@@ -31,11 +37,7 @@ round_windows as (
             order by r2.round_id desc
         ) as round_rank
     from all_rounds as r1
-    cross join (
-        select distinct round_id
-        from {{ ref('int_players') }}
-        where season = 2026
-    ) as r2
+    cross join round_ids as r2
     where r2.round_id <= r1.as_of_round_id
 ),
 
@@ -52,7 +54,7 @@ player_rounds as (
     select
         lr.as_of_round_id,
         p.id,
-        p.name,
+        p.player_name,
         p.club,
         p.club_logo_url,
         p.position,
@@ -72,7 +74,7 @@ latest_info as (
     select
         as_of_round_id,
         id,
-        name,
+        player_name,
         club,
         club_logo_url,
         position
@@ -99,25 +101,25 @@ last_n_played as (
         p.id,
         p.pts_round,
         p.base_round,
-        p.scout_G,
-        p.scout_A,
-        p.scout_FT,
-        p.scout_FD,
-        p.scout_FF,
-        p.scout_FS,
-        p.scout_PS,
-        p.scout_DS,
-        p.scout_SG,
-        p.scout_DE,
-        p.scout_DP,
-        p.scout_FC,
-        p.scout_PC,
-        p.scout_CA,
-        p.scout_CV,
-        p.scout_GC,
-        p.scout_GS,
-        p.scout_I,
-        p.scout_PP,
+        p.scout_g,
+        p.scout_a,
+        p.scout_ft,
+        p.scout_fd,
+        p.scout_ff,
+        p.scout_fs,
+        p.scout_ps,
+        p.scout_ds,
+        p.scout_sg,
+        p.scout_de,
+        p.scout_dp,
+        p.scout_fc,
+        p.scout_pc,
+        p.scout_ca,
+        p.scout_cv,
+        p.scout_gc,
+        p.scout_gs,
+        p.scout_i,
+        p.scout_pp,
         row_number() over (
             partition by r.as_of_round_id, p.id
             order by p.round_id desc
@@ -137,25 +139,25 @@ pts_calc as (
         id,
         avg(pts_round) as pts_avg,
         avg(base_round) as base_avg,
-        avg(scout_G) as avg_G,
-        avg(scout_A) as avg_A,
-        avg(scout_FT) as avg_FT,
-        avg(scout_FD) as avg_FD,
-        avg(scout_FF) as avg_FF,
-        avg(scout_FS) as avg_FS,
-        avg(scout_PS) as avg_PS,
-        avg(scout_DS) as avg_DS,
-        avg(scout_SG) as avg_SG,
-        avg(scout_DE) as avg_DE,
-        avg(scout_DP) as avg_DP,
-        avg(scout_FC) as avg_FC,
-        avg(scout_PC) as avg_PC,
-        avg(scout_CA) as avg_CA,
-        avg(scout_CV) as avg_CV,
-        avg(scout_GC) as avg_GC,
-        avg(scout_GS) as avg_GS,
-        avg(scout_I) as avg_I,
-        avg(scout_PP) as avg_PP
+        avg(scout_g) as avg_g,
+        avg(scout_a) as avg_a,
+        avg(scout_ft) as avg_ft,
+        avg(scout_fd) as avg_fd,
+        avg(scout_ff) as avg_ff,
+        avg(scout_fs) as avg_fs,
+        avg(scout_ps) as avg_ps,
+        avg(scout_ds) as avg_ds,
+        avg(scout_sg) as avg_sg,
+        avg(scout_de) as avg_de,
+        avg(scout_dp) as avg_dp,
+        avg(scout_fc) as avg_fc,
+        avg(scout_pc) as avg_pc,
+        avg(scout_ca) as avg_ca,
+        avg(scout_cv) as avg_cv,
+        avg(scout_gc) as avg_gc,
+        avg(scout_gs) as avg_gs,
+        avg(scout_i) as avg_i,
+        avg(scout_pp) as avg_pp
     from last_n_played
     where played_rank <= 5
     group by as_of_round_id, id
@@ -166,7 +168,7 @@ player_pts as (
     select
         a.as_of_round_id,
         a.id,
-        l.name,
+        l.player_name,
         l.club,
         l.club_logo_url,
         l.position,
@@ -174,25 +176,25 @@ player_pts as (
         p.pts_avg,
         p.base_avg,
         a.availability,
-        p.avg_G,
-        p.avg_A,
-        p.avg_FT,
-        p.avg_FD,
-        p.avg_FF,
-        p.avg_FS,
-        p.avg_PS,
-        p.avg_DS,
-        p.avg_SG,
-        p.avg_DE,
-        p.avg_DP,
-        p.avg_FC,
-        p.avg_PC,
-        p.avg_CA,
-        p.avg_CV,
-        p.avg_GC,
-        p.avg_GS,
-        p.avg_I,
-        p.avg_PP
+        p.avg_g,
+        p.avg_a,
+        p.avg_ft,
+        p.avg_fd,
+        p.avg_ff,
+        p.avg_fs,
+        p.avg_ps,
+        p.avg_ds,
+        p.avg_sg,
+        p.avg_de,
+        p.avg_dp,
+        p.avg_fc,
+        p.avg_pc,
+        p.avg_ca,
+        p.avg_cv,
+        p.avg_gc,
+        p.avg_gs,
+        p.avg_i,
+        p.avg_pp
     from availability_calc as a
     inner join latest_info as l
         on a.as_of_round_id = l.as_of_round_id and a.id = l.id

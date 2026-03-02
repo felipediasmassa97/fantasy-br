@@ -9,7 +9,7 @@ home/away venue splits sourced from int_home_away.
 select
     b.as_of_round_id,
     b.id as player_id,
-    b.name as player_name,
+    b.player_name,
     b.position,
     b.club,
     b.club_logo_url,
@@ -23,6 +23,11 @@ select
     b.shrinking_weight_this_season,
     b.shrinking_method,
     b.baseline_pts,
+    -- Home/away venue-split baselines (blended via shrinkage)
+    v.pts_avg_home,
+    v.pts_avg_away,
+    v.matches_home_this_season,
+    v.matches_away_this_season,
     -- Baseline rank within position (all matches)
     row_number() over (
         partition by b.as_of_round_id, b.position
@@ -33,11 +38,6 @@ select
         partition by b.as_of_round_id
         order by b.baseline_pts desc nulls last
     ) as baseline_rank_gen,
-    -- Home/away venue-split baselines (blended via shrinkage)
-    v.pts_avg_home,
-    v.pts_avg_away,
-    v.matches_home_this_season,
-    v.matches_away_this_season,
     -- Baseline rank within position (home matches only)
     row_number() over (
         partition by b.as_of_round_id, b.position

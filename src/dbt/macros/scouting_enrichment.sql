@@ -5,10 +5,10 @@ Scouting enrichment: computes z-scores and DVS from a preceding `player_pts` CTE
 This macro generates CTEs that continue the WITH clause started in the calling model.
 It expects a CTE named `player_pts` to already exist with these columns:
   - as_of_round_id (required if by_round=true)
-  - id, name, club, club_logo_url, position
+  - id, player_name, club, club_logo_url, position
   - pts_avg, base_avg, availability, matches_counted
-  - All scout averages: avg_G, avg_A, avg_FT, avg_FD, avg_FF, avg_FS, avg_PS,
-    avg_DS, avg_SG, avg_DE, avg_DP, avg_FC, avg_PC, avg_CA, avg_CV, avg_GC, avg_GS, avg_I, avg_PP
+  - All scout averages: avg_g, avg_a, avg_ft, avg_fd, avg_ff, avg_fs, avg_ps,
+    avg_ds, avg_sg, avg_de, avg_dp, avg_fc, avg_pc, avg_ca, avg_cv, avg_gc, avg_gs, avg_i, avg_pp
 
 Outputs all player_pts columns plus:
   - z_score_gen_avg, z_score_gen_base: standard deviations from top-200 player mean

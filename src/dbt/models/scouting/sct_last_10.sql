@@ -9,7 +9,7 @@ All complex logic (windowing, z-scores, DVS) lives in the intermediate model.
 select
     as_of_round_id,
     id as player_id,
-    name as player_name,
+    player_name,
     position,
     club,
     club_logo_url,
@@ -17,8 +17,6 @@ select
     availability,
     pts_avg,
     base_avg,
-    -- G/A contribution: points from goals and assists
-    pts_avg - base_avg as ga_avg,
     -- Scout averages (averaged over last 10 played matches)
     avg_g,
     avg_a,
@@ -48,6 +46,8 @@ select
     dvs_pos_base,
     dvs_gen_avg,
     dvs_gen_base,
+    -- G/A contribution: points from goals and assists
+    pts_avg - base_avg as ga_avg,
     -- ADP rankings: lower rank = better player (ordered by DVS descending)
     row_number() over (partition by as_of_round_id, position order by dvs_pos_avg desc nulls last) as adp_pos_avg,
     row_number() over (partition by as_of_round_id, position order by dvs_pos_base desc nulls last) as adp_pos_base,

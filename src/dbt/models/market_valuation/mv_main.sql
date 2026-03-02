@@ -8,18 +8,18 @@ Joins PAR, baseline, EWM, regression, and distribution data.
 select
     b.as_of_round_id,
     b.id as player_id,
-    b.name as player_name,
+    b.player_name,
     b.club,
     b.club_logo_url,
     b.position,
-    -- PAR: value over replacement
-    b.baseline_pts - rl.replacement_level as par,
     -- Stabilized mean (= baseline_pts)
     b.baseline_pts,
     -- Recency-weighted form
     e.ewm_pts,
     -- Regression candidate score
     reg.regression_score,
+    -- PAR: value over replacement
+    b.baseline_pts - rl.replacement_level as par,
     -- Availability: matches played / rounds where player was listed this season
     case
         when b.rounds_listed_this_season is null or b.rounds_listed_this_season = 0 then null

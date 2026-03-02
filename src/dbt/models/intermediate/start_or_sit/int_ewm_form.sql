@@ -70,7 +70,7 @@ ewm_agg as (
 select
     b.as_of_round_id,
     b.id,
-    b.name,
+    b.player_name,
     b.club,
     b.club_logo_url,
     b.position,

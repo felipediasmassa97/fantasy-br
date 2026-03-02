@@ -57,14 +57,6 @@ dialect = "bigquery"
 templater = "jinja"
 sql_file_exts = ".sql"
 max_line_length = 120
-exclude_rules = [
-    "CP02",   # Identifiers: scout codes (G, FT, FD …) are uppercase in BigQuery structs
-    "RF04",   # References: avoid function references (BigQuery uses STRUCT, ARRAY, etc.)
-    "ST05",   # Structure: subquery in FROM/JOIN - CTEs preferred but not enforced here
-    "ST06",   # Structure: select wildcards - too opinionated for dbt models
-    "AM04",   # Ambiguous: column count - not useful in dbt context
-    "CV02",   # Convention: COALESCE instead of IFNULL - BigQuery COALESCE is fine
-]
 
 [tool.sqlfluff.templater.jinja]
 apply_dbt_builtins = true

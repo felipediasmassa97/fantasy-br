@@ -7,7 +7,7 @@ Thin mart: detailed PAR computation with replacement level context.
 select
     b.as_of_round_id,
     b.id as player_id,
-    b.name as player_name,
+    b.player_name,
     b.club,
     b.club_logo_url,
     b.position,

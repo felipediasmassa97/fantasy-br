@@ -10,7 +10,7 @@ select
     p.round_id as round,
     p.match_id,
     p.id as player_id,
-    p.name as player_name,
+    p.player_name,
     p.position,
     p.club,
     p.club_logo_url,

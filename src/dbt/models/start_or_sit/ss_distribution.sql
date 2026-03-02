@@ -8,11 +8,11 @@ See int_distribution_stats for calculation details.
 select
     as_of_round_id,
     id as player_id,
-    name as player_name,
+    player_name,
     position,
     club,
     club_logo_url,
-    matches_played as matches_played,
+    matches_played,
     pts_floor,
     pts_median,
     pts_ceiling,

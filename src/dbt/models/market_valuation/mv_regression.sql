@@ -8,7 +8,7 @@ See int_regression for score formula.
 select
     as_of_round_id,
     id as player_id,
-    name as player_name,
+    player_name,
     position,
     club,
     club_logo_url,
