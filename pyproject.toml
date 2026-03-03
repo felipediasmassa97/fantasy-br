@@ -1,29 +1,48 @@
 [project]
 name = "fantasy-br"
 version = "0.1.0"
-description = "Fantasy BR"
+description = "Fantasy BR - Analytics Platform for Cartola FC / Panela FC"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = [
+dependencies = []
+
+[project.scripts]
+app         = "scripts:run_app"
+dbt         = "scripts:run_dbt"
+lint-sql    = "scripts:lint_sql"
+format-sql  = "scripts:format_sql"
+lint-app    = "scripts:lint_app"
+format-app  = "scripts:format_app"
+
+[project.optional-dependencies]
+app = [
+  "Authlib>=1.3.2",
+  "db-dtypes>=1.0",
+  "google-cloud-bigquery>=3.0",
+  "google-cloud-firestore>=2.0",
+  "streamlit>=1.42",
+]
+dbt = [
   "dbt-bigquery>=1.9",
-  "streamlit>=1.40",
-  "google-cloud-bigquery>=3.0"
+]
+tests = [
+  "pytest>=8.0",
+  "pytest-xdist>=3.0",
+  "ruff>=0.9",
+  "sqlfluff>=3.0",
+  "sqlfluff-templater-dbt>=3.0",
 ]
 
 [build-system]
-requires = ["uv_build>=0.8.17,<0.9.0"]
-build-backend = "uv_build"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.uv.build-backend]
-module-name = []
-module-root = ""
+[tool.hatch.build.targets.wheel]
+packages = ["scripts"]
 
-[project.optional-dependencies]
-tests = []
-
-[tool.ruff]
-lint.select = ["ALL"]
-lint.ignore = [
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
     "D203",   # Use D211 (no blank line before class docstring)
     "D213",   # Use D212 (summary on first line)
     "COM812", # Conflicts with ruff formatter
@@ -31,3 +50,21 @@ lint.ignore = [
 
 [tool.pytest.ini_options]
 log_cli_level = "INFO"
+
+[tool.sqlfluff]
+core.dialect = "bigquery"
+core.templater = "jinja"
+core.sql_file_exts = ".sql"
+core.max_line_length = 120
+rules.aliasing.table.aliasing = "explicit"
+rules.capitalisation.keywords.capitalisation_policy = "lower"
+rules.capitalisation.identifiers.capitalisation_policy = "lower"
+rules.capitalisation.functions.capitalisation_policy = "lower"
+rules.capitalisation.literals.capitalisation_policy = "lower"
+indentation.tab_space_size = 4
+indentation.indent_unit = "space"
+# Stubs for custom macros so jinja templater can parse the files
+templater.jinja.apply_dbt_builtins = true
+templater.jinja.macros.scouting_enrichment = "{% macro scouting_enrichment(by_round=true) %}enriched as (select * from player_pts limit 0)\nselect * from enriched{% endmacro %}"
+templater.jinja.macros.shrink_blend = "{% macro shrink_blend(n_expr, this_avg_expr, prior_avg_expr, k=5) %}null{% endmacro %}"
+templater.jinja.macros.shrink_weight = "{% macro shrink_weight(n_expr, k=5) %}0.0{% endmacro %}"
