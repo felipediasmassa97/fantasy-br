@@ -219,7 +219,7 @@ src/dbt/
 
 **General:**
 
-- `int_players` — base enriched player data per round (scout per-round deltas, opponent, is_home)
+- `int_players` — base enriched player data per round (scout per-round deltas, opponent, is_home, base_round excludes G/A/CV/GC)
 - `int_baseline` — stabilized mean via shrinkage blending (this + last season, k=5)
 - `int_home_away` — home/away averages, delta, multiplier
 - `int_round_by_round` — season 2026 round-level data with opponent name

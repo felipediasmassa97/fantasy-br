@@ -53,11 +53,13 @@ COLUMN_CONFIG = {
         "format": "%.0f%%",
     },
     "pts_avg": {
-        "tooltip": "Average points per match (including G/A). Higher is better.",
+        "tooltip": "Average points per match. Higher is better.",
         "format": "%+.1f",
     },
     "base_avg": {
-        "tooltip": "Base average points per match (excluding G/A). Higher is better.",
+        "tooltip": "Base average points per match (excluding goals, assists, red cards "
+        "and own goals). "
+        "Higher is better.",
         "format": "%+.1f",
     },
     "ga_avg": {

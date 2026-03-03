@@ -6,6 +6,18 @@ Adds ADP rankings (row_number by DVS) and G/A contribution.
 All complex logic lives in the intermediate model.
 */
 
+with goal_points as (
+    select points
+    from {{ ref('raw_scout_points') }}
+    where code = 'G'
+),
+
+assist_points as (
+    select points
+    from {{ ref('raw_scout_points') }}
+    where code = 'A'
+)
+
 select
     as_of_round_id,
     id as player_id,
@@ -47,7 +59,8 @@ select
     dvs_gen_avg,
     dvs_gen_base,
     -- G/A contribution: points from goals and assists
-    pts_avg - base_avg as ga_avg,
+    (avg_g * (select goal_points.points from goal_points))
+    + (avg_a * (select assist_points.points from assist_points)) as ga_avg,
     -- ADP rankings: lower rank = better player (ordered by DVS descending)
     row_number() over (partition by as_of_round_id, position order by dvs_pos_avg desc nulls last) as adp_pos_avg,
     row_number() over (partition by as_of_round_id, position order by dvs_pos_base desc nulls last) as adp_pos_base,

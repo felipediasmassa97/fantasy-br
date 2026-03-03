@@ -16,17 +16,31 @@ with all_rounds as (
     where season = 2026
 ),
 
+goal_points as (
+    select points
+    from {{ ref('raw_scout_points') }}
+    where code = 'G'
+),
+
+assist_points as (
+    select points
+    from {{ ref('raw_scout_points') }}
+    where code = 'A'
+),
+
 -- Aggregate per player: total points vs G/A points
 player_ga as (
     select
         r.as_of_round_id,
         p.id,
         sum(if(p.has_played, p.pts_round, null)) as total_pts,
-        sum(if(p.has_played, p.pts_round - p.base_round, null)) as ga_pts,
+        sum(if(p.has_played, (p.scout_g * gp.points) + (p.scout_a * ap.points), null)) as ga_pts,
         sum(if(p.has_played, p.base_round, null)) as base_pts,
         countif(p.has_played) as matches_played
     from {{ ref('int_players') }} as p
     cross join all_rounds as r
+    cross join goal_points as gp
+    cross join assist_points as ap
     where
         p.season = 2026
         and p.round_id <= r.as_of_round_id

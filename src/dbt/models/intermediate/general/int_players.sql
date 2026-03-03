@@ -51,6 +51,18 @@ assist_points as (
     where code = 'A'
 ),
 
+red_card_points as (
+    select points
+    from scout_points
+    where code = 'CV'
+),
+
+own_goal_points as (
+    select points
+    from scout_points
+    where code = 'GC'
+),
+
 -- Calculate per-round scout values from cumulative scout data
 with_deltas as (
     select
@@ -80,7 +92,7 @@ with_deltas as (
     from base_players
 )
 
--- Calculate base_round (points without goals and assists)
+-- Calculate base_round (points without goals, assists, red cards, and own goals)
 select
     d.season,
     d.round_id,
@@ -117,8 +129,14 @@ select
     d.scout_gs,
     d.scout_i,
     d.scout_pp,
-    -- Base points (without goals and assists)
-    d.pts_round - (d.scout_g * gp.points) - (d.scout_a * ap.points) as base_round
+    -- Base points (without goals, assists, red cards, and own goals)
+    d.pts_round
+    - (d.scout_g * gp.points)
+    - (d.scout_a * ap.points)
+    - (d.scout_cv * cvp.points)
+    - (d.scout_gc * gcp.points) as base_round
 from with_deltas as d
 cross join goal_points as gp
 cross join assist_points as ap
+cross join red_card_points as cvp
+cross join own_goal_points as gcp

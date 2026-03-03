@@ -525,7 +525,7 @@ def _render_round_by_round() -> None:
             "points_base": st.column_config.NumberColumn(
                 "Base",
                 format="%.1f",
-                help="Points excluding goals and assists",
+                help="Points excluding goals, assists, red cards and own goals",
             ),
             "did_play": st.column_config.CheckboxColumn(
                 "Played?",
