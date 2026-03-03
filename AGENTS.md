@@ -5,13 +5,13 @@ Instructions for AI agents working on this project.
 ## Tech Stack
 
 - **Language**: Python 3.13
-- **Infrastructure**: Terraform for Google BigQuery (GCS backend per environment)
-- **Data Transformation**: dbt-bigquery v1.11.5
+- **Infrastructure**: Terraform for Google BigQuery, Cloud Storage and Firestore (GCS backend per environment)
+- **Data Transformation**: dbt-bigquery
 - **Web Application**: Streamlit
-- **Package Management**: uv (dependency groups: `app`, `dbt`, `dev`)
+- **Package Management**: uv (optional dependency groups: `app`, `dbt`, `tests`)
 - **Testing**: pytest + pytest-xdist (no mocks)
 - **Python Linting & Formatting**: ruff
-- **SQL Linting & Formatting**: SQLFluff 4.x (dialect: BigQuery, templater: jinja)
+- **SQL Linting & Formatting**: SQLFluff (dialect: BigQuery, templater: jinja)
 - **CI/CD**: GitHub Actions with reusable workflows
 
 ## General Instructions
@@ -26,7 +26,7 @@ Instructions for AI agents working on this project.
 
 ### Processes
 
-- Always update documentation (`AGENTS.md`, `README.md`, `pyproject.toml`, `src/dbt/sources.yml`, `src/dbt/dbt_project.yml`, `src/dbt/profiles.yml`) after implementing features and making changes
+- Always update documentation (`AGENTS.md`, `README.md`, `pyproject.toml`, `src/dbt/models/sources.yml`, `src/dbt/dbt_project.yml`, `src/dbt/profiles.yml`) after implementing features and making changes
 - After making dbt changes, always run `uv run dbt build` with modified models selected to verify everything is working
 - After Python changes, run `uv run lint-app` and `uv run format-app`
 - After SQL changes, run `uv run lint-sql` and `uv run format-sql`
@@ -45,9 +45,10 @@ fantasy-br/
 │   │   └── pages/
 │   │       ├── scouting.py
 │   │       ├── start_or_sit.py
-│   │       └── market_valuation.py
+│   │       ├── market_valuation.py
+│   │       └── squad_and_team.py
 │   └── dbt/                  # dbt project (models, seeds, macros)
-├── infra/                    # Terraform (BigQuery infrastructure)
+├── infra/                    # Terraform (BigQuery and Firestore infrastructure)
 ├── tests/                    # pytest tests
 ├── legacy/                   # Legacy Jupyter notebooks and CSVs
 └── .github/                  # CI/CD pipelines
@@ -148,6 +149,7 @@ Managed with Terraform on GCP:
 
 - **BigQuery**: data warehousing, dbt and GitHub Actions integration
 - **Cloud Storage**: Terraform state buckets (one per environment)
+- **Firestore**: `user_squads` and `user_teams` collections for squad and team persistence
 
 ```bash
 terraform init -chdir=infra -backend-config="bucket=fantasy-br-tfstate-dev"
@@ -191,14 +193,14 @@ src/dbt/
 │   │   └── market_valuation/        # int_replacement_levels, int_form_trend, int_regression
 │   ├── scouting/                    # sct_last_1, sct_last_5, sct_last_5_home, sct_last_5_away,
 │   │                                #   sct_last_10, sct_this_season, sct_last_season
-│   ├── start_or_sit/                # ss_main, ss_map_breakdown, ss_mpap_debug, ss_splits,
+│   ├── start_or_sit/                # ss_main, ss_map_breakdown, ss_mpap_debug, ss_home_away,
 │   │                                #   ss_distribution, ss_round_by_round, ss_edge_cases
 │   └── market_valuation/            # mv_main, mv_par_breakdown, mv_stabilized, mv_form_trend,
 │                                    #   mv_regression, mv_value_profile, mv_round_by_round
 ├── seeds/
 │   ├── raw_players_legacy_2025.csv
 │   ├── raw_players_legacy_2026.csv
-│   └── scout_points.csv             # scout code → points mapping
+│   └── raw_scout_points.csv         # scout code to points mapping
 ├── dbt_project.yml                  # staging=view, intermediate=view, marts=table
 └── profiles.yml                     # local/dev/demo/prod profile definitions
 ```
@@ -242,8 +244,9 @@ src/dbt/
 | Page             | Mart models used                                                                                            |
 | ---------------- | ----------------------------------------------------------------------------------------------------------- |
 | Scouting         | sct_last_1, sct_last_5, sct_last_5_home, sct_last_5_away, sct_last_10, sct_this_season, sct_last_season     |
-| Start or Sit     | ss_main, ss_map_breakdown, ss_mpap_debug, ss_splits, ss_distribution, ss_round_by_round, ss_edge_cases      |
+| Start or Sit     | ss_main, ss_map_breakdown, ss_mpap_debug, ss_home_away, ss_distribution, ss_round_by_round, ss_edge_cases   |
 | Market Valuation | mv_main, mv_par_breakdown, mv_stabilized, mv_form_trend, mv_regression, mv_value_profile, mv_round_by_round |
+| Squad and Team   | Firestore only (user_squads, user_teams collections — no mart models)                                       |
 
 Each mart has a dedicated loader in `utils.py` (e.g., `load_ss_main()`, `load_mv_regression()`).
 Add new loaders there when adding new mart models.
@@ -251,13 +254,13 @@ Add new loaders there when adding new mart models.
 ## Dependencies and Package Management
 
 ```toml
-[dependency-groups]
-app = ["streamlit", "google-cloud-bigquery", "db-dtypes"]
+[project.optional-dependencies]
+app = ["streamlit", "google-cloud-bigquery", "google-cloud-firestore", "db-dtypes", "Authlib"]
 dbt = ["dbt-bigquery"]
-dev = ["ruff", "pytest", "pytest-xdist", "sqlfluff", "sqlfluff-templater-dbt"]
+tests = ["ruff", "pytest", "pytest-xdist", "sqlfluff", "sqlfluff-templater-dbt"]
 ```
 
-`uv sync` installs all groups. Use `uv sync --group <name>` for a subset.
+`uv sync --all-extras` installs all extras. Use `uv sync --extra <name>` for a subset.
 
 ## Script Aliases
 
@@ -351,5 +354,4 @@ Ensure `src/app/.streamlit/secrets.toml` has `gcp_service_account` credentials.
 ### SQLFluff notes
 
 - Scout field column names (e.g., `scout_G`, `avg_FT`) are uppercase — do not rename to lowercase
-- `CP02` (identifier capitalisation) is disabled in sqlfluff for this reason
-- The `scouting_enrichment` macro has a jinja stub in `pyproject.toml` so sqlfluff can parse scouting intermediate models without running dbt locally
+- The `scouting_enrichment`, `shrink_blend`, and `shrink_weight` macros have jinja stubs in `pyproject.toml` so SQLFluff can parse models without running dbt locally

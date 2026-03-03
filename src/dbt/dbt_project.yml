@@ -20,6 +20,12 @@ models:
       +materialized: view
     intermediate:
       +materialized: view
+      scouting:
+        +materialized: ephemeral
+      start_or_sit:
+        +materialized: ephemeral
+      market_valuation:
+        +materialized: ephemeral
     scouting:
       +materialized: table
     start_or_sit:

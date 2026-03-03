@@ -532,7 +532,7 @@ app = [
 dbt = [
     { name = "dbt-bigquery" },
 ]
-dev = [
+tests = [
     { name = "pytest" },
     { name = "pytest-xdist" },
     { name = "ruff" },
@@ -547,14 +547,14 @@ requires-dist = [
     { name = "dbt-bigquery", marker = "extra == 'dbt'", specifier = ">=1.9" },
     { name = "google-cloud-bigquery", marker = "extra == 'app'", specifier = ">=3.0" },
     { name = "google-cloud-firestore", marker = "extra == 'app'", specifier = ">=2.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
-    { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.9" },
-    { name = "sqlfluff", marker = "extra == 'dev'", specifier = ">=3.0" },
-    { name = "sqlfluff-templater-dbt", marker = "extra == 'dev'", specifier = ">=3.0" },
+    { name = "pytest", marker = "extra == 'tests'", specifier = ">=8.0" },
+    { name = "pytest-xdist", marker = "extra == 'tests'", specifier = ">=3.0" },
+    { name = "ruff", marker = "extra == 'tests'", specifier = ">=0.9" },
+    { name = "sqlfluff", marker = "extra == 'tests'", specifier = ">=3.0" },
+    { name = "sqlfluff-templater-dbt", marker = "extra == 'tests'", specifier = ">=3.0" },
     { name = "streamlit", marker = "extra == 'app'", specifier = ">=1.42" },
 ]
-provides-extras = ["app", "dbt", "dev"]
+provides-extras = ["app", "dbt", "tests"]
 
 [[package]]
 name = "fastjsonschema"

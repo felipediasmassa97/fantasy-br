@@ -112,9 +112,9 @@ def load_clubs() -> list[dict]:
     return _query(f"""
         SELECT DISTINCT
             abbreviation,
-            name as club
+            label as club
         FROM `{PROJECT_ID}.{DATASET_ID}.stg_clubs`
-        ORDER by name
+        ORDER by label
     """)  # noqa: S608
 
 

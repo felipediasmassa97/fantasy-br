@@ -60,6 +60,7 @@ This project provides analytics to maximize performance on Panela FC:
 - [uv](https://docs.astral.sh/uv/) for Python package management
 - [Terraform](https://www.terraform.io/downloads) >= 1.0 for infrastructure
 - [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) for GCP authentication
+- A GCP project with the following APIs enabled: BigQuery, Cloud Storage, Firestore, Cloud Resource Manager
 
 ## Environments
 
@@ -79,8 +80,8 @@ uv sync --all-extras
 gcloud auth application-default login
 
 # Initialize and deploy infrastructure (dev)
-terraform init -chdir=infra -backend-config="bucket=fantasy-br-tfstate-dev"
-terraform apply -chdir=infra -var-file=infra/envs/dev.tfvars
+uv run terraform init -chdir=infra -backend-config="bucket=fantasy-br-tfstate-dev"
+uv run terraform apply -chdir=infra -var-file=infra/envs/dev.tfvars
 
 # Set up dbt
 uv run dbt debug          # verify BigQuery connection
@@ -119,7 +120,7 @@ fantasy-br/
 │   │       ├── start_or_sit.py
 │   │       └── market_valuation.py
 │   └── dbt/                  # dbt project (models, seeds, macros)
-├── infra/                    # Terraform (BigQuery infrastructure)
+├── infra/                    # Terraform (BigQuery + Firestore infrastructure)
 ├── tests/                    # pytest tests
 ├── legacy/                   # Legacy Jupyter notebooks and CSVs
 └── .github/                  # CI/CD pipelines
@@ -217,14 +218,6 @@ uv run --env-file .env pytest tests/ -n auto   # parallel
 
 Do not use mocks.
 
-### Creating seeds from legacy data
-
-```bash
-uv run python scripts/create_seeds.py
-```
-
-Combines CSVs from `legacy/{year}/` into dbt seeds at `src/dbt/seeds/`.
-
 ## CI/CD Workflows
 
 | File                         | Trigger            | Jobs                                    |
@@ -237,9 +230,41 @@ Combines CSVs from `legacy/{year}/` into dbt seeds at `src/dbt/seeds/`.
 
 ## Infrastructure
 
-Managed with Terraform on GCP. See [infra/README.md](infra/README.md) for details.
+Managed with Terraform on Google Cloud Platform. Resources per environment:
+
+- **Cloud Storage bucket**: Terraform remote state backend
+- **BigQuery dataset**: holds all dbt staging, intermediate and mart tables
+- **Firestore database**: persists user squads and teams (`user_squads` and `user_teams` collections)
+- **IAM bindings**: grants the service account `roles/datastore.user`, `roles/bigquery.dataViewer`, and `roles/bigquery.jobUser`
+
+### Install Terraform
 
 ```bash
-terraform init -chdir=infra -backend-config="bucket=fantasy-br-tfstate-dev"
-terraform apply -chdir=infra -var-file=infra/envs/dev.tfvars
+brew tap hashicorp/tap
+brew install hashicorp/tap/terraform
+
+# Verify
+terraform --version
 ```
+
+### Authenticate with GCP
+
+```bash
+gcloud auth application-default login
+```
+
+### Deploy
+
+```bash
+# Initialize backend (once per environment)
+uv run terraform init -chdir=infra -backend-config="bucket=fantasy-br-tfstate-dev"
+
+# Preview and apply
+uv run terraform plan -chdir=infra -var-file=infra/envs/dev.tfvars
+uv run terraform apply -chdir=infra -var-file=infra/envs/dev.tfvars
+```
+
+### Free tier limits (per month)
+
+- **BigQuery**: 10 GB storage, 1 TB queries, free data loads ([pricing](https://cloud.google.com/bigquery/pricing)).
+- **Firestore**: 1 GiB storage, 50K reads/day, 20K writes/day ([pricing](https://cloud.google.com/firestore/pricing)).
