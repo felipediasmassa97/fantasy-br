@@ -23,7 +23,6 @@
   - Refactoring
     - [ ] !!! Refactor squad and team page
     - [ ] Remove noqa and apply best practices
-  - [ ] !!! Add theming
   - [ ] !!! Fix interaction bug on Scouting page
   - [ ] !!! Fix round-by-round bug on Start or Sit
   - [ ] Improve tooltips (clear, with intuition on metric definition, must say whether higher is better or worse, must disclaim premises and assumptions)
