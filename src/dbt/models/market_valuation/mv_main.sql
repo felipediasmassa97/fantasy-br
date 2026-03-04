@@ -18,6 +18,9 @@ select
     e.ewm_pts,
     -- Regression candidate score
     reg.regression_score,
+    -- PoE: points over expected based on MAP projection
+    poe.avg_poe_season,
+    poe.avg_poe_last_5,
     -- PAR: value over replacement
     b.baseline_pts - rl.replacement_level as par,
     -- Availability: matches played / rounds where player was listed this season
@@ -32,4 +35,6 @@ left join {{ ref('int_ewm_form') }} as e
     on b.as_of_round_id = e.as_of_round_id and b.id = e.id
 left join {{ ref('int_regression') }} as reg
     on b.as_of_round_id = reg.as_of_round_id and b.id = reg.id
+left join {{ ref('int_poe') }} as poe
+    on b.as_of_round_id = poe.as_of_round_id and b.id = poe.id
 where b.baseline_pts is not null

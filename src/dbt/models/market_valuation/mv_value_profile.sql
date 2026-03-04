@@ -18,6 +18,9 @@ select
     d.pts_median,
     d.pts_ceiling,
     d.consistency_rating,
+    -- PoE: points over expected based on MAP projection
+    poe.avg_poe_season,
+    poe.avg_poe_last_5,
     -- Value
     b.baseline_pts - rl.replacement_level as par_points,
     -- Availability: matches played / rounds where player was listed this season
@@ -34,4 +37,6 @@ left join {{ ref('int_distribution_stats') }} as d
     on b.as_of_round_id = d.as_of_round_id and b.id = d.id
 left join {{ ref('int_ga_dependency') }} as ga
     on b.as_of_round_id = ga.as_of_round_id and b.id = ga.id
+left join {{ ref('int_poe') }} as poe
+    on b.as_of_round_id = poe.as_of_round_id and b.id = poe.id
 where b.baseline_pts is not null

@@ -64,6 +64,16 @@ def _render_main() -> None:
             format="%.0f%%",
             help="% of listed rounds where player actually played",
         ),
+        "avg_poe_season": st.column_config.NumberColumn(
+            "PoE (Szn)",
+            format="%+.2f",
+            help="Average Points over Expected this season (actual minus MAP)",
+        ),
+        "avg_poe_last_5": st.column_config.NumberColumn(
+            "PoE (L5)",
+            format="%+.2f",
+            help="Average Points over Expected in last 5 matches (actual minus MAP)",
+        ),
     }
 
     display_cols = list(col_config.keys())
@@ -445,6 +455,16 @@ def _render_value_profile() -> None:
             "GA Dep",
             format="%.2f",
             help="G+A share of expected points (regression risk indicator).",
+        ),
+        "avg_poe_season": st.column_config.NumberColumn(
+            "PoE (Szn)",
+            format="%+.2f",
+            help="Average Points over Expected this season (actual minus MAP)",
+        ),
+        "avg_poe_last_5": st.column_config.NumberColumn(
+            "PoE (L5)",
+            format="%+.2f",
+            help="Average Points over Expected in last 5 matches (actual minus MAP)",
         ),
     }
 

@@ -13,6 +13,8 @@ select
     m.club_logo_url,
     m.position,
     m.map_score,
+    poe.avg_poe_season,
+    poe.avg_poe_last_5,
     d.pts_floor,
     d.pts_ceiling,
     d.consistency_rating,
@@ -20,3 +22,5 @@ select
 from {{ ref('int_map_score') }} as m
 left join {{ ref('int_distribution_stats') }} as d
     on m.as_of_round_id = d.as_of_round_id and m.id = d.id
+left join {{ ref('int_poe') }} as poe
+    on m.as_of_round_id = poe.as_of_round_id and m.id = poe.id

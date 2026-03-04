@@ -1,13 +1,13 @@
 # To-Dos
 
 - Workflows
-  - [ ] Fix demo and prod deployment error
 
-- Data Model
+- Infra
+
+- dbt
   - Performance
   - Refactoring
   - KPIs
-    - [ ] Add PoE (points over expected) to Start/Sit (cumulative PoE + last 5 PoE)
     - [ ] Add trade fairness delta
     - Strength of Schedule
       - [ ] Add Strength of Schedule for next 10 games (based on MPAP) -> Market Valuation metric
@@ -19,10 +19,9 @@
     - [ ] Add home/away subtotals, not only overall subtotals
   - Validation
 
-- Streamlit App
+- App
   - Refactoring
     - [ ] Remove noqa and apply best practices
-    - [ ] Improve tooltips (clear, with intuition on metric definition, must say whether higher is better or worse, must disclaim premises and assumptions)
   - Fixes
     - [ ] Fix interaction bug on Scouting page
     - [ ] Fix round-by-round bug on Start or Sit

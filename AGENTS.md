@@ -220,7 +220,7 @@ src/dbt/
 │   │   │                            #   int_round_by_round, int_edge_cases, int_ga_dependency
 │   │   ├── scouting/                # int_sct_*_stats (7 models, one per time window)
 │   │   ├── start_or_sit/            # int_map_mpap, int_ewm_form, int_distribution_stats,
-│   │   │                            #   int_map_score
+│   │   │                            #   int_map_score, int_poe
 │   │   └── market_valuation/        # int_replacement_levels, int_form_trend, int_regression
 │   ├── scouting/                    # sct_last_1, sct_last_5, sct_last_5_home, sct_last_5_away,
 │   │                                #   sct_last_10, sct_this_season, sct_last_season
@@ -263,6 +263,7 @@ src/dbt/
 - `int_ewm_form` — EWM form with multiplier clamped 0.8–1.2
 - `int_distribution_stats` — P20/P50/P80, CV, consistency rating, boom/bust rates
 - `int_map_score` — final MAP = baseline × form_mult × venue_mult × mpap_mult
+- `int_poe` — PoE (points over expected): avg_poe_season and avg_poe_last_5 (actual pts minus MAP projection)
 
 **Market Valuation:**
 

@@ -48,6 +48,16 @@ def _render_main() -> None:
             format="%.2f",
             help="MAP: baseline x form x venue x opponent multipliers",
         ),
+        "avg_poe_season": st.column_config.NumberColumn(
+            "PoE (Szn)",
+            format="%+.2f",
+            help="Average Points over Expected this season (actual minus MAP)",
+        ),
+        "avg_poe_last_5": st.column_config.NumberColumn(
+            "PoE (L5)",
+            format="%+.2f",
+            help="Average Points over Expected in last 5 matches (actual minus MAP)",
+        ),
         "pts_floor": st.column_config.NumberColumn(
             "Floor",
             format="%.1f",
@@ -134,6 +144,16 @@ def _render_map_breakdown() -> None:
             "MAP",
             format="%.2f",
             help="Final MAP score = baseline x form x venue x MPAP",
+        ),
+        "avg_poe_season": st.column_config.NumberColumn(
+            "PoE (Szn)",
+            format="%+.2f",
+            help="Average Points over Expected this season (actual minus MAP)",
+        ),
+        "avg_poe_last_5": st.column_config.NumberColumn(
+            "PoE (L5)",
+            format="%+.2f",
+            help="Average Points over Expected in last 5 matches (actual minus MAP)",
         ),
         "map_rank_pos": st.column_config.NumberColumn(
             "Rk (Pos)",
