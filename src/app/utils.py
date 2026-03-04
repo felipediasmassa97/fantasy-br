@@ -272,6 +272,8 @@ def render_sidebar_filters(*, render_rounds: bool = True) -> None:
                 key="filter_round_id",
             )
 
+        st.toggle("My Squad", value=False, key="filter_my_squad")
+
         st.text_input("Player Name", key="filter_name")
 
         positions = [
@@ -299,12 +301,17 @@ def render_sidebar_filters(*, render_rounds: bool = True) -> None:
 
 def filter_data(data: list[dict]) -> list[dict]:
     """Apply filters to data."""
+    filter_my_squad = st.session_state.get("filter_my_squad", False)
     filter_name = st.session_state.get("filter_name")
     filter_position = st.session_state.get("filter_position")
     filter_club = st.session_state.get("filter_club")
 
     filtered = data
 
+    if filter_my_squad:
+        filtered = [
+            row for row in filtered if row.get("player_id") in set(load_squad())
+        ]
     if filter_name:
         filtered = [
             row
@@ -372,17 +379,19 @@ def get_firestore_client() -> "FirestoreClient":
     )
 
 
-def load_squad(user_email: str) -> list[int]:
+def load_squad() -> list[int]:
     """Load persisted squad player IDs for a user."""
-    doc = get_firestore_client().collection("user_squads").document(user_email).get()
+    email = get_user_email()
+    doc = get_firestore_client().collection("user_squads").document(email).get()
     if doc.exists:
         return doc.to_dict().get("player_ids", [])
     return []
 
 
-def save_squad(user_email: str, player_ids: list[int]) -> None:
+def save_squad(player_ids: list[int]) -> None:
     """Persist squad for a user (replaces existing document)."""
-    get_firestore_client().collection("user_squads").document(user_email).set(
+    email = get_user_email()
+    get_firestore_client().collection("user_squads").document(email).set(
         {
             "player_ids": player_ids,
             "updated_at": datetime.datetime.now(tz=datetime.UTC),
@@ -390,17 +399,19 @@ def save_squad(user_email: str, player_ids: list[int]) -> None:
     )
 
 
-def load_team(user_email: str) -> list[int]:
+def load_team() -> list[int]:
     """Load persisted team player IDs for a user."""
-    doc = get_firestore_client().collection("user_teams").document(user_email).get()
+    email = get_user_email()
+    doc = get_firestore_client().collection("user_teams").document(email).get()
     if doc.exists:
         return doc.to_dict().get("player_ids", [])
     return []
 
 
-def save_team(user_email: str, player_ids: list[int]) -> None:
+def save_team(player_ids: list[int]) -> None:
     """Persist team for a user (replaces existing document)."""
-    get_firestore_client().collection("user_teams").document(user_email).set(
+    email = get_user_email()
+    get_firestore_client().collection("user_teams").document(email).set(
         {
             "player_ids": player_ids,
             "updated_at": datetime.datetime.now(tz=datetime.UTC),

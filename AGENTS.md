@@ -285,6 +285,8 @@ src/dbt/
 Each mart has a dedicated loader in `utils.py` (e.g., `load_ss_main()`, `load_mv_regression()`).
 Add new loaders there when adding new mart models.
 
+All pages except Squad and Team have a **My Squad** sidebar toggle (`filter_my_squad`) that filters displayed players to the user's persisted squad (Firestore `user_squads` collection). The toggle defaults to off (show all players). Squad management (add/remove) is only available in the Squad and Team page.
+
 ## Dependencies and Package Management
 
 ```toml

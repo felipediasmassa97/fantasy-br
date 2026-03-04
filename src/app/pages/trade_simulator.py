@@ -1,7 +1,7 @@
 """Trade Simulator page."""
 
 import streamlit as st
-from utils import load_available_rounds, load_mv_main
+from utils import load_available_rounds, load_mv_main, load_squad
 
 FAIR_TRADE_THRESHOLD = 0.5
 
@@ -119,6 +119,7 @@ def main() -> None:
             index=len(rounds) - 1,
             key="trade_round_id",
         )
+        my_squad = st.toggle("My Squad", value=False, key="trade_my_squad")
 
     data = load_mv_main(round_id)
     if not data:
@@ -126,6 +127,8 @@ def main() -> None:
         return
 
     players = _build_player_options(data)
+    if my_squad:
+        players = [p for p in players if p["player_id"] in set(load_squad())]
     if not players:
         st.info("No players with PAR data available.")
         return
