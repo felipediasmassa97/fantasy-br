@@ -51,29 +51,6 @@ jobs:
         working-directory: infra/envs/${{ inputs.environment }}
         run: terraform init
 
-      - name: Import existing BigQuery dataset if needed
-        working-directory: infra/envs/${{ inputs.environment }}
-        run: |
-          # fixit is it still required? bigquery dataset is in every environment now
-          DATASET_ID="fdm${{ inputs.environment }}_fantasy_br"
-
-          # Check if dataset exists in GCP but not in Terraform state
-          if bq show "${{ env.GCP_PROJECT }}:${DATASET_ID}" > /dev/null 2>&1; then
-            echo "Dataset ${DATASET_ID} exists in GCP"
-            
-            # Check if it's already in Terraform state
-            if ! terraform state show module.bigquery.google_bigquery_dataset.this > /dev/null 2>&1; then
-              echo "Importing dataset into Terraform state..."
-              terraform import \
-                module.bigquery.google_bigquery_dataset.this \
-                "projects/${{ env.GCP_PROJECT }}/datasets/${DATASET_ID}"
-            else
-              echo "Dataset already in Terraform state"
-            fi
-          else
-            echo "Dataset ${DATASET_ID} does not exist yet, will be created"
-          fi
-
       - name: Terraform Apply
         working-directory: infra/envs/${{ inputs.environment }}
         run: terraform apply -auto-approve
