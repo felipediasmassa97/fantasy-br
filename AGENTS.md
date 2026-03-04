@@ -160,7 +160,7 @@ IAM bindings are managed in `infra/iam.tf`. The service account (`app_service_ac
 
 | Role                        | Purpose                                         |
 | --------------------------- | ----------------------------------------------- |
-| `roles/datastore.user`      | Firestore read/write (squad & team persistence) |
+| `roles/datastore.owner`     | Firestore database creation and read/write      |
 | `roles/bigquery.dataViewer` | BigQuery SELECT for dbt mart queries            |
 | `roles/bigquery.jobUser`    | BigQuery job execution                          |
 

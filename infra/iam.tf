@@ -2,10 +2,10 @@ locals {
   sa_member = "serviceAccount:${var.app_service_account_email}"
 }
 
-# Firestore read/write — required for squad and team persistence
+# Firestore owner — required for database creation and read/write operations
 resource "google_project_iam_member" "firestore_user" {
   project = var.gcp_project_id
-  role    = "roles/datastore.user"
+  role    = "roles/datastore.owner"
   member  = local.sa_member
 }
 
