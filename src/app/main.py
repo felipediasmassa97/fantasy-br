@@ -2,6 +2,7 @@
 
 import streamlit as st
 from pages.market_valuation import main as market_valuation
+from pages.matchup_preview import main as matchup_preview
 from pages.scouting import main as scouting
 from pages.squad_and_team import main as squad_and_team
 from pages.start_or_sit import main as start_or_sit
@@ -55,6 +56,12 @@ pg = st.navigation(
             title="Trade Simulator",
             icon="🔄",
             url_path="trade-simulator",
+        ),
+        st.Page(
+            matchup_preview,
+            title="Matchup Preview",
+            icon="🆚",
+            url_path="matchup-preview",
         ),
     ]
 )

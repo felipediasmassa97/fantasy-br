@@ -309,9 +309,7 @@ def filter_data(data: list[dict]) -> list[dict]:
     filtered = data
 
     if filter_my_squad:
-        filtered = [
-            row for row in filtered if row.get("player_id") in set(load_squad())
-        ]
+        filtered = [row for row in filtered if row.get("player_id") in load_squad()]
     if filter_name:
         filtered = [
             row
@@ -379,41 +377,81 @@ def get_firestore_client() -> "FirestoreClient":
     )
 
 
-def load_squad() -> list[int]:
+def load_squad() -> set[int]:
     """Load persisted squad player IDs for a user."""
     email = get_user_email()
     doc = get_firestore_client().collection("user_squads").document(email).get()
     if doc.exists:
-        return doc.to_dict().get("player_ids", [])
-    return []
+        return set(doc.to_dict().get("player_ids", []))
+    return set()
 
 
-def save_squad(player_ids: list[int]) -> None:
+def save_squad(player_ids: set[int]) -> None:
     """Persist squad for a user (replaces existing document)."""
     email = get_user_email()
     get_firestore_client().collection("user_squads").document(email).set(
         {
-            "player_ids": player_ids,
+            "player_ids": list(player_ids),
             "updated_at": datetime.datetime.now(tz=datetime.UTC),
         }
     )
 
 
-def load_team() -> list[int]:
+def load_team() -> set[int]:
     """Load persisted team player IDs for a user."""
     email = get_user_email()
     doc = get_firestore_client().collection("user_teams").document(email).get()
     if doc.exists:
-        return doc.to_dict().get("player_ids", [])
-    return []
+        return set(doc.to_dict().get("player_ids", []))
+    return set()
 
 
-def save_team(player_ids: list[int]) -> None:
+def save_team(player_ids: set[int]) -> None:
     """Persist team for a user (replaces existing document)."""
     email = get_user_email()
     get_firestore_client().collection("user_teams").document(email).set(
         {
-            "player_ids": player_ids,
+            "player_ids": list(player_ids),
+            "updated_at": datetime.datetime.now(tz=datetime.UTC),
+        }
+    )
+
+
+def load_opponent_squad() -> set[int]:
+    """Load persisted opponent squad player IDs for a user."""
+    email = get_user_email()
+    doc = get_firestore_client().collection("opponent_squads").document(email).get()
+    if doc.exists:
+        return set(doc.to_dict().get("player_ids", []))
+    return set()
+
+
+def save_opponent_squad(player_ids: set[int]) -> None:
+    """Persist opponent squad for a user (replaces existing document)."""
+    email = get_user_email()
+    get_firestore_client().collection("opponent_squads").document(email).set(
+        {
+            "player_ids": list(player_ids),
+            "updated_at": datetime.datetime.now(tz=datetime.UTC),
+        }
+    )
+
+
+def load_opponent_team() -> set[int]:
+    """Load persisted opponent team player IDs for a user."""
+    email = get_user_email()
+    doc = get_firestore_client().collection("opponent_teams").document(email).get()
+    if doc.exists:
+        return set(doc.to_dict().get("player_ids", []))
+    return set()
+
+
+def save_opponent_team(player_ids: set[int]) -> None:
+    """Persist opponent team for a user (replaces existing document)."""
+    email = get_user_email()
+    get_firestore_client().collection("opponent_teams").document(email).set(
+        {
+            "player_ids": list(player_ids),
             "updated_at": datetime.datetime.now(tz=datetime.UTC),
         }
     )

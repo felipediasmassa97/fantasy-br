@@ -128,7 +128,7 @@ def main() -> None:
 
     players = _build_player_options(data)
     if my_squad:
-        players = [p for p in players if p["player_id"] in set(load_squad())]
+        players = [p for p in players if p["player_id"] in load_squad()]
     if not players:
         st.info("No players with PAR data available.")
         return

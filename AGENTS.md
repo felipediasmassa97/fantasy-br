@@ -47,7 +47,8 @@ fantasy-br/
 │   │       ├── start_or_sit.py
 │   │       ├── market_valuation.py
 │   │       ├── squad_and_team.py
-│   │       └── trade_simulator.py
+│   │       ├── trade_simulator.py
+│   │       └── matchup_preview.py
 │   └── dbt/                  # dbt project (models, seeds, macros)
 ├── infra/                    # Terraform infrastructure
 │   ├── modules/              # Reusable modules (bigquery, firestore, iam)
@@ -152,7 +153,7 @@ Managed with Terraform on GCP, using a modular structure with per-environment st
 
 - **BigQuery**: data warehousing, dbt and GitHub Actions integration
 - **Cloud Storage**: Terraform state buckets (one per environment)
-- **Firestore**: `user_squads` and `user_teams` collections for squad and team persistence
+- **Firestore**: `user_squads`, `user_teams`, `user_opponent_squads` and `user_opponent_teams` collections for squad and team persistence
 
 ```
 infra/
@@ -279,8 +280,9 @@ src/dbt/
 | Scouting         | sct_last_1, sct_last_5, sct_last_5_home, sct_last_5_away, sct_last_10, sct_this_season, sct_last_season     |
 | Start or Sit     | ss_main, ss_map_breakdown, ss_mpap_debug, ss_home_away, ss_distribution, ss_round_by_round, ss_edge_cases   |
 | Market Valuation | mv_main, mv_par_breakdown, mv_stabilized, mv_form_trend, mv_regression, mv_value_profile, mv_round_by_round |
-| Squad and Team   | Firestore only (user_squads, user_teams collections — no mart models)                                       |
+| Squad and Team   | Firestore only (user_squads, user_teams, user_opponent_squads, user_opponent_teams — no mart models)        |
 | Trade Simulator  | mv_main (PAR values only — no new mart models)                                                              |
+| Matchup Preview  | ss_main (MAP scores) and Firestore (user and opponent squads/teams)                                         |
 
 Each mart has a dedicated loader in `utils.py` (e.g., `load_ss_main()`, `load_mv_regression()`).
 Add new loaders there when adding new mart models.
