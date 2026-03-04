@@ -5,6 +5,7 @@ from pages.market_valuation import main as market_valuation
 from pages.scouting import main as scouting
 from pages.squad_and_team import main as squad_and_team
 from pages.start_or_sit import main as start_or_sit
+from pages.trade_simulator import main as trade_simulator
 
 st.set_page_config(
     page_title="Fantasy BR",
@@ -48,6 +49,12 @@ pg = st.navigation(
             title="Squad and Team",
             icon="👥",
             url_path="squad-and-team",
+        ),
+        st.Page(
+            trade_simulator,
+            title="Trade Simulator",
+            icon="🔄",
+            url_path="trade-simulator",
         ),
     ]
 )

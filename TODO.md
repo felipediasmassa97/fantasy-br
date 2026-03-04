@@ -8,7 +8,6 @@
   - Performance
   - Refactoring
   - KPIs
-    - [ ] Add trade fairness delta
     - Strength of Schedule
       - [ ] Add Strength of Schedule for next 10 games (based on MPAP) -> Market Valuation metric
       - [ ] Add Strength of Schedule for next 5 home games (based on MPAP) -> Market Valuation metric
@@ -26,8 +25,7 @@
     - [ ] Fix interaction bug on Scouting page
     - [ ] Fix round-by-round bug on Start or Sit
   - Trade Fairness
-    - [ ] Add trade-fairness page (select players for trade)
-    - [ ] Add trade fairness delta (select groups of players from both sides and check overall PAR delta)
+    - [ ] Test trade fairness page
   - Squad and Team
     - [ ] Add toggles for my team and my squad on visualizations
     - [ ] Add "My Opponent Squad" - goal: estimate points, evaluate trades

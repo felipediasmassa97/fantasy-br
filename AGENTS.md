@@ -46,7 +46,8 @@ fantasy-br/
 │   │       ├── scouting.py
 │   │       ├── start_or_sit.py
 │   │       ├── market_valuation.py
-│   │       └── squad_and_team.py
+│   │       ├── squad_and_team.py
+│   │       └── trade_simulator.py
 │   └── dbt/                  # dbt project (models, seeds, macros)
 ├── infra/                    # Terraform infrastructure
 │   ├── modules/              # Reusable modules (bigquery, firestore, iam)
@@ -279,6 +280,7 @@ src/dbt/
 | Start or Sit     | ss_main, ss_map_breakdown, ss_mpap_debug, ss_home_away, ss_distribution, ss_round_by_round, ss_edge_cases   |
 | Market Valuation | mv_main, mv_par_breakdown, mv_stabilized, mv_form_trend, mv_regression, mv_value_profile, mv_round_by_round |
 | Squad and Team   | Firestore only (user_squads, user_teams collections — no mart models)                                       |
+| Trade Simulator  | mv_main (PAR values only — no new mart models)                                                              |
 
 Each mart has a dedicated loader in `utils.py` (e.g., `load_ss_main()`, `load_mv_regression()`).
 Add new loaders there when adding new mart models.
