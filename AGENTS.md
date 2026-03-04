@@ -182,9 +182,9 @@ infra/
 ```
 
 ```bash
-uv run terraform init -chdir=infra
-uv run terraform plan -chdir=infra
-uv run terraform apply -chdir=infra
+uv run terraform -chdir=infra/envs/dev init
+uv run terraform -chdir=infra/envs/dev plan -out=tfplan
+uv run terraform -chdir=infra/envs/dev apply tfplan
 ```
 
 IAM bindings are managed via the `iam` module. The service account (`service_account_email` variable, default `github-actions@fantasy-br.iam.gserviceaccount.com`) is granted:
@@ -363,7 +363,7 @@ Ensure `src/app/.streamlit/secrets.toml` has `gcp_service_account` credentials.
 | `data-refresh.yaml`          | Daily 3 AM UTC     | Load Cartola API → dbt build (all envs) |
 | `implementation.yaml`        | Push to `main`     | infra + dbt: dev → demo → prod          |
 | `development.yaml`           | Push to non-`main` | infra + dbt: dev only                   |
-| `reusable-infra-deploy.yaml` | Called by above    | GCS bucket + Terraform apply            |
+| `reusable-infra-deploy.yaml` | Called by above    | Terraform plan and apply                |
 | `reusable-dbt-build.yaml`    | Called by above    | `dbt build`                             |
 
 ## Common Tasks

@@ -46,11 +46,30 @@ jobs:
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
 
       - name: Terraform Init
         working-directory: infra/envs/${{ inputs.environment }}
         run: terraform init
 
-      - name: Terraform Apply
+      - name: Terraform Plan
+        id: plan
         working-directory: infra/envs/${{ inputs.environment }}
-        run: terraform apply -auto-approve
+        run: |
+          terraform plan -no-color -out=tfplan
+
+          if [[ $(terraform show -no-color tfplan) == *"No changes."* ]]; then
+            echo "do_apply=false" >> $GITHUB_OUTPUT
+          else
+            echo "do_apply=true" >> $GITHUB_OUTPUT
+          fi
+
+          echo '```terraform' >> $GITHUB_STEP_SUMMARY
+          terraform show -no-color tfplan >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Terraform Apply
+        if: steps.plan.outputs.do_apply == 'true'
+        working-directory: infra/envs/${{ inputs.environment }}
+        run: terraform apply tfplan -auto-approve

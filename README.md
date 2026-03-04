@@ -79,9 +79,10 @@ uv sync --all-extras
 # Authenticate with GCP
 gcloud auth application-default login
 
-# Initialize and deploy infrastructure (dev)
-uv run terraform init -chdir=infra -backend-config="bucket=fantasy-br-tfstate-dev"
-uv run terraform apply -chdir=infra -var-file=infra/envs/dev.tfvars
+# Initialize, plan and deploy infrastructure (dev)
+uv run terraform -chdir=infra/envs/dev init
+uv run terraform -chdir=infra/envs/dev plan -out=tfplan
+uv run terraform -chdir=infra/envs/dev apply tfplan
 
 # Set up dbt
 uv run dbt debug          # verify BigQuery connection
@@ -225,7 +226,7 @@ Do not use mocks.
 | `data-refresh.yaml`          | Daily 3 AM UTC     | Load Cartola API → dbt build (all envs) |
 | `implementation.yaml`        | Push to `main`     | infra + dbt: dev → demo → prod          |
 | `development.yaml`           | Push to non-`main` | infra + dbt: dev only                   |
-| `reusable-infra-deploy.yaml` | Called by above    | GCS bucket + Terraform apply            |
+| `reusable-infra-deploy.yaml` | Called by above    | Terraform plan and apply                |
 | `reusable-dbt-build.yaml`    | Called by above    | `dbt seed && dbt build`                 |
 
 ## Infrastructure
@@ -235,7 +236,7 @@ Managed with Terraform on Google Cloud Platform. Resources per environment:
 - **Cloud Storage bucket**: Terraform remote state backend
 - **BigQuery dataset**: holds all dbt staging, intermediate and mart tables
 - **Firestore database**: persists user squads and teams (`user_squads` and `user_teams` collections)
-- **IAM bindings**: grants the service account `roles/datastore.user`, `roles/bigquery.dataViewer`, and `roles/bigquery.jobUser`
+- **IAM bindings**: grants the service account `roles/datastore.owner`, `roles/bigquery.dataViewer`, and `roles/bigquery.jobUser`
 
 ### Install Terraform
 
@@ -257,14 +258,26 @@ gcloud auth application-default login
 
 ```bash
 # Initialize backend (once per environment)
-uv run terraform init -chdir=infra -backend-config="bucket=fantasy-br-tfstate-dev"
+uv run terraform -chdir=infra/envs/dev init
 
-# Preview and apply
-uv run terraform plan -chdir=infra -var-file=infra/envs/dev.tfvars
-uv run terraform apply -chdir=infra -var-file=infra/envs/dev.tfvars
+# Preview and show plan
+uv run terraform -chdir=infra/envs/dev plan -out=tfplan
+uv run terraform -chdir=infra/envs/dev show -json tfplan > plan.json
+
+# Apply
+uv run terraform -chdir=infra/envs/dev apply tfplan
 ```
 
 ### Free tier limits (per month)
 
-- **BigQuery**: 10 GB storage, 1 TB queries, free data loads ([pricing](https://cloud.google.com/bigquery/pricing)).
-- **Firestore**: 1 GiB storage, 50K reads/day, 20K writes/day ([pricing](https://cloud.google.com/firestore/pricing)).
+- **BigQuery**:
+  - 10 GB storage
+  - 1 TB queries
+  - Free data loads
+  - [Pricing](https://cloud.google.com/bigquery/pricing)
+
+- **Firestore**:
+  - 1 GiB storage
+  - 50K reads/day
+  - 20K writes/day
+  - [Pricing](https://cloud.google.com/firestore/pricing)
