@@ -54,7 +54,7 @@ jobs:
       - name: Import existing BigQuery dataset if needed
         working-directory: infra/envs/${{ inputs.environment }}
         run: |
-        # fixit is it still required? bigquery dataset is in every environment now
+          # fixit is it still required? bigquery dataset is in every environment now
           DATASET_ID="fdm${{ inputs.environment }}_fantasy_br"
 
           # Check if dataset exists in GCP but not in Terraform state
