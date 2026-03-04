@@ -14,6 +14,9 @@ from utils import (
 )
 
 # fixit when interacting on a tab, app is reseting to first tab
+# fixit check if home-away scouts are being rendered correctly in details tab
+# fixit check if home-away scouts are being rendered correctly in comparison tab
+# fixit add subtotals to home and away too, not only overall
 
 PAGE_COLUMN_CONFIG = {
     "z_score_pos_avg": {
@@ -191,7 +194,6 @@ def render_details_tab(
     time_period: str,
 ) -> None:
     """Render detailed metrics tab."""
-    scouts_offensive, scouts_defensive, scouts_negative = scout_groups
     help_text = (
         "General compares against top 200 players overall. "
         "Position-based compares against top players in same position."
@@ -460,36 +462,7 @@ def render_details_tab(
         player = data[selected_idx]
         st.subheader(f"Scout Breakdown: {player['player_name']}")
         st.caption(f"{player['position']} | {player['club']}")
-
-        for group_name, scouts in [
-            ("Offensive", scouts_offensive),
-            ("Defensive", scouts_defensive),
-            ("Negative", scouts_negative),
-        ]:
-            cols = st.columns([1.5, 1, 1])
-            cols[0].markdown(f"**{group_name}**")
-            cols[1].markdown(f"**Count per Match** ({time_period})")
-            cols[2].markdown(f"**Points per Match** ({time_period})")
-
-            subtotal = 0.0
-            for key, desc, pts in scouts:
-                code = key.replace("avg_", "")
-                val = player.get(key)
-                cols = st.columns([1.5, 1, 1])
-                cols[0].markdown(f"{code} :gray[{desc}]")
-                if val is not None:
-                    cols[1].write(f"{val:.2f}")
-                    cols[2].write(f"{val * pts:+.2f}")
-                    subtotal += val * pts
-                else:
-                    cols[1].write("-")
-                    cols[2].write("-")
-            # Subtotal row
-            cols = st.columns([1.5, 1, 1])
-            cols[0].markdown("**Subtotal**")
-            cols[1].write("")
-            cols[2].markdown(f"**{subtotal:+.2f}**")
-            st.divider()
+        _render_scout_breakdown(player, scout_groups, time_period)
 
 
 def render_comparison_tab(
@@ -499,7 +472,6 @@ def render_comparison_tab(
 ) -> None:
     """Render player comparison tab."""
     _ = time_period  # Used for consistency with other tabs
-    scouts_offensive, scouts_defensive, scouts_negative = scout_groups
     st.subheader("Player Comparison")
 
     selected = st.multiselect(
@@ -669,6 +641,68 @@ def render_comparison_tab(
                 cols[i + 1].write(fmt % val if fmt else str(val))
 
     # Scout sections with subtotals
+    _render_scout_comparison(selected, scout_groups)
+
+
+def _venue_suffix(val_home: float | None, val_away: float | None, fmt: str) -> str:
+    """Format home/away venue suffix like '(6.00 H / 4.00 A)'."""
+    if val_home is None and val_away is None:
+        return ""
+    h = fmt % val_home if val_home is not None else "-"
+    a = fmt % val_away if val_away is not None else "-"
+    return f" ({h} H / {a} A)"
+
+
+def _render_scout_breakdown(
+    player: dict,
+    scout_groups: tuple[list[tuple[str, str, float]], ...],
+    time_period: str,
+) -> None:
+    """Render scout breakdown for a single player in the Details tab."""
+    scouts_offensive, scouts_defensive, scouts_negative = scout_groups
+    for group_name, scouts in [
+        ("Offensive", scouts_offensive),
+        ("Defensive", scouts_defensive),
+        ("Negative", scouts_negative),
+    ]:
+        cols = st.columns([1.5, 1, 1])
+        cols[0].markdown(f"**{group_name}**")
+        cols[1].markdown(f"**Count per Match** ({time_period})")
+        cols[2].markdown(f"**Points per Match** ({time_period})")
+
+        subtotal = 0.0
+        for key, desc, pts in scouts:
+            code = key.replace("avg_", "")
+            val = player.get(key)
+            val_home = player.get(f"{key}_home")
+            val_away = player.get(f"{key}_away")
+            cols = st.columns([1.5, 1, 1])
+            cols[0].markdown(f"{code} :gray[{desc}]")
+            if val is not None:
+                cnt_suffix = _venue_suffix(val_home, val_away, "%.2f")
+                cols[1].write(f"{val:.2f}{cnt_suffix}")
+                pts_home = val_home * pts if val_home is not None else None
+                pts_away = val_away * pts if val_away is not None else None
+                pts_suffix = _venue_suffix(pts_home, pts_away, "%+.2f")
+                cols[2].write(f"{val * pts:+.2f}{pts_suffix}")
+                subtotal += val * pts
+            else:
+                cols[1].write("-")
+                cols[2].write("-")
+        # Subtotal row
+        cols = st.columns([1.5, 1, 1])
+        cols[0].markdown("**Subtotal**")
+        cols[1].write("")
+        cols[2].markdown(f"**{subtotal:+.2f}**")
+        st.divider()
+
+
+def _render_scout_comparison(
+    selected: list[dict],
+    scout_groups: tuple[list[tuple[str, str, float]], ...],
+) -> None:
+    """Render scout comparison across multiple players."""
+    scouts_offensive, scouts_defensive, scouts_negative = scout_groups
     for group_name, scouts in [
         ("Scouts per Match: Offensive", scouts_offensive),
         ("Scouts per Match: Defensive", scouts_defensive),
@@ -691,7 +725,10 @@ def render_comparison_tab(
                     cols[i + 1].write("-")
                 else:
                     pts_val = val * pts
-                    cols[i + 1].write(f"{pts_val:+.1f} pts ({val:.2f})")
+                    val_home = player.get(f"{key}_home")
+                    val_away = player.get(f"{key}_away")
+                    cnt_suffix = _venue_suffix(val_home, val_away, "%.2f")
+                    cols[i + 1].write(f"{pts_val:+.1f} pts ({val:.2f}){cnt_suffix}")
 
         # Subtotal row
         cols = st.columns([1.5] + [1] * len(selected))

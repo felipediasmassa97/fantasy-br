@@ -6,26 +6,25 @@
   - Performance
   - Refactoring
   - KPIs
-    - [ ] !!! Remove red card and own goal from base average
     - [ ] !!! Add PoE (points over expected) to Start/Sit (cumulative PoE + last 5 PoE)
     - [ ] !!! Add trade fairness delta
     - [ ] Add Strength of Schedule for next 10 games (based on MPAP) -> Market Valuation metric
     - [ ] Add Strength of Schedule for next 5 home games (based on MPAP) -> Market Valuation metric
     - [ ] Add Strength of Schedule for next 5 away games (based on MPAP) -> Market Valuation metric
-    - [ ] Add ELO or Power Index for each player
-    - [ ] Update ELO or Power Index each week (start with base ELO maybe)
   - Scouts
-    - [ ] !!! Show scouts for home matches
-    - [ ] !!! Show scouts for away matches
+    - [ ] Check scouts for home/away matches in details tab
+    - [ ] Check scouts for home/away matches in comparison tab
+    - [ ] Add home/away subtotals, not only overall subtotals
   - Validation
 
 - Streamlit App
   - Refactoring
     - [ ] !!! Refactor squad and team page
     - [ ] Remove noqa and apply best practices
-  - [ ] !!! Fix interaction bug on Scouting page
-  - [ ] !!! Fix round-by-round bug on Start or Sit
-  - [ ] Improve tooltips (clear, with intuition on metric definition, must say whether higher is better or worse, must disclaim premises and assumptions)
+    - [ ] Improve tooltips (clear, with intuition on metric definition, must say whether higher is better or worse, must disclaim premises and assumptions)
+  - Fixes
+    - [ ] !!! Fix interaction bug on Scouting page
+    - [ ] !!! Fix round-by-round bug on Start or Sit
   - [ ] !!! Add trade-fairness page (select players for trade)
   - [ ] !!! Add trade fairness delta (select groups of players from both sides and check overall PAR delta)
   - !!! Squad and Team
