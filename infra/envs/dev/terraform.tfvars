@@ -1,0 +1,6 @@
+project_id            = "fantasy-br"
+region                = "US"
+environment           = "dev"
+dataset_id            = "fdmdev_fantasy_br"
+firestore_location    = "nam5"
+service_account_email = "github-actions@fantasy-br.iam.gserviceaccount.com"

@@ -48,7 +48,9 @@ fantasy-br/
 │   │       ├── market_valuation.py
 │   │       └── squad_and_team.py
 │   └── dbt/                  # dbt project (models, seeds, macros)
-├── infra/                    # Terraform (BigQuery and Firestore infrastructure)
+├── infra/                    # Terraform infrastructure
+│   ├── modules/              # Reusable modules (bigquery, firestore, iam)
+│   └── envs/                 # Per-environment stacks (dev, demo, prod)
 ├── tests/                    # pytest tests
 ├── legacy/                   # Legacy Jupyter notebooks and CSVs
 └── .github/                  # CI/CD pipelines
@@ -145,24 +147,53 @@ Base rules for Panela FC are the same as for Cartola FC, with the following chan
 
 ### Infrastructure
 
-Managed with Terraform on GCP:
+Managed with Terraform on GCP, using a modular structure with per-environment stacks:
 
 - **BigQuery**: data warehousing, dbt and GitHub Actions integration
 - **Cloud Storage**: Terraform state buckets (one per environment)
 - **Firestore**: `user_squads` and `user_teams` collections for squad and team persistence
 
-```bash
-terraform init -chdir=infra -backend-config="bucket=fantasy-br-tfstate-dev"
-terraform apply -chdir=infra -var-file=infra/envs/dev.tfvars
+```
+infra/
+├── .gitignore
+├── modules/
+│   ├── bigquery/             # BigQuery dataset resource
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   ├── firestore/            # Firestore database resource
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   └── iam/                  # IAM role bindings (for_each on roles list)
+│       ├── main.tf
+│       ├── variables.tf
+│       └── outputs.tf
+└── envs/
+    ├── dev/
+    │   ├── backend.tf        # GCS state bucket (fantasy-br-tfstate-dev)
+    │   ├── providers.tf      # Terraform + Google provider versions
+    │   ├── main.tf           # Wires modules together
+    │   ├── variables.tf      # Typed input variables
+    │   ├── terraform.tfvars  # Environment-specific values
+    │   └── outputs.tf
+    ├── demo/                 # Same structure as dev
+    └── prod/                 # Same structure as dev
 ```
 
-IAM bindings are managed in `infra/iam.tf`. The service account (`app_service_account_email` variable, default `github-actions@fantasy-br.iam.gserviceaccount.com`) is granted:
+```bash
+uv run terraform init -chdir=infra
+uv run terraform plan -chdir=infra
+uv run terraform apply -chdir=infra
+```
 
-| Role                        | Purpose                                         |
-| --------------------------- | ----------------------------------------------- |
-| `roles/datastore.owner`     | Firestore database creation and read/write      |
-| `roles/bigquery.dataViewer` | BigQuery SELECT for dbt mart queries            |
-| `roles/bigquery.jobUser`    | BigQuery job execution                          |
+IAM bindings are managed via the `iam` module. The service account (`service_account_email` variable, default `github-actions@fantasy-br.iam.gserviceaccount.com`) is granted:
+
+| Role                        | Purpose                                    |
+| --------------------------- | ------------------------------------------ |
+| `roles/datastore.owner`     | Firestore database creation and read/write |
+| `roles/bigquery.dataViewer` | BigQuery SELECT for dbt mart queries       |
+| `roles/bigquery.jobUser`    | BigQuery job execution                     |
 
 ### Data Pipeline
 
