@@ -215,6 +215,11 @@ def load_mv_value_profile(round_id: int) -> list[dict]:
     return load_analytics("mv_value_profile", round_id, "par_points")
 
 
+def load_mv_schedule_strength(round_id: int) -> list[dict]:
+    """Load schedule strength data."""
+    return load_analytics("mv_schedule_strength", round_id, "schedule_strength")
+
+
 def load_mv_round_by_round(round_id: int) -> list[dict]:
     """Load MV round-by-round raw data."""
     return _query(f"""

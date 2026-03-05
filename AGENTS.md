@@ -223,13 +223,15 @@ src/dbt/
 │   │   ├── scouting/                # int_sct_*_stats (7 models, one per time window)
 │   │   ├── start_or_sit/            # int_map_mpap, int_ewm_form, int_distribution_stats,
 │   │   │                            #   int_map_score, int_poe
-│   │   └── market_valuation/        # int_replacement_levels, int_form_trend, int_regression
+│   │   └── market_valuation/        # int_replacement_levels, int_form_trend, int_regression,
+│   │                                #   int_schedule_strength
 │   ├── scouting/                    # sct_last_1, sct_last_5, sct_last_5_home, sct_last_5_away,
 │   │                                #   sct_last_10, sct_this_season, sct_last_season
 │   ├── start_or_sit/                # ss_main, ss_map_breakdown, ss_mpap_debug, ss_home_away,
 │   │                                #   ss_distribution, ss_round_by_round, ss_edge_cases
 │   └── market_valuation/            # mv_main, mv_par_breakdown, mv_stabilized, mv_form_trend,
-│                                    #   mv_regression, mv_value_profile, mv_round_by_round
+│                                    #   mv_regression, mv_value_profile, mv_schedule_strength,
+│                                    #   mv_round_by_round
 ├── seeds/
 │   ├── raw_players_legacy_2025.csv
 │   ├── raw_players_legacy_2026.csv
@@ -272,17 +274,18 @@ src/dbt/
 - `int_replacement_levels` — position-specific percentile replacement level + depth flag (DEEP/MODERATE/SCARCE)
 - `int_form_trend` — last-3, last-5, EWM averages, trend ratios, form bucket (UP/FLAT/DOWN)
 - `int_regression` — regression_score = perf_gap × (1+ga_share) × (1/consistency); signals SELL_HIGH/BUY_LOW/NEUTRAL
+- `int_schedule_strength` — avg blended MPAP across next 10 future opponents per player
 
 ### Streamlit App (`src/app/`)
 
-| Page             | Mart models used                                                                                            |
-| ---------------- | ----------------------------------------------------------------------------------------------------------- |
-| Scouting         | sct_last_1, sct_last_5, sct_last_5_home, sct_last_5_away, sct_last_10, sct_this_season, sct_last_season     |
-| Start or Sit     | ss_main, ss_map_breakdown, ss_mpap_debug, ss_home_away, ss_distribution, ss_round_by_round, ss_edge_cases   |
-| Market Valuation | mv_main, mv_par_breakdown, mv_stabilized, mv_form_trend, mv_regression, mv_value_profile, mv_round_by_round |
-| Squad and Team   | Firestore only (user_squads, user_teams, user_opponent_squads, user_opponent_teams — no mart models)        |
-| Trade Simulator  | mv_main (PAR values only — no new mart models)                                                              |
-| Matchup Preview  | ss_main (MAP scores) and Firestore (user and opponent squads/teams)                                         |
+| Page             | Mart models used                                                                                                                  |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Scouting         | sct_last_1, sct_last_5, sct_last_5_home, sct_last_5_away, sct_last_10, sct_this_season, sct_last_season                           |
+| Start or Sit     | ss_main, ss_map_breakdown, ss_mpap_debug, ss_home_away, ss_distribution, ss_round_by_round, ss_edge_cases                         |
+| Market Valuation | mv_main, mv_par_breakdown, mv_stabilized, mv_form_trend, mv_regression, mv_value_profile, mv_schedule_strength, mv_round_by_round |
+| Squad and Team   | Firestore only (user_squads, user_teams, user_opponent_squads, user_opponent_teams — no mart models)                              |
+| Trade Simulator  | mv_main (PAR values only — no new mart models)                                                                                    |
+| Matchup Preview  | ss_main (MAP scores) and Firestore (user and opponent squads/teams)                                                               |
 
 Each mart has a dedicated loader in `utils.py` (e.g., `load_ss_main()`, `load_mv_regression()`).
 Add new loaders there when adding new mart models.

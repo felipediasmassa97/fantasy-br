@@ -11,6 +11,7 @@ from utils import (
     load_mv_par_breakdown,
     load_mv_regression,
     load_mv_round_by_round,
+    load_mv_schedule_strength,
     load_mv_value_profile,
     render_sidebar_filters,
 )
@@ -479,6 +480,65 @@ def _render_value_profile() -> None:
     )
 
 
+def _render_schedule_strength() -> None:
+    """Schedule Strength subtab: MPAP-based upcoming opponent difficulty."""
+    st.subheader("Schedule Strength")
+    st.caption(
+        "Average points allowed by upcoming opponents for the player's position "
+        "(next 10 matches). Higher = easier schedule."
+    )
+
+    data = filter_data(
+        load_mv_schedule_strength(st.session_state.get("filter_round_id"))
+    )
+    if not data:
+        st.info("No data available for this round.")
+        return
+
+    col_config = {
+        "player_name": st.column_config.TextColumn("Player", width="medium"),
+        "position": st.column_config.TextColumn("Pos", width="small"),
+        "club_logo_url": st.column_config.ImageColumn("Club", width="small"),
+        "club": st.column_config.TextColumn("Club", width="small"),
+        "schedule_strength": st.column_config.NumberColumn(
+            "SoS",
+            format="%.2f",
+            help="Schedule Strength: avg MPAP of next opponents. Higher = easier.",
+        ),
+        "schedule_strength_ratio": st.column_config.NumberColumn(
+            "SoS Ratio",
+            format="%.2f",
+            help="Schedule strength / league avg for position. >1 = easier than avg.",
+        ),
+        "baseline_pts": st.column_config.NumberColumn(
+            "Baseline",
+            format="%.2f",
+            help="Stabilized mean points (shrinkage-blended)",
+        ),
+        "par": st.column_config.NumberColumn(
+            "PAR",
+            format="%+.2f",
+            help="Points Above Replacement",
+        ),
+        "opponents_evaluated": st.column_config.NumberColumn(
+            "Opps",
+            format="%d",
+            help="Number of future opponents evaluated (up to 10)",
+        ),
+        "upcoming_opponents": st.column_config.TextColumn(
+            "Upcoming Opponents",
+            width="large",
+            help="List of upcoming opponents with round numbers",
+        ),
+    }
+
+    display_cols = list(col_config.keys())
+    rows = [{k: row.get(k) for k in display_cols} for row in data]
+    st.dataframe(
+        rows, use_container_width=True, hide_index=True, column_config=col_config
+    )
+
+
 def _render_round_by_round() -> None:
     """Round-by-Round Raw subtab."""
     st.subheader("Round-by-Round Raw Data")
@@ -574,6 +634,7 @@ def main() -> None:
             "Form & Trend",
             "Regression",
             "Value Profile",
+            "Schedule",
             "Round-by-Round",
         ]
     )
@@ -591,4 +652,6 @@ def main() -> None:
     with tabs[5]:
         _render_value_profile()
     with tabs[6]:
+        _render_schedule_strength()
+    with tabs[7]:
         _render_round_by_round()

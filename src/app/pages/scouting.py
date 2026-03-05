@@ -16,7 +16,6 @@ from utils import (
 # fixit when interacting on a tab, app is reseting to first tab
 # fixit check if home-away scouts are being rendered correctly in details tab
 # fixit check if home-away scouts are being rendered correctly in comparison tab
-# fixit add subtotals to home and away too, not only overall
 
 PAGE_COLUMN_CONFIG = {
     "z_score_pos_avg": {
@@ -671,6 +670,8 @@ def _render_scout_breakdown(
         cols[2].markdown(f"**Points per Match** ({time_period})")
 
         subtotal = 0.0
+        subtotal_home = 0.0
+        subtotal_away = 0.0
         for key, desc, pts in scouts:
             code = key.replace("avg_", "")
             val = player.get(key)
@@ -686,6 +687,10 @@ def _render_scout_breakdown(
                 pts_suffix = _venue_suffix(pts_home, pts_away, "%+.2f")
                 cols[2].write(f"{val * pts:+.2f}{pts_suffix}")
                 subtotal += val * pts
+                if pts_home is not None:
+                    subtotal_home += pts_home
+                if pts_away is not None:
+                    subtotal_away += pts_away
             else:
                 cols[1].write("-")
                 cols[2].write("-")
@@ -693,7 +698,8 @@ def _render_scout_breakdown(
         cols = st.columns([1.5, 1, 1])
         cols[0].markdown("**Subtotal**")
         cols[1].write("")
-        cols[2].markdown(f"**{subtotal:+.2f}**")
+        pts_sub_suffix = _venue_suffix(subtotal_home, subtotal_away, "%+.2f")
+        cols[2].markdown(f"**{subtotal:+.2f}**{pts_sub_suffix}")
         st.divider()
 
 
@@ -735,7 +741,10 @@ def _render_scout_comparison(
         cols[0].markdown("**Subtotal**")
         for i, player in enumerate(selected):
             subtotal = sum((player.get(k) or 0) * p for k, _, p in scouts)
-            cols[i + 1].markdown(f"**{subtotal:+.1f}**")
+            sub_home = sum((player.get(f"{k}_home") or 0) * p for k, _, p in scouts)
+            sub_away = sum((player.get(f"{k}_away") or 0) * p for k, _, p in scouts)
+            suffix = _venue_suffix(sub_home, sub_away, "%+.1f")
+            cols[i + 1].markdown(f"**{subtotal:+.1f}**{suffix}")
 
 
 def main() -> None:
