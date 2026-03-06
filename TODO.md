@@ -15,8 +15,7 @@
 
 - App
   - Fixes
-    - [ ] Fix interaction bug on Scouting page
-    - [ ] Fix round-by-round bug on Start or Sit
+    - [ ] Check if interaction bug on Scouting page was fixed
   - Trade Fairness
     - [ ] Test trade fairness page
   - Squad and Team
@@ -24,7 +23,7 @@
     - [ ] Test Team feature
     - [ ] Test Squad and Team with other email
   - Refactoring
-    - [ ] Remove noqa and apply best practices
+    - [ ] !!! Remove noqa and apply best practices
 
 - Documentation
 

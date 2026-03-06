@@ -177,7 +177,12 @@ def load_ss_distribution(round_id: int) -> list[dict]:
 
 def load_ss_round_by_round(round_id: int) -> list[dict]:
     """Load round-by-round raw data."""
-    return load_analytics("ss_round_by_round", round_id, "points_total")
+    return _query(f"""
+        SELECT *
+        FROM `{PROJECT_ID}.{DATASET_ID}.ss_round_by_round`
+        WHERE round <= {int(round_id)}
+        ORDER BY points_total DESC NULLS LAST
+    """)  # noqa: S608
 
 
 def load_ss_edge_cases() -> list[dict]:
