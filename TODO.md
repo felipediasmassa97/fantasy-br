@@ -14,7 +14,6 @@
   - [ ] Check scouts for home/away matches in comparison tab
 
 - App
-  - Prevent unauthorized users
   - Fixes
     - [ ] Fix interaction bug on Scouting page
     - [ ] Fix round-by-round bug on Start or Sit

@@ -21,6 +21,14 @@ if not st.user.is_logged_in:
     st.button("Sign in with Google", on_click=st.login, use_container_width=False)
     st.stop()
 
+# Restrict access to authorized users only
+allowed_emails: list[str] = st.secrets.get("auth", {}).get("allowed_emails", [])
+if allowed_emails and st.user.email not in allowed_emails:
+    st.title(":shallow_pan_of_food: Fantasy BR")
+    st.error("Access denied. Your account is not authorized to use this application.")
+    st.button("Sign out", on_click=st.logout)
+    st.stop()
+
 with st.sidebar:
     st.write(f"Welcome, **{st.user.name}**!")
     st.button("Sign out", on_click=st.logout, key="signout")

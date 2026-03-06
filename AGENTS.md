@@ -364,7 +364,22 @@ Do not use mocks.
 uv run app    # runs at http://localhost:8501
 ```
 
-Ensure `src/app/.streamlit/secrets.toml` has `gcp_service_account` credentials.
+Ensure `src/app/.streamlit/secrets.toml` has `gcp_service_account` credentials and `allowed_emails` list:
+
+```toml
+[auth]
+...
+allowed_emails = ["felipediasmassa97@gmail.com", "felipediasmassa97@poli.ufrj.br"]
+```
+
+Users not in the `allowed_emails` list are shown an "Access denied" message after Google sign-in. If the key is missing or empty, all authenticated users are allowed (open access).
+
+To onboard new users:
+
+- Access [Streamlit Cloud](https://share.streamlit.io/)
+- Go to `fantasy-br`'s settings
+- Select Secrets tab
+- Add the new user email in `allowed_emails` list
 
 ## CI/CD Workflows
 
