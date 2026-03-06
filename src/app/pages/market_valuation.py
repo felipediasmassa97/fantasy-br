@@ -484,8 +484,9 @@ def _render_schedule_strength() -> None:
     """Schedule Strength subtab: MPAP-based upcoming opponent difficulty."""
     st.subheader("Schedule Strength")
     st.caption(
-        "Average points allowed by upcoming opponents for the player's position "
-        "(next 10 matches). Higher = easier schedule."
+        "Average points allowed by upcoming opponents for the player's position. "
+        "Higher = easier schedule. Overall uses next 10 matches; "
+        "Home/Away use next 5 home/away matches respectively."
     )
 
     data = filter_data(
@@ -503,12 +504,32 @@ def _render_schedule_strength() -> None:
         "schedule_strength": st.column_config.NumberColumn(
             "SoS",
             format="%.2f",
-            help="Schedule Strength: avg MPAP of next opponents. Higher = easier.",
+            help="Schedule Strength: avg MPAP of next 10 opponents. Higher = easier.",
         ),
         "schedule_strength_ratio": st.column_config.NumberColumn(
             "SoS Ratio",
             format="%.2f",
             help="Schedule strength / league avg for position. >1 = easier than avg.",
+        ),
+        "schedule_strength_home": st.column_config.NumberColumn(
+            "SoS (H)",
+            format="%.2f",
+            help="Home Schedule Strength: avg MPAP of next 5 home opponents.",
+        ),
+        "schedule_strength_home_ratio": st.column_config.NumberColumn(
+            "SoS (H) Ratio",
+            format="%.2f",
+            help="Home schedule strength / league avg. >1 = easier than avg.",
+        ),
+        "schedule_strength_away": st.column_config.NumberColumn(
+            "SoS (A)",
+            format="%.2f",
+            help="Away Schedule Strength: avg MPAP of next 5 away opponents.",
+        ),
+        "schedule_strength_away_ratio": st.column_config.NumberColumn(
+            "SoS (A) Ratio",
+            format="%.2f",
+            help="Away schedule strength / league avg. >1 = easier than avg.",
         ),
         "baseline_pts": st.column_config.NumberColumn(
             "Baseline",
@@ -529,6 +550,16 @@ def _render_schedule_strength() -> None:
             "Upcoming Opponents",
             width="large",
             help="List of upcoming opponents with round numbers",
+        ),
+        "upcoming_opponents_home": st.column_config.TextColumn(
+            "Upcoming (H)",
+            width="large",
+            help="Next 5 home opponents",
+        ),
+        "upcoming_opponents_away": st.column_config.TextColumn(
+            "Upcoming (A)",
+            width="large",
+            help="Next 5 away opponents",
         ),
     }
 

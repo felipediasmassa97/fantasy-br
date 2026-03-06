@@ -5,20 +5,16 @@
 - Infra
 
 - dbt
-  - Performance
-  - Refactoring
-  - KPIs
-    - Strength of Schedule
-      - [ ] !!! Add Strength of Schedule for next 5 home games (based on MPAP) -> Market Valuation metric
-      - [ ] !!! Add Strength of Schedule for next 5 away games (based on MPAP) -> Market Valuation metric
-  - Scouts
-    - [ ] Check scouts for home/away matches in details tab
-    - [ ] Check scouts for home/away matches in comparison tab
-  - Validation
+  - Strength of Schedule
+    - [ ] Check strength of schedule overall
+    - [ ] Check strength of schedule home
+    - [ ] Check strength of schedule away
+- Scouts
+  - [ ] Check scouts for home/away matches in details tab
+  - [ ] Check scouts for home/away matches in comparison tab
 
 - App
-  - Refactoring
-    - [ ] Remove noqa and apply best practices
+  - Prevent unauthorized users
   - Fixes
     - [ ] Fix interaction bug on Scouting page
     - [ ] Fix round-by-round bug on Start or Sit
@@ -28,6 +24,8 @@
     - [ ] Test Squad feature
     - [ ] Test Team feature
     - [ ] Test Squad and Team with other email
+  - Refactoring
+    - [ ] Remove noqa and apply best practices
 
 - Documentation
 

@@ -274,7 +274,7 @@ src/dbt/
 - `int_replacement_levels` — position-specific percentile replacement level + depth flag (DEEP/MODERATE/SCARCE)
 - `int_form_trend` — last-3, last-5, EWM averages, trend ratios, form bucket (UP/FLAT/DOWN)
 - `int_regression` — regression_score = perf_gap × (1+ga_share) × (1/consistency); signals SELL_HIGH/BUY_LOW/NEUTRAL
-- `int_schedule_strength` — avg blended MPAP across next 10 future opponents per player
+- `int_schedule_strength` — avg blended MPAP across upcoming opponents per player: overall (next 10), home (next 5 home), away (next 5 away); materialized as view due to CTE complexity
 
 ### Streamlit App (`src/app/`)
 
