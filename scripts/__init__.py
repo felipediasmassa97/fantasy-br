@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from dbt.cli.main import cli
+
 ROOT = Path(__file__).parent.parent
 
 
@@ -20,8 +22,6 @@ def run_app() -> None:
 def run_dbt() -> None:
     """Run dbt from the dbt project directory, forwarding all arguments."""
     os.chdir(ROOT / "src" / "dbt")
-    from dbt.cli.main import cli  # noqa: PLC0415
-
     sys.argv[0] = "dbt"
     cli()
 

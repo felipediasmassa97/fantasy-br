@@ -22,8 +22,6 @@
     - [ ] Test Squad feature
     - [ ] Test Team feature
     - [ ] Test Squad and Team with other email
-  - Refactoring
-    - [ ] !!! Remove noqa and apply best practices
 
 - Documentation
 

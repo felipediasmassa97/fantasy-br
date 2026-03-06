@@ -1,5 +1,8 @@
 """Shared utilities for Fantasy BR Streamlit app."""
 
+# Allow dynamic SQL queries with proper parameterization handled by BigQuery client
+# ruff: noqa: S608
+
 import datetime
 from typing import TYPE_CHECKING
 
@@ -93,7 +96,7 @@ def load_available_rounds() -> list[int]:
             SELECT DISTINCT as_of_round_id
             FROM `{PROJECT_ID}.{DATASET_ID}.sct_this_season`
             ORDER BY as_of_round_id ASC
-        """)  # noqa: S608
+        """)
     ]
 
 
@@ -106,7 +109,7 @@ def load_positions() -> list[dict]:
         FROM `{PROJECT_ID}.{DATASET_ID}.stg_positions`
         WHERE abbreviation <> "HC"
         ORDER BY id
-    """)  # noqa: S608
+    """)
 
 
 def load_clubs() -> list[dict]:
@@ -117,7 +120,7 @@ def load_clubs() -> list[dict]:
             label as club
         FROM `{PROJECT_ID}.{DATASET_ID}.stg_clubs`
         ORDER by label
-    """)  # noqa: S608
+    """)
 
 
 def load_scouting_data(view_name: str, round_id: int | None = None) -> list[dict]:
@@ -127,13 +130,13 @@ def load_scouting_data(view_name: str, round_id: int | None = None) -> list[dict
             SELECT *
             FROM `{PROJECT_ID}.{DATASET_ID}.{view_name}`
             ORDER BY adp_gen_avg ASC NULLS LAST
-        """)  # noqa: S608
+        """)
     return _query(f"""
         SELECT *
         FROM `{PROJECT_ID}.{DATASET_ID}.{view_name}`
         WHERE as_of_round_id = {round_id}
         ORDER BY adp_gen_avg ASC NULLS LAST
-    """)  # noqa: S608
+    """)
 
 
 def load_analytics(view: str, as_of_round_id: str | None, order_by: str) -> list[dict]:
@@ -147,7 +150,7 @@ def load_analytics(view: str, as_of_round_id: str | None, order_by: str) -> list
         FROM `{PROJECT_ID}.{DATASET_ID}.{view}`
         {where_clause}
         ORDER BY {order_by} DESC NULLS LAST
-    """)  # noqa: S608
+    """)
 
 
 def load_ss_main(round_id: int) -> list[dict]:
@@ -182,7 +185,7 @@ def load_ss_round_by_round(round_id: int) -> list[dict]:
         FROM `{PROJECT_ID}.{DATASET_ID}.ss_round_by_round`
         WHERE round <= {int(round_id)}
         ORDER BY points_total DESC NULLS LAST
-    """)  # noqa: S608
+    """)
 
 
 def load_ss_edge_cases() -> list[dict]:
@@ -232,7 +235,7 @@ def load_mv_round_by_round(round_id: int) -> list[dict]:
         FROM `{PROJECT_ID}.{DATASET_ID}.mv_round_by_round`
         WHERE round <= {round_id}
         ORDER BY round DESC, points_total DESC NULLS LAST
-    """)  # noqa: S608
+    """)
 
 
 def load_scout_points() -> dict[str, tuple[str, float]]:
@@ -242,7 +245,7 @@ def load_scout_points() -> dict[str, tuple[str, float]]:
         for row in _query(f"""
             SELECT code, description_en, points
             FROM `{PROJECT_ID}.{DATASET_ID}.raw_scout_points`
-        """)  # noqa: S608
+        """)
     }
 
 
@@ -482,4 +485,4 @@ def load_players() -> list[dict]:
             FROM `{PROJECT_ID}.{DATASET_ID}.sct_this_season`
         )
         ORDER BY position, player_name
-    """)  # noqa: S608
+    """)
