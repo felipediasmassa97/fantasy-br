@@ -13,7 +13,7 @@ from utils import (
     style_dataframe,
 )
 
-# fixit when interacting on a tab, app is reseting to first tab
+# fixit check if tab selection bug is fixed
 # fixit check if home-away scouts are being rendered correctly in details tab
 # fixit check if home-away scouts are being rendered correctly in comparison tab
 
@@ -779,18 +779,21 @@ def main() -> None:
 
     filtered_data = filter_data(data)
 
-    # Main tabs
-    tab1, tab2, tab3 = st.tabs(
-        ["Rankings Overview", "Detailed Metrics", "Compare Players"],
+    # Main tabs (segmented_control persists selection across reruns)
+    tab_options = ["Rankings Overview", "Detailed Metrics", "Compare Players"]
+    selected_tab = st.segmented_control(
+        "View",
+        options=tab_options,
+        default=tab_options[0],
+        key="scouting_tab",
+        label_visibility="collapsed",
     )
 
-    with tab1:
+    if selected_tab == "Rankings Overview":
         render_rankings_tab(filtered_data)
-
-    with tab2:
+    elif selected_tab == "Detailed Metrics":
         render_details_tab(filtered_data, scout_groups, selected_period)
-
-    with tab3:
+    elif selected_tab == "Compare Players":
         render_comparison_tab(filtered_data, scout_groups, selected_period)
 
 
