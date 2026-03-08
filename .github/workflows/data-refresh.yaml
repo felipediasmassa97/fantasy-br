@@ -108,30 +108,11 @@ jobs:
             "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_positions" positions.jsonl
           echo "Loaded $(wc -l < positions.jsonl) positions"
 
-      - name: Fetch and load schedule from football-data.org
+      - name: Extract and load schedule
         env:
           FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
         run: |
           YEAR=$(date +%Y)
-          PREV_YEAR=$((YEAR - 1))
-
-          # Fetch previous season schedule
-          curl -sf -H "X-Auth-Token: ${FOOTBALL_DATA_API_KEY}" \
-            "https://api.football-data.org/v4/competitions/BSA/matches?season=${PREV_YEAR}" | \
-            jq -c --argjson season "$PREV_YEAR" '.matches[] | {
-              season: $season,
-              match_id: .id,
-              round_id: .matchday,
-              home_team_id: .homeTeam.id,
-              home_team_name: .homeTeam.shortName,
-              home_team_tla: .homeTeam.tla,
-              away_team_id: .awayTeam.id,
-              away_team_name: .awayTeam.shortName,
-              away_team_tla: .awayTeam.tla
-            }' > schedule_prev.jsonl
-
-          echo "Fetched $(wc -l < schedule_prev.jsonl | tr -d ' ') matches for ${PREV_YEAR}"
-          sleep 7
 
           # Fetch current season schedule (includes future rounds)
           curl -sf -H "X-Auth-Token: ${FOOTBALL_DATA_API_KEY}" \
@@ -146,16 +127,15 @@ jobs:
               away_team_id: .awayTeam.id,
               away_team_name: .awayTeam.shortName,
               away_team_tla: .awayTeam.tla
-            }' > schedule_current.jsonl
+            }' > schedule.jsonl
 
-          echo "Fetched $(wc -l < schedule_current.jsonl | tr -d ' ') matches for ${YEAR}"
+          echo "Fetched $(wc -l < schedule.jsonl | tr -d ' ') matches for ${YEAR}"
 
-          cat schedule_prev.jsonl schedule_current.jsonl > schedule_all.jsonl
-          TOTAL_COUNT=$(wc -l < schedule_all.jsonl | tr -d ' ')
-          echo "Total: ${TOTAL_COUNT} matches across ${PREV_YEAR} and ${YEAR}"
+          TOTAL_COUNT=$(wc -l < schedule.jsonl | tr -d ' ')
+          echo "Total: ${TOTAL_COUNT} matches across ${YEAR}"
 
           bq load --source_format=NEWLINE_DELIMITED_JSON --autodetect --replace \
-            "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_schedule" schedule_all.jsonl
+            "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_schedule" schedule.jsonl
           echo "Loaded ${TOTAL_COUNT} schedule rows"
 
   run-dbt-dev:

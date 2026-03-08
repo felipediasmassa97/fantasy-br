@@ -238,7 +238,7 @@ src/dbt/
 │   ├── raw_players_legacy_2025.csv
 │   ├── raw_players_legacy_2026.csv
 │   ├── raw_scout_points.csv         # scout code to points mapping
-│   └── raw_club_mapping.csv         # football-data.org TLA to Cartola club ID mapping
+│   └── raw_club_mapping.csv         # football-data.org team ID to Cartola club ID mapping
 ├── dbt_project.yml                  # staging=view, intermediate=view, marts=table
 └── profiles.yml                     # local/dev/demo/prod profile definitions
 ```
@@ -257,7 +257,7 @@ src/dbt/
 
 **General:**
 
-- `int_matches` — maps football-data.org schedule to Cartola club IDs via `raw_club_mapping` seed
+- `int_matches` — maps football-data.org schedule to Cartola club IDs via `raw_club_mapping` seed (keyed on numeric team ID to avoid TLA conflicts)
 - `int_players` — base enriched player data per round (scout per-round deltas, opponent, is_home, base_round excludes G/A/CV/GC)
 - `int_baseline` — stabilized mean via shrinkage blending (this + last season, k=5)
 - `int_home_away` — home/away averages, delta, multiplier
