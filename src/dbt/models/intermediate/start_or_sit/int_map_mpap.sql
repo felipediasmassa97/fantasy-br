@@ -20,11 +20,12 @@ with all_rounds as (
 ),
 
 player_clubs as (
-    select distinct
+    select
         id as player_id,
-        club_id
+        any_value(club_id having max round_id) as club_id
     from {{ ref('int_players') }}
     where season = 2026
+    group by id
 ),
 
 -- Next match for each club at each as_of_round (looking at as_of_round_id + 1)

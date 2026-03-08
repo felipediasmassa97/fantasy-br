@@ -13,10 +13,6 @@ from utils import (
     style_dataframe,
 )
 
-# fixit check if tab selection bug is fixed
-# fixit check if home-away scouts are being rendered correctly in details tab
-# fixit check if home-away scouts are being rendered correctly in comparison tab
-
 PAGE_COLUMN_CONFIG = {
     "z_score_pos_avg": {
         "tooltip": "Z-Score: how many standard deviations above or below top position "
@@ -673,13 +669,13 @@ def _render_scout_breakdown(
         subtotal_home = 0.0
         subtotal_away = 0.0
         for key, desc, pts in scouts:
-            code = key.replace("avg_", "")
+            code = key.replace("avg_", "").upper()
             val = player.get(key)
             val_home = player.get(f"{key}_home")
             val_away = player.get(f"{key}_away")
             cols = st.columns([1.5, 1, 1])
             cols[0].markdown(f"{code} :gray[{desc}]")
-            if val is not None:
+            if val is not None and val != 0.0:
                 cnt_suffix = _venue_suffix(val_home, val_away, "%.2f")
                 cols[1].write(f"{val:.2f}{cnt_suffix}")
                 pts_home = val_home * pts if val_home is not None else None

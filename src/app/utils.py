@@ -165,7 +165,7 @@ def load_ss_map_breakdown(round_id: int) -> list[dict]:
 
 def load_ss_mpap_debug(round_id: int) -> list[dict]:
     """Load MPAP debug data."""
-    return load_analytics("ss_mpap_debug", round_id, "mpap_multiplier")
+    return load_analytics("ss_mpap_debug", round_id, "mpap_ratio")
 
 
 def load_ss_home_away(round_id: int) -> list[dict]:
@@ -254,17 +254,17 @@ def get_scout_groups(
 ) -> tuple[list[tuple[str, str, float]], ...]:
     """Build scout groups from loaded scout_points data."""
     offensive = [
-        (f"avg_{code}", scout_points[code][0], scout_points[code][1])
+        (f"avg_{code.lower()}", scout_points[code][0], scout_points[code][1])
         for code in SCOUTS_OFFENSIVE_CODES
         if code in scout_points
     ]
     defensive = [
-        (f"avg_{code}", scout_points[code][0], scout_points[code][1])
+        (f"avg_{code.lower()}", scout_points[code][0], scout_points[code][1])
         for code in SCOUTS_DEFENSIVE_CODES
         if code in scout_points
     ]
     negative = [
-        (f"avg_{code}", scout_points[code][0], scout_points[code][1])
+        (f"avg_{code.lower()}", scout_points[code][0], scout_points[code][1])
         for code in SCOUTS_NEGATIVE_CODES
         if code in scout_points
     ]
@@ -330,7 +330,11 @@ def filter_data(data: list[dict]) -> list[dict]:
             if filter_name.lower() in row.get("player_name", "").lower()
         ]
     if filter_club and filter_club["club"] != "All":
-        filtered = [row for row in filtered if row.get("club") == filter_club["club"]]
+        filtered = [
+            row
+            for row in filtered
+            if row.get("club") == filter_club.get("abbreviation")
+        ]
     if filter_position and filter_position["position"] != "All":
         filtered = [
             row
@@ -392,11 +396,13 @@ def get_firestore_client() -> "FirestoreClient":
 
 def load_squad() -> set[int]:
     """Load persisted squad player IDs for a user."""
+    if "_cached_squad" in st.session_state:
+        return st.session_state["_cached_squad"]
     email = get_user_email()
     doc = get_firestore_client().collection("user_squads").document(email).get()
-    if doc.exists:
-        return set(doc.to_dict().get("player_ids", []))
-    return set()
+    squad = set(doc.to_dict().get("player_ids", [])) if doc.exists else set()
+    st.session_state["_cached_squad"] = squad
+    return squad
 
 
 def save_squad(player_ids: set[int]) -> None:
@@ -408,6 +414,7 @@ def save_squad(player_ids: set[int]) -> None:
             "updated_at": datetime.datetime.now(tz=datetime.UTC),
         }
     )
+    st.session_state["_cached_squad"] = set(player_ids)
 
 
 def load_team() -> set[int]:
@@ -483,6 +490,18 @@ def load_players() -> list[dict]:
         WHERE as_of_round_id = (
             SELECT MAX(as_of_round_id)
             FROM `{PROJECT_ID}.{DATASET_ID}.sct_this_season`
+        )
+        ORDER BY position, player_name
+    """)
+
+
+def load_enriched_players() -> list[dict]:
+    """Load all players enriched with MAP, PoE, opponent, PAR and regression data."""
+    return _query(f"""
+        SELECT *
+        FROM `{PROJECT_ID}.{DATASET_ID}.sat_players`
+        WHERE as_of_round_id = (
+            SELECT MAX(as_of_round_id) FROM `{PROJECT_ID}.{DATASET_ID}.sat_players`
         )
         ORDER BY position, player_name
     """)

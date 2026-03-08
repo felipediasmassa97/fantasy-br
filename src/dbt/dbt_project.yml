@@ -32,3 +32,5 @@ models:
       +materialized: table
     market_valuation:
       +materialized: table
+    squad_and_team:
+      +materialized: table

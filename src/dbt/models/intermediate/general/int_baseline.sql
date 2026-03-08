@@ -21,30 +21,30 @@ player_avg_this_season as (
     select
         r.as_of_round_id,
         p.id,
-        p.player_name,
-        p.club,
-        p.club_logo_url,
-        p.position,
+        any_value(p.player_name having max p.round_id) as player_name,
+        any_value(p.club having max p.round_id) as club,
+        any_value(p.club_logo_url having max p.round_id) as club_logo_url,
+        any_value(p.position having max p.round_id) as position,
         avg(if(p.has_played, p.pts_round, null)) as player_pts_avg_this_season,
         countif(p.has_played = true) as matches_this_season,
         count(*) as rounds_listed_this_season
     from {{ ref('int_players') }} as p
     cross join all_rounds as r
     where p.season = 2026 and p.round_id <= r.as_of_round_id
-    group by r.as_of_round_id, p.id, p.player_name, p.club, p.club_logo_url, p.position
+    group by r.as_of_round_id, p.id
 ),
 
 -- Last season averages per player (full season 2025)
 player_avg_last_season as (
     select
         id,
-        position,
+        any_value(position having max round_id) as position,
         avg(if(has_played, pts_round, null)) as player_pts_avg_last_season,
         countif(has_played = true) as matches_last_season,
         countif(has_played = true) / count(*) as availability_last_season
     from {{ ref('int_players') }}
     where season = 2025
-    group by id, position
+    group by id
 ),
 
 -- Position average from last season (for rookies)

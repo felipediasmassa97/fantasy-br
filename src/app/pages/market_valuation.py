@@ -151,7 +151,7 @@ def _render_par_breakdown() -> None:
 
 def _render_baseline() -> None:
     """Baseline (Stabilized Mean & Shrinkage) subtab."""
-    st.subheader("Baseline — Stabilized Mean & Shrinkage")
+    st.subheader("Baseline: Stabilized Mean & Shrinkage")
 
     data = filter_data(load_mv_baseline(st.session_state.get("filter_round_id")))
     if not data:
@@ -370,9 +370,10 @@ def _render_regression() -> None:
             format="%.2f",
             help="Goals + assists share of points. High = regression risk.",
         ),
-        "consistency_rating": st.column_config.TextColumn(
+        "consistency_rating": st.column_config.NumberColumn(
             "Consistency",
-            help="HIGH / MED / LOW based on CV",
+            format="%.2f",
+            help="Consistency: 1/(1+CV). Higher is more consistent.",
         ),
         "regression_score": st.column_config.NumberColumn(
             "Regr Score",
@@ -398,7 +399,7 @@ def _render_regression() -> None:
 
 def _render_value_profile() -> None:
     """Value Profile subtab."""
-    st.subheader("Value Profile — Risk vs Reward")
+    st.subheader("Value Profile: Risk vs Reward")
 
     data = filter_data(load_mv_value_profile(st.session_state.get("filter_round_id")))
     if not data:
@@ -443,9 +444,10 @@ def _render_value_profile() -> None:
             format="%.1f",
             help="80th-percentile score",
         ),
-        "consistency_rating": st.column_config.TextColumn(
+        "consistency_rating": st.column_config.NumberColumn(
             "Consistency",
-            help="HIGH / MED / LOW based on CV",
+            format="%.2f",
+            help="Consistency: 1/(1+CV). Higher is more consistent.",
         ),
         "availability": st.column_config.NumberColumn(
             "Avail%",
@@ -648,7 +650,7 @@ def _render_round_by_round() -> None:
 
 def main() -> None:
     """Render Market Valuation page."""
-    st.title("Market Valuation")
+    st.title("💰 Market Valuation")
 
     rounds = load_available_rounds()
     if not rounds:

@@ -58,10 +58,10 @@ def _render_verdict(par_a: float, par_b: float) -> None:
         verdict = "roughly fair"
         icon = ":balance_scale:"
     elif delta > 0:
-        verdict = "Side A has the edge"
+        verdict = "Side A has the edge (receives more value)"
         icon = ":arrow_left:"
     else:
-        verdict = "Side B has the edge"
+        verdict = "Side B has the edge (receives more value)"
         icon = ":arrow_right:"
 
     st.subheader("Trade Verdict")
@@ -81,7 +81,7 @@ def _render_selections(
     with col_left:
         st.subheader("Side A")
         selected_left = st.multiselect(
-            "Players (Side A)",
+            "Side A receives",
             options=[p["player_id"] for p in players],
             format_func=lambda pid: player_by_id[pid]["label"],
             key="trade_side_a",
@@ -93,7 +93,7 @@ def _render_selections(
             p["player_id"] for p in players if p["player_id"] not in selected_left
         ]
         selected_right = st.multiselect(
-            "Players (Side B)",
+            "Side B receives",
             options=available_right,
             format_func=lambda pid: player_by_id[pid]["label"],
             key="trade_side_b",
@@ -104,7 +104,7 @@ def _render_selections(
 
 def main() -> None:
     """Render Trade Simulator page."""
-    st.title("Trade Simulator")
+    st.title("🔄 Trade Simulator")
 
     rounds = load_available_rounds()
     if not rounds:
@@ -136,8 +136,8 @@ def main() -> None:
     player_by_id = {p["player_id"]: p for p in players}
 
     st.markdown(
-        "Select players on each side of a trade. "
-        "The PAR delta shows which side has the edge."
+        "Select the players each side **receives** in the trade. "
+        "The PAR delta shows which side gets more value."
     )
 
     selected_left, selected_right = _render_selections(players, player_by_id)
@@ -153,12 +153,14 @@ def main() -> None:
 
     with col_left:
         if selected_left:
+            st.markdown("**Side A receives:**")
             par_a = _render_side(player_by_id, selected_left, "Side A")
         else:
             st.info("No players selected for Side A.")
 
     with col_right:
         if selected_right:
+            st.markdown("**Side B receives:**")
             par_b = _render_side(player_by_id, selected_right, "Side B")
         else:
             st.info("No players selected for Side B.")

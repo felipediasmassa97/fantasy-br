@@ -68,9 +68,10 @@ def _render_main() -> None:
             format="%.1f",
             help="80th-percentile score — best realistic outcome",
         ),
-        "consistency_rating": st.column_config.TextColumn(
+        "consistency_rating": st.column_config.NumberColumn(
             "Consistency",
-            help="Consistency: LOW (<0.5 CV) / MED / HIGH (>1.0 CV)",
+            format="%.2f",
+            help="Consistency: 1/(1+CV). Higher is more consistent.",
         ),
         "is_home_next": st.column_config.CheckboxColumn(
             "Home?",
@@ -394,9 +395,10 @@ def _render_distribution() -> None:
             format="%.2f",
             help="Coefficient of variation (std/mean). Higher = more volatile",
         ),
-        "consistency_rating": st.column_config.TextColumn(
+        "consistency_rating": st.column_config.NumberColumn(
             "Consistency",
-            help="HIGH (CV<0.5) / MED / LOW (CV>1.0)",
+            format="%.2f",
+            help="Consistency: 1/(1+CV). Higher is more consistent.",
         ),
         "boom_rate": st.column_config.NumberColumn(
             "Boom% (≥8)",
@@ -590,7 +592,7 @@ def _render_edge_cases() -> None:
 
 def main() -> None:
     """Render Start or Sit page."""
-    st.title("Start or Sit")
+    st.title("⚖️ Start or Sit")
 
     rounds = load_available_rounds()
     if not rounds:
@@ -622,7 +624,6 @@ def main() -> None:
     with tabs[4]:
         _render_distribution()
     with tabs[5]:
-        # fixit failing on this tab (Unrecognized name: as_of_round_id)
         _render_round_by_round()
     with tabs[6]:
         _render_edge_cases()
