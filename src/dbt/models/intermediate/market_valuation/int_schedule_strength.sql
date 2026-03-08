@@ -41,7 +41,7 @@ future_matches as (
         m.round_id as future_round_id,
         true as is_home
     from all_rounds as r
-    inner join {{ ref('stg_matches') }} as m
+    inner join {{ ref('int_matches') }} as m
         on
             m.season = 2026
             and r.as_of_round_id < m.round_id
@@ -53,7 +53,7 @@ future_matches as (
         m.round_id as future_round_id,
         false as is_home
     from all_rounds as r
-    inner join {{ ref('stg_matches') }} as m
+    inner join {{ ref('int_matches') }} as m
         on
             m.season = 2026
             and r.as_of_round_id < m.round_id

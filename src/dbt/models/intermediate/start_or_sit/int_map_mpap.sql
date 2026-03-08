@@ -36,7 +36,7 @@ next_match as (
         m.club_away_id as opponent_id,
         true as is_home_next
     from all_rounds as r
-    inner join {{ ref('stg_matches') }} as m
+    inner join {{ ref('int_matches') }} as m
         on m.season = 2026 and m.round_id = r.as_of_round_id + 1
     union all
     select
@@ -45,7 +45,7 @@ next_match as (
         m.club_home_id as opponent_id,
         false as is_home_next
     from all_rounds as r
-    inner join {{ ref('stg_matches') }} as m
+    inner join {{ ref('int_matches') }} as m
         on m.season = 2026 and m.round_id = r.as_of_round_id + 1
 ),
 

@@ -32,7 +32,7 @@ base_players as (
     from {{ ref('stg_players') }} as p
     left join {{ ref('stg_clubs') }} as c on p.club_id = c.id
     left join {{ ref('stg_positions') }} as pos on p.position_id = pos.id
-    left join {{ ref('stg_matches') }} as m
+    left join {{ ref('int_matches') }} as m
         on
             p.season = m.season
             and p.round_id = m.round_id

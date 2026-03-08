@@ -47,20 +47,24 @@ models:
       - name: label
         description: Display name in Portuguese
 
-  - name: stg_matches
-    description: Staged matches data with English column names
+  - name: stg_schedule
+    description: Staged schedule data from football-data.org
     columns:
       - name: season
         description: Season year
       - name: round_id
-        description: Round number in the season
+        description: Round number in the season (1-38)
       - name: match_id
-        description: Unique identifier
-      - name: club_home_id
-        description: Foreign key to stg_clubs for home club
-      - name: club_away_id
-        description: Foreign key to stg_clubs for away club
-      - name: club_home_name
-        description: Home club name
-      - name: club_away_name
-        description: Away club name
+        description: Unique identifier from football-data.org
+      - name: home_team_id
+        description: Football-data.org home team ID
+      - name: home_team_name
+        description: Home team short name
+      - name: home_team_tla
+        description: Home team three-letter abbreviation
+      - name: away_team_id
+        description: Football-data.org away team ID
+      - name: away_team_name
+        description: Away team short name
+      - name: away_team_tla
+        description: Away team three-letter abbreviation

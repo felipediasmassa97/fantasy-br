@@ -108,29 +108,55 @@ jobs:
             "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_positions" positions.jsonl
           echo "Loaded $(wc -l < positions.jsonl) positions"
 
-      - name: Extract and load matches
+      - name: Fetch and load schedule from football-data.org
+        env:
+          FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
         run: |
           YEAR=$(date +%Y)
+          PREV_YEAR=$((YEAR - 1))
 
-          # Get current round number from the main partidas endpoint
-          CURRENT_ROUND=$(curl -sL "https://api.cartolafc.globo.com/partidas" | jq '.rodada')
-          echo "Current round: ${CURRENT_ROUND}"
+          # Fetch previous season schedule
+          curl -sf -H "X-Auth-Token: ${FOOTBALL_DATA_API_KEY}" \
+            "https://api.football-data.org/v4/competitions/BSA/matches?season=${PREV_YEAR}" | \
+            jq -c --argjson season "$PREV_YEAR" '.matches[] | {
+              season: $season,
+              match_id: .id,
+              round_id: .matchday,
+              home_team_id: .homeTeam.id,
+              home_team_name: .homeTeam.shortName,
+              home_team_tla: .homeTeam.tla,
+              away_team_id: .awayTeam.id,
+              away_team_name: .awayTeam.shortName,
+              away_team_tla: .awayTeam.tla
+            }' > schedule_prev.jsonl
 
-          # Fetch all rounds from 1 to current
-          > matches_all.jsonl
-          for round in $(seq 1 $CURRENT_ROUND); do
-            curl -sL "https://api.cartolafc.globo.com/partidas/${round}" | \
-              jq -c --argjson temporada "$YEAR" --argjson rodada "$round" \
-              '.partidas[] + {temporada: $temporada, rodada_id: $rodada}' >> matches_all.jsonl
-          done
+          echo "Fetched $(wc -l < schedule_prev.jsonl | tr -d ' ') matches for ${PREV_YEAR}"
+          sleep 7
 
-          TOTAL_COUNT=$(wc -l < matches_all.jsonl | tr -d ' ')
-          echo "Fetched ${TOTAL_COUNT} matches across ${CURRENT_ROUND} rounds"
+          # Fetch current season schedule (includes future rounds)
+          curl -sf -H "X-Auth-Token: ${FOOTBALL_DATA_API_KEY}" \
+            "https://api.football-data.org/v4/competitions/BSA/matches?season=${YEAR}" | \
+            jq -c --argjson season "$YEAR" '.matches[] | {
+              season: $season,
+              match_id: .id,
+              round_id: .matchday,
+              home_team_id: .homeTeam.id,
+              home_team_name: .homeTeam.shortName,
+              home_team_tla: .homeTeam.tla,
+              away_team_id: .awayTeam.id,
+              away_team_name: .awayTeam.shortName,
+              away_team_tla: .awayTeam.tla
+            }' > schedule_current.jsonl
 
-          # Replace all data in raw_matches
+          echo "Fetched $(wc -l < schedule_current.jsonl | tr -d ' ') matches for ${YEAR}"
+
+          cat schedule_prev.jsonl schedule_current.jsonl > schedule_all.jsonl
+          TOTAL_COUNT=$(wc -l < schedule_all.jsonl | tr -d ' ')
+          echo "Total: ${TOTAL_COUNT} matches across ${PREV_YEAR} and ${YEAR}"
+
           bq load --source_format=NEWLINE_DELIMITED_JSON --autodetect --replace \
-            "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_matches" matches_all.jsonl
-          echo "Replaced raw_matches with ${TOTAL_COUNT} rows"
+            "${GCP_PROJECT_ID}:${BQ_DATASET_ID}.raw_schedule" schedule_all.jsonl
+          echo "Loaded ${TOTAL_COUNT} schedule rows"
 
   run-dbt-dev:
     needs: load-data

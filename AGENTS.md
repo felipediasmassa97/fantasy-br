@@ -200,7 +200,9 @@ IAM bindings are managed via the `iam` module. The service account (`service_acc
 ### Data Pipeline
 
 Raw data is loaded from the Cartola FC API daily by `data-refresh.yaml` and stored in BigQuery
-(`raw_players_etl`, `raw_clubs`, `raw_positions`, `raw_matches`).
+(`raw_players_etl`, `raw_clubs`, `raw_positions`).
+The full championship schedule (previous and current season) is loaded from the
+football-data.org API into `raw_schedule`.
 Historical season data (2025, 2026) is stored as dbt seeds.
 
 ### dbt Project (`src/dbt/`)
@@ -216,9 +218,9 @@ src/dbt/
 │   └── dvs.sql
 ├── models/
 │   ├── sources.yml                  # raw BigQuery source table definitions
-│   ├── staging/                     # stg_players, stg_clubs, stg_matches, stg_positions
+│   ├── staging/                     # stg_players, stg_clubs, stg_schedule, stg_positions
 │   ├── intermediate/
-│   │   ├── general/                 # int_players, int_baseline, int_home_away,
+│   │   ├── general/                 # int_matches, int_players, int_baseline, int_home_away,
 │   │   │                            #   int_round_by_round, int_edge_cases, int_ga_dependency
 │   │   ├── scouting/                # int_sct_*_stats (7 models, one per time window)
 │   │   ├── start_or_sit/            # int_map_mpap, int_ewm_form, int_distribution_stats,
@@ -235,7 +237,8 @@ src/dbt/
 ├── seeds/
 │   ├── raw_players_legacy_2025.csv
 │   ├── raw_players_legacy_2026.csv
-│   └── raw_scout_points.csv         # scout code to points mapping
+│   ├── raw_scout_points.csv         # scout code to points mapping
+│   └── raw_club_mapping.csv         # football-data.org TLA to Cartola club ID mapping
 ├── dbt_project.yml                  # staging=view, intermediate=view, marts=table
 └── profiles.yml                     # local/dev/demo/prod profile definitions
 ```
@@ -254,6 +257,7 @@ src/dbt/
 
 **General:**
 
+- `int_matches` — maps football-data.org schedule to Cartola club IDs via `raw_club_mapping` seed
 - `int_players` — base enriched player data per round (scout per-round deltas, opponent, is_home, base_round excludes G/A/CV/GC)
 - `int_baseline` — stabilized mean via shrinkage blending (this + last season, k=5)
 - `int_home_away` — home/away averages, delta, multiplier
@@ -285,7 +289,7 @@ src/dbt/
 | Market Valuation | mv_main, mv_par_breakdown, mv_stabilized, mv_form_trend, mv_regression, mv_value_profile, mv_schedule_strength, mv_round_by_round |
 | Squad and Team   | Firestore only (user_squads, user_teams, user_opponent_squads, user_opponent_teams — no mart models)                              |
 | Trade Simulator  | mv_main (PAR values only — no new mart models)                                                                                    |
-| Matchup Preview  | ss_main (MAP scores) and Firestore (user and opponent squads/teams)                                                               |
+| Matchup Preview  | ss_main (MAP scores for Team), mv_main (PAR for Squad) and Firestore (user and opponent squads/teams)                             |
 
 Each mart has a dedicated loader in `utils.py` (e.g., `load_ss_main()`, `load_mv_regression()`).
 Add new loaders there when adding new mart models.
@@ -383,13 +387,13 @@ To onboard new users:
 
 ## CI/CD Workflows
 
-| File                         | Trigger            | Jobs                                    |
-| ---------------------------- | ------------------ | --------------------------------------- |
-| `data-refresh.yaml`          | Daily 3 AM UTC     | Load Cartola API → dbt build (all envs) |
-| `implementation.yaml`        | Push to `main`     | infra + dbt: dev → demo → prod          |
-| `development.yaml`           | Push to non-`main` | infra + dbt: dev only                   |
-| `reusable-infra-deploy.yaml` | Called by above    | Terraform plan and apply                |
-| `reusable-dbt-build.yaml`    | Called by above    | `dbt build`                             |
+| File                         | Trigger            | Jobs                                                                 |
+| ---------------------------- | ------------------ | -------------------------------------------------------------------- |
+| `data-refresh.yaml`          | Daily 3 AM UTC     | Load Cartola API + football-data.org schedule → dbt build (all envs) |
+| `implementation.yaml`        | Push to `main`     | infra + dbt: dev → demo → prod                                       |
+| `development.yaml`           | Push to non-`main` | infra + dbt: dev only                                                |
+| `reusable-infra-deploy.yaml` | Called by above    | Terraform plan and apply                                             |
+| `reusable-dbt-build.yaml`    | Called by above    | `dbt build`                                                          |
 
 ## Common Tasks
 

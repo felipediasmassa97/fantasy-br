@@ -15,5 +15,5 @@ sources:
         description: Raw clubs data from Cartola Market API
       - name: raw_positions
         description: Raw positions data from Cartola Market API
-      - name: raw_matches
-        description: Raw matches data from Cartola API
+      - name: raw_schedule
+        description: Raw schedule data from football-data.org API (all rounds, both seasons)
