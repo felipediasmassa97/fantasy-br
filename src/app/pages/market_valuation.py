@@ -17,6 +17,76 @@ from utils import (
 )
 
 
+def _col_label(field: str, cfg: object) -> str:
+    """Extract display label from a Streamlit column config object."""
+    label = cfg.get("label") if isinstance(cfg, dict) else None  # type: ignore[union-attr]
+    return label or field.replace("_", " ").title()
+
+
+def _format_value(value: object, cfg: object) -> object:
+    """Format a value using the column config's format string, if any."""
+    if value is None:
+        return ""
+    fmt: str | None = None
+    if isinstance(cfg, dict):
+        fmt = (cfg.get("type_config") or {}).get("format")  # type: ignore[union-attr]
+    if not fmt:
+        return value
+    try:
+        return fmt % value
+    except (TypeError, ValueError):
+        return value
+
+
+_COMPARE_MIN = 2
+
+
+def _render_player_comparison(rows: list[dict], col_config: dict, tab_key: str) -> None:
+    """Multiselect and transposed comparison table for 2-4 selected players."""
+    if not rows:
+        return
+
+    skip = {"club_logo_url"}
+    display_fields = [k for k in col_config if k not in skip]
+
+    def _opt_label(row: dict) -> str:
+        name = row.get("player_name") or "?"
+        pos = row.get("position") or ""
+        return f"{name} ({pos})" if pos else name
+
+    options: dict[str, dict] = {}
+    for row in rows:
+        lbl = _opt_label(row)
+        base, i = lbl, 2
+        while lbl in options:
+            lbl, i = f"{base} #{i}", i + 1
+        options[lbl] = row
+
+    st.divider()
+    selected = st.multiselect(
+        "Compare players (select 2\u20134)",
+        options=list(options.keys()),
+        max_selections=4,
+        key=f"mv_compare_{tab_key}",
+        placeholder="Select players to compare...",
+    )
+    n = len(selected)
+    if n == 0:
+        return
+    if n < _COMPARE_MIN:
+        st.caption(f"Select at least {_COMPARE_MIN} players to compare.")
+        return
+
+    selected_rows = [options[lbl] for lbl in selected]
+    metric_labels = [_col_label(f, col_config[f]) for f in display_fields]
+    comp: dict[str, list] = {"Metric": metric_labels}
+    for lbl, row in zip(selected, selected_rows, strict=True):
+        comp[lbl] = [_format_value(row.get(f), col_config[f]) for f in display_fields]
+
+    st.markdown("**Player Comparison**")
+    st.dataframe(pd.DataFrame(comp), use_container_width=True, hide_index=True)
+
+
 def _render_main() -> None:
     """Render main consolidated tab with key valuation columns."""
     st.subheader("Market Valuation Overview")
@@ -86,6 +156,7 @@ def _render_main() -> None:
     st.dataframe(
         rows, use_container_width=True, hide_index=True, column_config=col_config
     )
+    _render_player_comparison(rows, col_config, "main")
 
 
 def _render_par_breakdown() -> None:
@@ -147,6 +218,7 @@ def _render_par_breakdown() -> None:
     st.dataframe(
         rows, use_container_width=True, hide_index=True, column_config=col_config
     )
+    _render_player_comparison(rows, col_config, "par_breakdown")
 
 
 def _render_baseline() -> None:
@@ -257,6 +329,7 @@ def _render_baseline() -> None:
     st.dataframe(
         rows, use_container_width=True, hide_index=True, column_config=col_config
     )
+    _render_player_comparison(rows, col_config, "baseline")
 
 
 def _render_form_trend() -> None:
@@ -326,6 +399,7 @@ def _render_form_trend() -> None:
     st.dataframe(
         rows, use_container_width=True, hide_index=True, column_config=col_config
     )
+    _render_player_comparison(rows, col_config, "form_trend")
 
 
 def _render_regression() -> None:
@@ -395,6 +469,7 @@ def _render_regression() -> None:
     st.dataframe(
         rows, use_container_width=True, hide_index=True, column_config=col_config
     )
+    _render_player_comparison(rows, col_config, "regression")
 
 
 def _render_value_profile() -> None:
@@ -480,6 +555,7 @@ def _render_value_profile() -> None:
     st.dataframe(
         rows, use_container_width=True, hide_index=True, column_config=col_config
     )
+    _render_player_comparison(rows, col_config, "value_profile")
 
 
 def _render_schedule_strength() -> None:
@@ -570,6 +646,7 @@ def _render_schedule_strength() -> None:
     st.dataframe(
         rows, use_container_width=True, hide_index=True, column_config=col_config
     )
+    _render_player_comparison(rows, col_config, "schedule")
 
 
 def _render_round_by_round() -> None:
@@ -605,47 +682,74 @@ def _render_round_by_round() -> None:
         for c in scout_cols
     }
 
+    rr_col_config = {
+        "round": st.column_config.NumberColumn(
+            "Rd",
+            format="%d",
+        ),
+        "player_name": st.column_config.TextColumn(
+            "Player",
+            width="medium",
+        ),
+        "position": st.column_config.TextColumn(
+            "Position",
+            width="small",
+        ),
+        "club_logo_url": st.column_config.ImageColumn(
+            "Club",
+            width="small",
+        ),
+        "club": st.column_config.TextColumn(
+            "Club",
+            width="small",
+        ),
+        "points_total": st.column_config.NumberColumn(
+            "Total",
+            format="%.1f",
+            help="Total points including G/A",
+        ),
+        "points_base": st.column_config.NumberColumn(
+            "Base",
+            format="%.1f",
+            help="Points excluding goals, assists, red cards and own goals",
+        ),
+        "did_play": st.column_config.CheckboxColumn(
+            "Played?",
+        ),
+        **scout_col_config,
+    }
     st.dataframe(
         df[display_cols],
         use_container_width=True,
         hide_index=True,
-        column_config={
-            "round": st.column_config.NumberColumn(
-                "Rd",
-                format="%d",
-            ),
-            "player_name": st.column_config.TextColumn(
-                "Player",
-                width="medium",
-            ),
-            "position": st.column_config.TextColumn(
-                "Position",
-                width="small",
-            ),
-            "club_logo_url": st.column_config.ImageColumn(
-                "Club",
-                width="small",
-            ),
-            "club": st.column_config.TextColumn(
-                "Club",
-                width="small",
-            ),
-            "points_total": st.column_config.NumberColumn(
-                "Total",
-                format="%.1f",
-                help="Total points including G/A",
-            ),
-            "points_base": st.column_config.NumberColumn(
-                "Base",
-                format="%.1f",
-                help="Points excluding goals, assists, red cards and own goals",
-            ),
-            "did_play": st.column_config.CheckboxColumn(
-                "Played?",
-            ),
-            **scout_col_config,
-        },
+        column_config=rr_col_config,
     )
+    st.divider()
+    if "player_name" in df.columns:
+        player_options = sorted(df["player_name"].dropna().unique().tolist())
+        selected_players = st.multiselect(
+            "Compare players (select 2\u20134)",
+            options=player_options,
+            max_selections=4,
+            key="mv_compare_round_by_round",
+            placeholder="Select players to compare...",
+        )
+        n_sel = len(selected_players)
+        if n_sel >= _COMPARE_MIN:
+            cmp_df = (
+                df[df["player_name"].isin(selected_players)][display_cols]
+                .sort_values(["player_name", "round"])
+                .reset_index(drop=True)
+            )
+            st.markdown("**Player Comparison \u2014 Round by Round**")
+            st.dataframe(
+                cmp_df,
+                use_container_width=True,
+                hide_index=True,
+                column_config=rr_col_config,
+            )
+        elif n_sel == 1:
+            st.caption(f"Select at least {_COMPARE_MIN} players to compare.")
 
 
 def main() -> None:

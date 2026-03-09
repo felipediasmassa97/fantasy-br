@@ -7,9 +7,6 @@
 - dbt
 
 - App
-  - Fixes
-    - Market Valuation
-      - [ ] Add future matches (only one opponent in Schedule tab)
 
 - Documentation
 
