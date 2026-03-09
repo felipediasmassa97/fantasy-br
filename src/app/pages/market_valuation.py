@@ -149,6 +149,7 @@ def _render_main() -> None:
 
     display_cols = list(col_config.keys())
     rows = [{k: row.get(k) for k in display_cols} for row in data]
+    rows = sorted(rows, key=lambda r: r.get("par", 0), reverse=True)
     for row in rows:
         if row.get("availability") is not None:
             row["availability"] = row["availability"] * 100
@@ -215,6 +216,7 @@ def _render_par_breakdown() -> None:
 
     display_cols = list(col_config.keys())
     rows = [{k: row.get(k) for k in display_cols} for row in data]
+    rows = sorted(rows, key=lambda r: r.get("par_points", 0), reverse=True)
     st.dataframe(
         rows, use_container_width=True, hide_index=True, column_config=col_config
     )
@@ -325,6 +327,7 @@ def _render_baseline() -> None:
     }
 
     display_cols = list(col_config.keys())
+    data = sorted(data, key=lambda r: r.get("par", 0), reverse=True)
     rows = [{k: row.get(k) for k in display_cols} for row in data]
     st.dataframe(
         rows, use_container_width=True, hide_index=True, column_config=col_config
@@ -395,6 +398,7 @@ def _render_form_trend() -> None:
     }
 
     display_cols = list(col_config.keys())
+    data = sorted(data, key=lambda r: r.get("par", 0), reverse=True)
     rows = [{k: row.get(k) for k in display_cols} for row in data]
     st.dataframe(
         rows, use_container_width=True, hide_index=True, column_config=col_config
@@ -465,6 +469,7 @@ def _render_regression() -> None:
     }
 
     display_cols = list(col_config.keys())
+    data = sorted(data, key=lambda r: r.get("par", 0), reverse=True)
     rows = [{k: row.get(k) for k in display_cols} for row in data]
     st.dataframe(
         rows, use_container_width=True, hide_index=True, column_config=col_config
@@ -548,6 +553,7 @@ def _render_value_profile() -> None:
 
     display_cols = list(col_config.keys())
     rows = [{k: row.get(k) for k in display_cols} for row in data]
+    rows = sorted(rows, key=lambda r: r.get("par_points", 0), reverse=True)
     for row in rows:
         if row.get("availability") is not None:
             row["availability"] = row["availability"] * 100
@@ -643,6 +649,7 @@ def _render_schedule_strength() -> None:
 
     display_cols = list(col_config.keys())
     rows = [{k: row.get(k) for k in display_cols} for row in data]
+    rows = sorted(rows, key=lambda r: r.get("par", 0), reverse=True)
     st.dataframe(
         rows, use_container_width=True, hide_index=True, column_config=col_config
     )

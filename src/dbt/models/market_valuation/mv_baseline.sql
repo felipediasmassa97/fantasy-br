@@ -57,7 +57,10 @@ select
     row_number() over (
         partition by b.as_of_round_id
         order by v.pts_avg_away desc nulls last
-    ) as baseline_rank_gen_away
+    ) as baseline_rank_gen_away,
+    b.baseline_pts - rl.replacement_level as par
 from {{ ref('int_baseline') }} as b
 left join {{ ref('int_home_away') }} as v
     on b.as_of_round_id = v.as_of_round_id and b.id = v.id
+left join {{ ref('int_replacement_levels') }} as rl
+    on b.as_of_round_id = rl.as_of_round_id and b.position = rl.position

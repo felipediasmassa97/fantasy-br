@@ -6,18 +6,21 @@ See int_regression for score formula.
 */
 
 select
-    as_of_round_id,
-    id as player_id,
-    player_name,
-    position,
-    club,
-    club_logo_url,
-    ewm_pts as ewm_points,
-    baseline_pts,
-    performance_gap,
-    ga_share as goal_assist_share,
-    consistency_rating,
-    regression_score,
-    signal_label,
-    confidence_flag
-from {{ ref('int_regression') }}
+    r.as_of_round_id,
+    r.id as player_id,
+    r.player_name,
+    r.position,
+    r.club,
+    r.club_logo_url,
+    r.ewm_pts as ewm_points,
+    r.baseline_pts,
+    r.performance_gap,
+    r.ga_share as goal_assist_share,
+    r.consistency_rating,
+    r.regression_score,
+    r.signal_label,
+    r.confidence_flag,
+    r.baseline_pts - rl.replacement_level as par
+from {{ ref('int_regression') }} as r
+left join {{ ref('int_replacement_levels') }} as rl
+    on r.as_of_round_id = rl.as_of_round_id and r.position = rl.position

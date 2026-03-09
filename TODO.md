@@ -7,6 +7,10 @@
 - dbt
 
 - App
+  - Start or Sit
+    - [ ] Order all tabs based on MAP
+  - Market Valuation
+    - [ ] Order all tabs based on PAR
 
 - Documentation
 

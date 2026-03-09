@@ -81,6 +81,7 @@ def _render_main() -> None:
 
     display_cols = list(col_config.keys())
     rows = [{k: row.get(k) for k in display_cols} for row in data]
+    rows = sorted(rows, key=lambda r: r.get("map_score", 0), reverse=True)
     st.dataframe(
         rows, use_container_width=True, hide_index=True, column_config=col_config
     )
@@ -170,6 +171,7 @@ def _render_map_breakdown() -> None:
 
     display_cols = list(col_config.keys())
     rows = [{k: row.get(k) for k in display_cols} for row in data]
+    rows = sorted(rows, key=lambda r: r.get("map_points", 0), reverse=True)
     st.dataframe(
         rows, use_container_width=True, hide_index=True, column_config=col_config
     )
@@ -332,6 +334,7 @@ def _render_home_away() -> None:
     }
 
     display_cols = list(col_config.keys())
+    data = sorted(data, key=lambda r: r.get("map_score", 0), reverse=True)
     rows = [{k: row.get(k) for k in display_cols} for row in data]
     st.dataframe(
         rows, use_container_width=True, hide_index=True, column_config=col_config
@@ -413,6 +416,7 @@ def _render_distribution() -> None:
     }
 
     display_cols = list(col_config.keys())
+    data = sorted(data, key=lambda r: r.get("map_score", 0), reverse=True)
     rows = [{k: row.get(k) for k in display_cols} for row in data]
 
     # Convert rates from fractions to percentages
@@ -584,6 +588,7 @@ def _render_edge_cases() -> None:
     }
 
     display_cols = list(col_config.keys())
+    data = sorted(data, key=lambda r: r.get("map_score", 0), reverse=True)
     rows = [{k: row.get(k) for k in display_cols} for row in data]
     st.dataframe(
         rows, use_container_width=True, hide_index=True, column_config=col_config

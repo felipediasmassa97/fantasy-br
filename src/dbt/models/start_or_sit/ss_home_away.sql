@@ -24,7 +24,10 @@ select
     v.position_pts_avg_away_last_season as position_avg_points_away_last_season,
     v.home_away_delta,
     v.multiplier_home,
-    v.multiplier_away
+    v.multiplier_away,
+    m.map_score
 from {{ ref('int_baseline') }} as b
 left join {{ ref('int_home_away') }} as v
     on b.as_of_round_id = v.as_of_round_id and b.id = v.id
+left join {{ ref('int_map_score') }} as m
+    on b.as_of_round_id = m.as_of_round_id and b.id = m.id
