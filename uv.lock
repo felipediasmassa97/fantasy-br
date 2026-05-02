@@ -542,17 +542,17 @@ tests = [
 
 [package.metadata]
 requires-dist = [
-    { name = "authlib", specifier = ">=1.3.2" },
-    { name = "db-dtypes", specifier = ">=1.0" },
-    { name = "dbt-bigquery", marker = "extra == 'dbt'", specifier = ">=1.9" },
-    { name = "google-cloud-bigquery", specifier = ">=3.0" },
-    { name = "google-cloud-firestore", specifier = ">=2.0" },
-    { name = "pytest", marker = "extra == 'tests'", specifier = ">=8.0" },
-    { name = "pytest-xdist", marker = "extra == 'tests'", specifier = ">=3.0" },
-    { name = "ruff", marker = "extra == 'tests'", specifier = ">=0.9" },
-    { name = "sqlfluff", marker = "extra == 'tests'", specifier = ">=3.0" },
-    { name = "sqlfluff-templater-dbt", marker = "extra == 'tests'", specifier = ">=3.0" },
-    { name = "streamlit", specifier = ">=1.42" },
+    { name = "authlib", specifier = "==1.6.8" },
+    { name = "db-dtypes", specifier = "==1.5.0" },
+    { name = "dbt-bigquery", marker = "extra == 'dbt'", specifier = "==1.11.0" },
+    { name = "google-cloud-bigquery", specifier = "==3.40.1" },
+    { name = "google-cloud-firestore", specifier = "==2.23.0" },
+    { name = "pytest", marker = "extra == 'tests'", specifier = "==9.0.2" },
+    { name = "pytest-xdist", marker = "extra == 'tests'", specifier = "==3.8.0" },
+    { name = "ruff", marker = "extra == 'tests'", specifier = "==0.15.4" },
+    { name = "sqlfluff", marker = "extra == 'tests'", specifier = "==4.0.4" },
+    { name = "sqlfluff-templater-dbt", marker = "extra == 'tests'", specifier = "==4.0.4" },
+    { name = "streamlit", specifier = "==1.54.0" },
 ]
 provides-extras = ["dbt", "tests"]
 
