@@ -520,15 +520,15 @@ wheels = [
 name = "fantasy-br"
 version = "0.1.0"
 source = { editable = "." }
-
-[package.optional-dependencies]
-app = [
+dependencies = [
     { name = "authlib" },
     { name = "db-dtypes" },
     { name = "google-cloud-bigquery" },
     { name = "google-cloud-firestore" },
     { name = "streamlit" },
 ]
+
+[package.optional-dependencies]
 dbt = [
     { name = "dbt-bigquery" },
 ]
@@ -542,19 +542,19 @@ tests = [
 
 [package.metadata]
 requires-dist = [
-    { name = "authlib", marker = "extra == 'app'", specifier = ">=1.3.2" },
-    { name = "db-dtypes", marker = "extra == 'app'", specifier = ">=1.0" },
+    { name = "authlib", specifier = ">=1.3.2" },
+    { name = "db-dtypes", specifier = ">=1.0" },
     { name = "dbt-bigquery", marker = "extra == 'dbt'", specifier = ">=1.9" },
-    { name = "google-cloud-bigquery", marker = "extra == 'app'", specifier = ">=3.0" },
-    { name = "google-cloud-firestore", marker = "extra == 'app'", specifier = ">=2.0" },
+    { name = "google-cloud-bigquery", specifier = ">=3.0" },
+    { name = "google-cloud-firestore", specifier = ">=2.0" },
     { name = "pytest", marker = "extra == 'tests'", specifier = ">=8.0" },
     { name = "pytest-xdist", marker = "extra == 'tests'", specifier = ">=3.0" },
     { name = "ruff", marker = "extra == 'tests'", specifier = ">=0.9" },
     { name = "sqlfluff", marker = "extra == 'tests'", specifier = ">=3.0" },
     { name = "sqlfluff-templater-dbt", marker = "extra == 'tests'", specifier = ">=3.0" },
-    { name = "streamlit", marker = "extra == 'app'", specifier = ">=1.42" },
+    { name = "streamlit", specifier = ">=1.42" },
 ]
-provides-extras = ["app", "dbt", "tests"]
+provides-extras = ["dbt", "tests"]
 
 [[package]]
 name = "fastjsonschema"
