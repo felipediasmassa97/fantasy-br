@@ -281,3 +281,6 @@ uv run terraform -chdir=infra/envs/dev apply tfplan
   - 50K reads/day
   - 20K writes/day
   - [Pricing](https://cloud.google.com/firestore/pricing)
+# Hello World
+
+Test commit from Dr. Lagostim 🦞
