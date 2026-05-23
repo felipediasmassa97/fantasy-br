@@ -14,6 +14,15 @@ clean-targets:
   - target
   - dbt_packages
 
+seeds:
+  fantasy_br:
+    player_overrides:
+      +column_types:
+        id: int64
+        name: string
+        position: string
+        club: string
+
 models:
   fantasy_br:
     staging:
