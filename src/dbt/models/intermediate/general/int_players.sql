@@ -29,7 +29,7 @@ base_players as (
             when p.club_id = m.club_home_id then m.club_away_id
             when p.club_id = m.club_away_id then m.club_home_id
         end as opponent_id
-    from {{ ref('stg_players') }} as p
+    from {{ ref('int_players_with_overrides') }} as p
     left join {{ ref('stg_clubs') }} as c on p.club_id = c.id
     left join {{ ref('stg_positions') }} as pos on p.position_id = pos.id
     left join {{ ref('int_matches') }} as m
