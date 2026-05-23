@@ -52,6 +52,7 @@ jobs:
           jq -c --arg temporada "$YEAR" '
             .atletas[] + {temporada: ($temporada | tonumber)} 
             | if .media_num then .media_num = (.media_num * 1.0) else . end
+            | del(.craque)
           ' market.json > players_all.jsonl
           API_COUNT=$(wc -l < players_all.jsonl | tr -d ' ')
 
