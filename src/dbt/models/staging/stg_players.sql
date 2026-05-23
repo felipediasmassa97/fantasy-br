@@ -94,8 +94,28 @@ unioned as (
     select * from raw_players_legacy_2025
     union all
     select * from raw_players_legacy_2026
+),
+
+overrides as (
+    select
+        u.season,
+        u.round_id,
+        u.id,
+        u.player_name,
+        u.club_id,
+        u.position_id,
+        u.pts_round,
+        u.pts_avg,
+        u.has_played,
+        u.matches_played,
+        u.scout,
+        coalesce(o.name, u.player_name) as player_name,
+        coalesce(o.club, u.club_id) as club_id,
+        coalesce(o.position, u.position_id) as position_id
+    from unioned u
+    left join {{ ref('player_overrides') }} o on u.id = o.id
+    where u.position_id != 6
 )
 
 select *
-from unioned
-where position_id != 6  -- exclude head coaches
+from overrides  -- exclude head coaches
