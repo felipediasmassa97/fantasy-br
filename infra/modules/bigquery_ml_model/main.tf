@@ -5,12 +5,14 @@
 #
 # Terraform CANNOT create BigQuery ML models natively.
 # Instead we use a null_resource + local-exec to run the CREATE MODEL DDL.
-# Changes to the training SQL file trigger automatic re-training via
-# `create_before_destroy` (old model deleted, new model created).
 #
-# NOTE: The model's LEAN FEATURES training query is in
-# scripts/ml_pipeline/ml_training_features.sql (inline in create_bqml_model.sql).
-# Any change to those files triggers re-training.
+# RETRAIN TRIGGERS (any of):
+#   1. training SQL content changes      (filemd5 of create_bqml_model.sql)
+#   2. features SQL content changes     (filemd5 of ml_training_features.sql)
+#   3. training query OUTPUT changes    (hash of query result set)
+#      → computed at apply time by pre-step provisioner, stored in /tmp/bqml_state.json
+#      → null_resource trigger includes filemd5 of the state file
+#
 # =============================================================================
 
 terraform {
@@ -26,7 +28,7 @@ data "terraform_remote_state" "infra" {
 }
 
 # ────────────────────────────────────────────────────────────────────────────
-# 1. Validate prerequisites exist before attempting CREATE MODEL
+# Validate bq CLI is available before attempting CREATE MODEL
 # ────────────────────────────────────────────────────────────────────────────
 data "external" "validate_bq" {
   program = ["bash", "-c", <<-EOF
@@ -40,26 +42,115 @@ EOF
 }
 
 # ────────────────────────────────────────────────────────────────────────────
-# 2. Null resource: CREATE OR REPLACE MODEL
-#    Triggers on: any change to the training SQL file content
+# Local file to persist the previous training query output hash.
+# Used to detect when training data has changed so we re-train.
+# ────────────────────────────────────────────────────────────────────────────
+resource "local_file" "bqml_state" {
+  filename = "/tmp/bqml_model_state.json"
+  content  = jsonencode({
+    sql_hash      = filemd5(var.training_query_path)
+    features_hash = filemd5(var.ml_training_features_path)
+    result_hash   = "none"  # will be updated by provisioner
+  })
+}
+
+# ────────────────────────────────────────────────────────────────────────────
+# Null resource: CREATE OR REPLACE MODEL
+#
+# Trigger condition: any of
+#   - training SQL content changed
+#   - features SQL content changed
+#   - training query output changed (detected via state file hash)
 # ────────────────────────────────────────────────────────────────────────────
 resource "null_resource" "bqml_model" {
-  # Re-train whenever the training SQL file changes
+  # Re-train when SQL content changes OR when training query result changes
   triggers = {
-    # Hash of the training SQL file content — changes = re-train
     training_sql_content = filemd5(var.training_query_path)
-    # Hash of the features SQL content
     features_sql_content = filemd5(var.ml_training_features_path)
-    # Explicit env flag — set to "true" to force re-training
-    force_retrain = var.force_retrain ? "1" : "0"
+    # Include the state file hash — updated by provisioner when result changes
+    state_file_content   = filemd5("/tmp/bqml_model_state.json")
   }
 
-  # Ensure bq CLI is available
   depends_on = [
     data.external.validate_bq,
     google_bigquery_dataset.existing_dataset,
+    local_file.bqml_state,
   ]
 
+  # ── Pre-step: compute hash of training query output ──────────────────────
+  # Runs the training query and stores the output hash in the state file.
+  # If output hasn't changed since last run, no retrain needed.
+  # ─────────────────────────────────────────────────────────────────────────
+  provisioner "local-exec" {
+    command = <<-EOF
+      set -euo pipefail
+
+      PROJECT="${var.project_id}"
+      DATASET="${var.dataset_id}"
+      STATE_FILE="/tmp/bqml_model_state.json"
+      FEATURES_FILE="${var.ml_training_features_path}"
+
+      echo "==> Computing training query output hash..."
+
+      # Extract inline features query from the training SQL
+      # The features SQL is inlined inside create_bqml_model.sql as a CTE
+      FEATURES_SQL=$(sed -n '/WITH/,/training_data AS (/p' "${var.training_query_path}" | head -n -1)
+
+      # Run the features query and compute sha256 of the result set
+      RESULT_HASH=$(bq query --nouse_legacy_sql --use_legacy_sql=false \
+        --format=json \
+        --max_rows=100000 \
+        "SELECT * FROM (${FEATURES_SQL}) ORDER BY 1,2" 2>/dev/null \
+        | sha256sum | cut -d' ' -f1)
+
+      echo "    Result hash: ${RESULT_HASH}"
+
+      # Load previous state
+      PREV_SQL_HASH=$(python3 -c "import json; d=json.load(open('${STATE_FILE}')); print(d.get('sql_hash','none'))")
+      PREV_FEATURES_HASH=$(python3 -c "import json; d=json.load(open('${STATE_FILE}')); print(d.get('features_hash','none'))")
+      PREV_RESULT_HASH=$(python3 -c "import json; d=json.load(open('${STATE_FILE}')); print(d.get('result_hash','none'))")
+
+      CURRENT_SQL_HASH="${var.training_query_path}"
+      CURRENT_SQL_HASH=$(sha256sum "${CURRENT_SQL_HASH}" | cut -d' ' -f1)
+
+      # Check if retrain is needed
+      SQL_CHANGED=$([ "${PREV_SQL_HASH}" != "${CURRENT_SQL_HASH}" ] && echo "yes" || echo "no")
+      FEATURES_CHANGED=$([ "${PREV_FEATURES_HASH}" != "$(sha256sum ${FEATURES_FILE} | cut -d' ' -f1)" ] && echo "yes" || echo "no")
+      RESULT_CHANGED=$([ "${PREV_RESULT_HASH}" != "${RESULT_HASH}" ] && echo "yes" || echo "no")
+
+      echo "    SQL changed: ${SQL_CHANGED}"
+      echo "    Features changed: ${FEATURES_CHANGED}"
+      echo "    Result changed: ${RESULT_CHANGED}"
+
+      RETRAIN_NEEDED="no"
+      if [ "${SQL_CHANGED}" == "yes" ] || [ "${FEATURES_CHANGED}" == "yes" ] || [ "${RESULT_CHANGED}" == "yes" ]; then
+        RETRAIN_NEEDED="yes"
+        echo "    Retrain will be triggered."
+      else
+        echo "    No retrain needed — model is up to date."
+      fi
+
+      # Write updated state
+      python3 -c "
+      import json
+      d = {
+        'sql_hash': '${CURRENT_SQL_HASH}',
+        'features_hash': '$(sha256sum ${FEATURES_FILE} | cut -d' ' -f1)',
+        'result_hash': '${RESULT_HASH}',
+        'retrain_needed': '${RETRAIN_NEEDED}'
+      }
+      with open('${STATE_FILE}', 'w') as f:
+        json.dump(d, f)
+      "
+
+      echo "    State file updated."
+    EOF
+  }
+
+  # ── Main step: run CREATE MODEL ──────────────────────────────────────────
+  # Only executes when trigger fires (SQL changed, features changed, or result changed).
+  # Checks retrain_needed flag from state file before running CREATE MODEL.
+  # ─────────────────────────────────────────────────────────────────────────
   provisioner "local-exec" {
     command = <<-EOF
       set -euo pipefail
@@ -68,7 +159,15 @@ resource "null_resource" "bqml_model" {
       DATASET="${var.dataset_id}"
       MODEL="${var.model_name}"
       SQL_FILE="${var.training_query_path}"
-      ENV="${var.environment}"
+      STATE_FILE="/tmp/bqml_model_state.json"
+
+      # Check if retrain is actually needed
+      RETRAIN_NEEDED=$(python3 -c "import json; print(json.load(open('${STATE_FILE}'))['retrain_needed'])" 2>/dev/null || echo "yes")
+
+      if [ "${RETRAIN_NEEDED}" != "yes" ]; then
+        echo "    No retrain needed — skipping CREATE MODEL."
+        exit 0
+      fi
 
       echo "==> Checking if BigQuery ML model '${MODEL}' exists..."
       if bq ls "${PROJECT}:${DATASET}.${MODEL}" > /dev/null 2>&1; then
@@ -76,10 +175,13 @@ resource "null_resource" "bqml_model" {
         bq rm -f "${PROJECT}:${DATASET}.${MODEL}"
       fi
 
+      echo "==> Substituting \${DATASET} in training SQL..."
+      # The SQL file uses \${DATASET} as a placeholder; substitute with actual dataset_id
+      sed_cmd="s/\\\${DATASET}/${DATASET}/g"
+      SQL_CONTENT=$(cat "${SQL_FILE}" | sed "${sed_cmd}")
+
       echo "==> Registering BigQuery ML model..."
-      bq query --nouse_legacy_sql --use_legacy_sql=false \
-        --dataset_id="${DATASET}" \
-        "$(cat "${SQL_FILE}")"
+      echo "${SQL_CONTENT}" | bq query --nouse_legacy_sql --use_legacy_sql=false --dataset_id="${DATASET}"
 
       echo "==> Verifying model registration..."
       bq show -model "${PROJECT}:${DATASET}.${MODEL}"
@@ -88,7 +190,7 @@ resource "null_resource" "bqml_model" {
     EOF
   }
 
-  # Destroy: drop the model on `terraform destroy`
+  # ── Destroy: drop the model on `terraform destroy` ───────────────────────
   provisioner "local-exec" {
     when   = destroy
     command = <<-EOF
@@ -104,7 +206,7 @@ resource "null_resource" "bqml_model" {
 }
 
 # ────────────────────────────────────────────────────────────────────────────
-# 3. Reference the existing dataset (must already exist from infra module)
+# Reference the existing dataset (must already exist from infra module)
 # ────────────────────────────────────────────────────────────────────────────
 data "google_bigquery_dataset" "existing_dataset" {
   dataset_id = var.dataset_id
@@ -121,9 +223,7 @@ output "model_reference" {
 
 output "model_exists" {
   description = "Whether the model exists after apply"
-  # This is dynamically resolved by the null_resource
-  # Terraform will show 'tainted' if CREATE MODEL failed
-  value = "true"
+  value       = "true"
 }
 
 output "training_triggered" {

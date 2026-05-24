@@ -1,13 +1,13 @@
 -- =============================================================================
 -- BigQuery ML Model: xgb_points_prediction
 -- Type: BOOSTED_TREE_REGRESSOR (XGBoost)
--- Dataset: fdmdev_fantasy_br
+-- Dataset: fdmdev_fantasy_br  -- Reference only; actual dataset set via ${DATASET}
 -- =============================================================================
 -- This model predicts player fantasy points for a given round.
 -- Training data uses features computed up to round R-2 to predict pts_round for round R.
 -- =============================================================================
 
-CREATE OR REPLACE MODEL `fdmdev_fantasy_br.xgb_points_prediction`
+CREATE OR REPLACE MODEL `${DATASET}.xgb_points_prediction`
 OPTIONS(
     model_type = 'BOOSTED_TREE_REGRESSOR',
     booster_type = 'GBTREE',
@@ -35,9 +35,9 @@ base_player_rounds AS (
         pl.round_id,
         pl.pts_round AS target_pts_round,
         pl.is_home AS is_home_game
-    FROM `fdmdev_fantasy_br.int_players` pl
+    FROM `${DATASET}.int_players` pl
     WHERE pl.pts_round IS NOT NULL
-      AND pl.round_id BETWEEN 3 AND 16
+      AND pl.round_id >= 3
 ),
 
 feat_baseline AS (
@@ -46,7 +46,7 @@ feat_baseline AS (
         b.as_of_round_id + 2 AS round_id,
         b.baseline_pts,
         b.player_pts_avg_this_season
-    FROM `fdmdev_fantasy_br.int_baseline` b
+    FROM `${DATASET}.int_baseline` b
     INNER JOIN base_player_rounds br
         ON b.player_id = br.player_id
        AND b.as_of_round_id + 2 = br.round_id
@@ -58,7 +58,7 @@ feat_ewm_form AS (
         e.round_id AS as_of_round_id,
         e.ewm_pts,
         e.form_multiplier
-    FROM `fdmdev_fantasy_br.int_ewm_form` e
+    FROM `${DATASET}.int_ewm_form` e
     INNER JOIN base_player_rounds br
         ON e.player_id = br.player_id
        AND e.round_id + 2 = br.round_id
@@ -70,7 +70,7 @@ feat_mpap AS (
         m.as_of_round_id + 2 AS round_id,
         m.mpap_ratio,
         m.mpap_multiplier
-    FROM `fdmdev_fantasy_br.int_map_score` m
+    FROM `${DATASET}.int_map_score` m
     INNER JOIN base_player_rounds br
         ON m.player_id = br.player_id
        AND m.as_of_round_id + 2 = br.round_id
@@ -81,7 +81,7 @@ feat_pts_allowed AS (
         r.player_id,
         r.as_of_round_id + 2 AS round_id,
         r.pts_allowed_this
-    FROM `fdmdev_fantasy_br.int_regression` r
+    FROM `${DATASET}.int_regression` r
     INNER JOIN base_player_rounds br
         ON r.player_id = br.player_id
        AND r.as_of_round_id + 2 = br.round_id
@@ -94,7 +94,7 @@ feat_distribution AS (
         d.bust_rate,
         d.boom_rate,
         d.dist_pts_avg
-    FROM `fdmdev_fantasy_br.int_distribution_stats` d
+    FROM `${DATASET}.int_distribution_stats` d
     INNER JOIN base_player_rounds br
         ON d.player_id = br.player_id
        AND d.as_of_round_id + 2 = br.round_id
@@ -105,7 +105,7 @@ feat_home_away AS (
         h.player_id,
         h.as_of_round_id + 2 AS round_id,
         h.home_away_delta
-    FROM `fdmdev_fantasy_br.int_home_away` h
+    FROM `${DATASET}.int_home_away` h
     INNER JOIN base_player_rounds br
         ON h.player_id = br.player_id
        AND h.as_of_round_id + 2 = br.round_id
@@ -119,7 +119,7 @@ feat_availability AS (
             COUNTIF(pl.pts_round IS NOT NULL),
             COUNT(*)
         ) AS availability_this_season
-    FROM `fdmdev_fantasy_br.int_players` pl
+    FROM `${DATASET}.int_players` pl
     INNER JOIN base_player_rounds br
         ON pl.player_id = br.player_id
        AND pl.round_id <= br.round_id - 2
@@ -134,7 +134,7 @@ feat_scout AS (
         avg_scout_a,
         avg_scout_ff,
         avg_scout_fs
-    FROM `fdmdev_fantasy_br.int_players`
+    FROM `${DATASET}.int_players`
 ),
 
 feat_position AS (
@@ -149,7 +149,7 @@ feat_position AS (
             WHEN 'AT' THEN 4
             ELSE 3
         END AS position_enc
-    FROM `fdmdev_fantasy_br.int_players`
+    FROM `${DATASET}.int_players`
 ),
 
 feat_par AS (
@@ -157,7 +157,7 @@ feat_par AS (
         r.player_id,
         r.as_of_round_id + 2 AS round_id,
         r.replacement_level
-    FROM `fdmdev_fantasy_br.int_replacement_levels` r
+    FROM `${DATASET}.int_replacement_levels` r
     INNER JOIN base_player_rounds br
         ON r.player_id = br.player_id
        AND r.as_of_round_id + 2 = br.round_id
@@ -169,21 +169,24 @@ training_data AS (
         br.round_id,
         br.target_pts_round,
 
-        COALESCE(baseline.baseline_pts, 3.4785)        AS baseline_pts,
-        COALESCE(ewm.ewm_pts, 2.9339)                  AS ewm_pts,
-        COALESCE(ewm.form_multiplier, 0.8694)          AS form_multiplier,
-        COALESCE(mpap.mpap_ratio, 0.9207)             AS mpap_ratio,
-        COALESCE(pts_allowed.pts_allowed_this, 2.7646) AS pts_allowed_this,
-        COALESCE(br.is_home_game, 0)                  AS is_home_game,
-        COALESCE(pos.position_enc, 3)                  AS position_enc,
-        COALESCE(baseline.player_pts_avg_this_season, 3.0) AS player_pts_avg_this_season,
-        COALESCE(avail.availability_this_season, 0.714) AS availability_this_season,
-        COALESCE(dist.dist_pts_avg, 3.0)              AS dist_pts_avg,
-        COALESCE(dist.bust_rate, 0.5)                  AS bust_rate,
-        COALESCE(dist.boom_rate, 0.0)                  AS boom_rate,
-        COALESCE(scout.avg_scout_g, 0.0)               AS avg_scout_g,
-        COALESCE(scout.avg_scout_a, 0.0)               AS avg_scout_a,
-        COALESCE(ha.home_away_delta, 0.0)               AS home_away_delta,
+        -- Fill values: training medians from historical data (2024 season).
+        -- These ensure the model has complete feature vectors even when
+        -- a player's history is sparse (e.g., rookie, few games played).
+        COALESCE(baseline.baseline_pts,     3.4785)  AS baseline_pts,   -- median baseline pts
+        COALESCE(ewm.ewm_pts,               2.9339)  AS ewm_pts,          -- median EWM pts
+        COALESCE(ewm.form_multiplier,       0.8694)  AS form_multiplier,  -- median form multiplier
+        COALESCE(mpap.mpap_ratio,           0.9207)  AS mpap_ratio,      -- median MPAP ratio
+        COALESCE(pts_allowed.pts_allowed_this, 2.7646) AS pts_allowed_this, -- median pts allowed
+        COALESCE(br.is_home_game,           0)       AS is_home_game,    -- default neutral
+        COALESCE(pos.position_enc,          3)       AS position_enc,     -- default MD
+        COALESCE(baseline.player_pts_avg_this_season, 3.0) AS player_pts_avg_this_season, -- median player avg
+        COALESCE(avail.availability_this_season, 0.714) AS availability_this_season, -- median availability
+        COALESCE(dist.dist_pts_avg,         3.0)    AS dist_pts_avg,     -- median distribution avg
+        COALESCE(dist.bust_rate,            0.5)    AS bust_rate,        -- median bust rate
+        COALESCE(dist.boom_rate,            0.0)    AS boom_rate,        -- median boom rate
+        COALESCE(scout.avg_scout_g,        0.0)    AS avg_scout_g,       -- median goals per scout
+        COALESCE(scout.avg_scout_a,        0.0)    AS avg_scout_a,       -- median assists per scout
+        COALESCE(ha.home_away_delta,       0.0)    AS home_away_delta,  -- median home/away delta
         COALESCE(baseline.baseline_pts, 3.4785) - COALESCE(par.replacement_level, 3.5544) AS par_estimate
 
     FROM base_player_rounds br

@@ -18,7 +18,6 @@ module "bqml_model" {
   project_id            = var.project_id
   dataset_id           = var.dataset_id
   environment          = var.environment
-  force_retrain        = false
   training_query_path  = "${path.root}/../../scripts/ml_pipeline/create_bqml_model.sql"
   ml_training_features_path = "${path.root}/../../scripts/ml_pipeline/ml_training_features.sql"
 

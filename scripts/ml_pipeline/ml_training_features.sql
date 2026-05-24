@@ -19,7 +19,7 @@ base_player_rounds AS (
         pl.is_home AS is_home_game
     FROM `fdmdev_fantasy_br.int_players` pl
     WHERE pl.pts_round IS NOT NULL
-      AND pl.round_id BETWEEN 3 AND 16  -- Need at least 2 prior rounds for features
+      AND pl.round_id >= 3  -- Need at least 2 prior rounds for features
 ),
 
 -- -----------------------------------------------------------------------
@@ -253,6 +253,7 @@ training_data AS (
 
     WHERE
         -- Ensure no same-round leakage: all features use data through round R-2
+        -- No upper bound — model retraining accommodates future rounds automatically
         br.round_id >= 3
 )
 

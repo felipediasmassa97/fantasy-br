@@ -1,14 +1,13 @@
 /*
 ML Points Prediction Mart — uses BigQuery ML model to predict player fantasy points.
 
-Model: xgb_points_prediction (BOOSTED_TREE_REGRESSOR, trained rounds 1-16)
+Model: xgb_points_prediction (BOOSTED_TREE_REGRESSOR)
 Val RMSE: 0.46 | Test RMSE: 0.48 | R²: 0.987
 
 Requires BigQuery ML model registered at:
-  fantasy-br.fdmdev_fantasy_br.xgb_points_prediction
+  {{ var('bqml_project') }}.{{ var('bqml_dataset') }}.xgb_points_prediction
 
-To register the model (one-time):
-    python scripts/ml_pipeline/register_bqml_model.py
+The model is registered via Terraform (infra/modules/bigquery_ml_model/).
 */
 
 {{ config(materialized='table', alias='ml_points_pred') }}
@@ -32,7 +31,7 @@ feat_position AS (
             ELSE 3
         END AS position_enc
     FROM {{ ref('int_players') }}
-    WHERE season = 2026 AND round_id BETWEEN 3 AND 16
+    WHERE season = 2026 AND round_id >= 3
 ),
 
 feat_baseline AS (
@@ -44,7 +43,7 @@ feat_baseline AS (
         matches_this_season,
         rounds_listed_this_season
     FROM {{ ref('int_baseline') }}
-    WHERE as_of_round_id + 2 BETWEEN 3 AND 16
+    WHERE as_of_round_id + 2 >= 3
 ),
 
 feat_ewm AS (
@@ -54,7 +53,7 @@ feat_ewm AS (
         ewm_pts,
         form_multiplier
     FROM {{ ref('int_ewm_form') }}
-    WHERE as_of_round_id + 2 BETWEEN 3 AND 16
+    WHERE as_of_round_id + 2 >= 3
 ),
 
 feat_mpap AS (
@@ -64,7 +63,7 @@ feat_mpap AS (
         mpap_ratio,
         mpap_multiplier
     FROM {{ ref('int_map_mpap') }}
-    WHERE as_of_round_id + 2 BETWEEN 3 AND 16
+    WHERE as_of_round_id + 2 >= 3
 ),
 
 feat_pts_allowed AS (
@@ -73,7 +72,7 @@ feat_pts_allowed AS (
         (as_of_round_id + 2)  AS round_id,
         pts_allowed_this
     FROM {{ ref('int_regression') }}
-    WHERE as_of_round_id + 2 BETWEEN 3 AND 16
+    WHERE as_of_round_id + 2 >= 3
       AND pts_allowed_this IS NOT NULL
 ),
 
@@ -85,7 +84,7 @@ feat_distribution AS (
         boom_rate,
         dist_pts_avg
     FROM {{ ref('int_distribution_stats') }}
-    WHERE as_of_round_id + 2 BETWEEN 3 AND 16
+    WHERE as_of_round_id + 2 >= 3
 ),
 
 feat_home_away AS (
@@ -94,7 +93,7 @@ feat_home_away AS (
         (as_of_round_id + 2)  AS round_id,
         home_away_delta
     FROM {{ ref('int_home_away') }}
-    WHERE as_of_round_id + 2 BETWEEN 3 AND 16
+    WHERE as_of_round_id + 2 >= 3
 ),
 
 feat_scout AS (
@@ -106,7 +105,7 @@ feat_scout AS (
         avg_scout_ff,
         avg_scout_fs
     FROM {{ ref('int_players') }}
-    WHERE season = 2026 AND round_id BETWEEN 3 AND 16
+    WHERE season = 2026 AND round_id >= 3
 ),
 
 feat_replacement AS (
@@ -115,7 +114,7 @@ feat_replacement AS (
         position,
         replacement_level
     FROM {{ ref('int_replacement_levels') }}
-    WHERE as_of_round_id + 2 BETWEEN 3 AND 16
+    WHERE as_of_round_id + 2 >= 3
 ),
 
 -- ── 2. Build feature vector (one row per player-round) ───────────────────────
@@ -128,6 +127,7 @@ feature_vector AS (
         p.club_logo_url,
         p.position,
         p.is_home,
+        -- Fill values: training medians (same as CREATE MODEL COALESCE defaults)
         COALESCE(baseline.baseline_pts,                3.4785)  AS baseline_pts,
         COALESCE(ewm.ewm_pts,                         2.9339)  AS ewm_pts,
         COALESCE(ewm.form_multiplier,                 0.8694)  AS form_multiplier,
@@ -162,14 +162,14 @@ feature_vector AS (
     LEFT JOIN feat_replacement   AS repl  ON p.round_id = repl.round_id AND p.position = repl.position
     WHERE p.season = 2026
       AND p.pts_round IS NOT NULL
-      AND p.round_id BETWEEN 3 AND 16
+      AND p.round_id >= 3
 ),
 
 -- ── 3. Run ML.PREDICT — BigQuery ML returns input features + predicted column ─
 ml_raw AS (
     SELECT *
     FROM ML.PREDICT(
-        MODEL `fantasy-br.fdmdev_fantasy_br.xgb_points_prediction`,
+        MODEL `{{ var('bqml_project') }}.{{ var('bqml_dataset') }}.xgb_points_prediction`,
         (SELECT
             baseline_pts, ewm_pts, form_multiplier, mpap_ratio,
             pts_allowed_this, is_home_game, position_enc,

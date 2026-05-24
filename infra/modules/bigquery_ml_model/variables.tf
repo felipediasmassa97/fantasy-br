@@ -6,8 +6,7 @@
 # NOTE: Terraform manages the model metadata and IAM. The actual model
 # training (CREATE MODEL DDL) is executed by a GitHub Actions workflow
 # step after `terraform apply`, since BigQuery ML uses DDL for model
-# creation rather than a native Terraform resource that accepts an
-# inline training query.
+# creation rather than a native Terraform resource.
 # =============================================================================
 
 variable "model_name" {
@@ -29,12 +28,6 @@ variable "project_id" {
 variable "environment" {
   description = "Environment (dev, demo, prod)"
   type        = string
-}
-
-variable "force_retrain" {
-  description = "Set to true to force re-training on next terraform apply"
-  type        = bool
-  default     = false
 }
 
 variable "training_query_path" {

@@ -7,11 +7,6 @@ on:
         description: "Environment to deploy (dev, demo, prod)"
         required: true
         type: string
-      force_retrain_model:
-        description: "Set to 'true' to force re-training the BigQuery ML model"
-        required: false
-        default: "false"
-        type: string
     secrets:
       GCP_SA_KEY:
         description: "GCP Service Account Key JSON"
@@ -35,8 +30,9 @@ jobs:
 
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
-        with:
-          install-bq: true  # Required for BigQuery ML model management
+
+      - name: Install bq CLI
+        run: gcloud components install bq-cli -q
 
       - name: Verify bq CLI
         run: bq --version
@@ -67,12 +63,7 @@ jobs:
         id: plan
         working-directory: infra/envs/${{ inputs.environment }}
         run: |
-          if [[ "${{ inputs.force_retrain_model }}" == "true" ]]; then
-            FORCE_RETRAIN_VAR="-var" "force_retrain=true"
-          else
-            FORCE_RETRAIN_VAR=()
-          fi
-          terraform plan -no-color -out=tfplan "''${FORCE_RETRAIN_VAR[@]}''"
+          terraform plan -no-color -out=tfplan
 
           if [[ $(terraform show -no-color tfplan) == *"No changes."* ]]; then
             echo "do_apply=false" >> $GITHUB_OUTPUT
@@ -87,13 +78,7 @@ jobs:
       - name: Terraform Apply
         if: steps.plan.outputs.do_apply == 'true'
         working-directory: infra/envs/${{ inputs.environment }}
-        run: |
-          if [[ "${{ inputs.force_retrain_model }}" == "true" ]]; then
-            FORCE_RETRAIN_VAR="-var" "force_retrain=true"
-          else
-            FORCE_RETRAIN_VAR=()
-          fi
-          terraform apply tfplan -auto-approve "''${FORCE_RETRAIN_VAR[@]}''"
+        run: terraform apply tfplan -auto-approve
 
       - name: Terraform Output (model reference)
         if: steps.plan.outputs.do_apply == 'true'
