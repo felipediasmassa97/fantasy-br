@@ -48,6 +48,11 @@ def _render_main() -> None:
             format="%.2f",
             help="MAP: baseline x form x venue x opponent multipliers",
         ),
+        "ml_points_pred": st.column_config.NumberColumn(
+            "ML Pred",
+            format="%.1f",
+            help="XGBoost ML prediction — expected fantasy points next round (Val RMSE: 0.46)",
+        ),
         "avg_poe_season": st.column_config.NumberColumn(
             "PoE (Szn)",
             format="%+.2f",

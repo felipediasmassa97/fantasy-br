@@ -7,6 +7,11 @@ on:
         description: "Environment to deploy (dev, demo, prod)"
         required: true
         type: string
+      force_retrain_model:
+        description: "Set to 'true' to force re-training the BigQuery ML model"
+        required: false
+        default: "false"
+        type: string
     secrets:
       GCP_SA_KEY:
         description: "GCP Service Account Key JSON"
@@ -30,6 +35,11 @@ jobs:
 
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
+        with:
+          install-bq: true  # Required for BigQuery ML model management
+
+      - name: Verify bq CLI
+        run: bq --version
 
       - name: Create Terraform state bucket if not exists
         run: |
@@ -57,7 +67,12 @@ jobs:
         id: plan
         working-directory: infra/envs/${{ inputs.environment }}
         run: |
-          terraform plan -no-color -out=tfplan
+          if [[ "${{ inputs.force_retrain_model }}" == "true" ]]; then
+            FORCE_RETRAIN_VAR="-var" "force_retrain=true"
+          else
+            FORCE_RETRAIN_VAR=()
+          fi
+          terraform plan -no-color -out=tfplan "''${FORCE_RETRAIN_VAR[@]}''"
 
           if [[ $(terraform show -no-color tfplan) == *"No changes."* ]]; then
             echo "do_apply=false" >> $GITHUB_OUTPUT
@@ -72,4 +87,20 @@ jobs:
       - name: Terraform Apply
         if: steps.plan.outputs.do_apply == 'true'
         working-directory: infra/envs/${{ inputs.environment }}
-        run: terraform apply tfplan -auto-approve
+        run: |
+          if [[ "${{ inputs.force_retrain_model }}" == "true" ]]; then
+            FORCE_RETRAIN_VAR="-var" "force_retrain=true"
+          else
+            FORCE_RETRAIN_VAR=()
+          fi
+          terraform apply tfplan -auto-approve "''${FORCE_RETRAIN_VAR[@]}''"
+
+      - name: Terraform Output (model reference)
+        if: steps.plan.outputs.do_apply == 'true'
+        working-directory: infra/envs/${{ inputs.environment }}
+        run: |
+          echo "### BigQuery ML Model" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          terraform output model_reference >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "✅ BigQuery ML model registered at: $(terraform output -raw model_reference)" >> $GITHUB_STEP_SUMMARY
