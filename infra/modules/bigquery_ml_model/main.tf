@@ -22,7 +22,7 @@ terraform {
 
 data "terraform_remote_state" "infra" {
   backend = "gcs"
-  config {
+  config = {
     bucket = "fantasy-br-tfstate-${var.environment}"
     prefix = "envs/${var.environment}"
   }
