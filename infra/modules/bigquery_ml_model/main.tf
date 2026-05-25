@@ -4,15 +4,16 @@
 # Manages the BigQuery ML model lifecycle via `bq` CLI.
 #
 # Terraform CANNOT create BigQuery ML models natively.
-# Instead we use a null_resource + local-exec to run the CREATE MODEL DDL.
+# Instead we use null_resource + local-exec to run CREATE MODEL DDL.
 #
 # RETRAIN TRIGGERS (any of):
-#   1. training SQL content changes      (filemd5 of create_bqml_model.sql)
-#   2. features SQL content changed     (filemd5 of ml_training_features.sql)
-#   3. training query OUTPUT changed   (hash of query result set)
+#   1. training SQL content changes  (filemd5 of create_bqml_model.sql)
+#   2. features SQL content changed (filemd5 of ml_training_features.sql)
+#   3. training query OUTPUT changed (hash of query result set)
 #
-# NOTE: destroy provisioner reads project/dataset from the state file
-# to avoid referencing Terraform variables (unavailable during destroy).
+# TWO NULL RESOURCES (avoids Terraform destroy-provisioner parse errors):
+#   - bqml_model:     create/update the model (triggers on SQL/data changes)
+#   - bqml_model_destroy: destroy the model (no var references, pure shell)
 # =============================================================================
 
 terraform {
@@ -42,7 +43,7 @@ EOF
 }
 
 # ────────────────────────────────────────────────────────────────────────────
-# Local file to persist training state (hashes + config for destroy provisioner)
+# Local file to persist training state
 # ────────────────────────────────────────────────────────────────────────────
 resource "local_file" "bqml_state" {
   filename = "/tmp/bqml_model_state.json"
@@ -77,7 +78,6 @@ resource "null_resource" "bqml_model" {
     command = <<-EOF
       set -euo pipefail
 
-      # Assign Terraform vars to shell vars FIRST so we can use them in heredoc
       TF_PROJECT_ID="${var.project_id}"
       TF_DATASET="${var.dataset_id}"
       TF_MODEL="${var.model_name}"
@@ -87,10 +87,8 @@ resource "null_resource" "bqml_model" {
 
       echo "==> Computing training query output hash..."
 
-      # Extract inline features query from the training SQL
       FEATURES_SQL=$(sed -n '/WITH/,/training_data AS (/p' "$TF_SQL_FILE" | head -n -1)
 
-      # Run the features query and compute sha256 of the result set
       RESULT_HASH=$(bq query --nouse_legacy_sql --use_legacy_sql=false \
         --format=json \
         --max_rows=100000 \
@@ -178,12 +176,18 @@ with open('${STATE_FILE}', 'w') as f:
       echo "    ✅ Model '${TF_MODEL}' registered successfully."
     EOF
   }
+}
 
-  # ── Destroy: drop the model on `terraform destroy` ─────────────────────
-  # State file (written by provisioner) is the primary source of project/dataset.
-  # Falls back to direct var reference only on initial terraform apply,
-  # which runs before state file is written.
-  # ─────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────────────────
+# Separate null resource for destroy — avoids Terraform destroy-provisioner
+# parse errors (no var.* references anywhere in this resource)
+# ────────────────────────────────────────────────────────────────────────────
+resource "null_resource" "bqml_model_destroy" {
+  triggers = {
+    # Always run on destroy (uuid forces recreate on destroy)
+    always = uuidv4()
+  }
+
   provisioner "local-exec" {
     when = destroy
     command = <<-EOF
@@ -193,19 +197,18 @@ with open('${STATE_FILE}', 'w') as f:
         PROJECT=$(python3 -c "import json; print(json.load(open('${STATE_FILE}'))['project_id'])" 2>/dev/null)
         DATASET=$(python3 -c "import json; print(json.load(open('${STATE_FILE}'))['dataset_id'])" 2>/dev/null)
         MODEL=$(python3 -c "import json; print(json.load(open('${STATE_FILE}'))['model_name'])" 2>/dev/null)
+        echo "==> Dropping BigQuery ML model '${MODEL}' from ${PROJECT}:${DATASET}..."
+        bq rm -f "${PROJECT}:${DATASET}.${MODEL}" || true
+        echo "    ✅ Model dropped."
+      else
+        echo "    State file not found — assuming model already gone."
       fi
-      PROJECT="${var.project_id}"
-      DATASET="${var.dataset_id}"
-      MODEL="${var.model_name}"
-      echo "==> Dropping BigQuery ML model from ${PROJECT}:${DATASET}..."
-      bq rm -f "${PROJECT}:${DATASET}.${MODEL}" || true
-      echo "    ✅ Done."
     EOF
   }
 }
 
 # ────────────────────────────────────────────────────────────────────────────
-# Reference the existing dataset (must already exist from infra module)
+# Reference the existing dataset
 # ────────────────────────────────────────────────────────────────────────────
 data "google_bigquery_dataset" "existing_dataset" {
   dataset_id = var.dataset_id
