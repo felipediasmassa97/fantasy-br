@@ -3,8 +3,8 @@
 #
 # Manages the BigQuery ML model lifecycle via `bq` CLI.
 # Terraform CANNOT create BigQuery ML models natively — use null_resource +
-# local-exec with `$${...}` escaping to prevent Terraform from interpolating
-# shell variables before the shell sees them.
+# local-exec with doubledollar ($$) escaping for all shell variable references
+# inside heredocs, so Terraform passes them through literally to the shell.
 #
 # RETRAIN TRIGGERS (checked at runtime in pre-step):
 #   1. training SQL content changes
@@ -39,13 +39,13 @@ EOF
 }
 
 # ────────────────────────────────────────────────────────────────────────────
-# Local file to persist training state and config for destroy provisioner
+# Local file to persist training state and destroy-time config
 # ────────────────────────────────────────────────────────────────────────────
 resource "local_file" "bqml_state" {
   filename = "/tmp/bqml_model_state.json"
   content  = jsonencode({
-    sql_hash      = filemd5(var.training_query_path)
-    features_hash = filemd5(var.ml_training_features_path)
+    sql_hash      = filemd5("${path.module}/../../scripts/ml_pipeline/create_bqml_model.sql")
+    features_hash = filemd5("${path.module}/../../scripts/ml_pipeline/ml_training_features.sql")
     result_hash   = "none"
     project_id    = var.project_id
     dataset_id    = var.dataset_id
@@ -58,8 +58,8 @@ resource "local_file" "bqml_state" {
 # ────────────────────────────────────────────────────────────────────────────
 resource "null_resource" "bqml_model" {
   triggers = {
-    training_sql_content = filemd5(var.training_query_path)
-    features_sql_content = filemd5(var.ml_training_features_path)
+    training_sql_content = filemd5("${path.module}/../../scripts/ml_pipeline/create_bqml_model.sql")
+    features_sql_content = filemd5("${path.module}/../../scripts/ml_pipeline/ml_training_features.sql")
   }
 
   depends_on = [
@@ -69,18 +69,17 @@ resource "null_resource" "bqml_model" {
   ]
 
   # ── Pre-step: compute hash of training query output ──────────────────────
-  # $${VAR} escapes Terraform interpolation — shell sees ${VAR} at runtime
+  # $$ = literal $ to shell (Terraform passes through without interpolation)
   provisioner "local-exec" {
     command = <<-EOF
       set -euo pipefail
 
-      # Use double-dollar to get literal $ for shell variables
       PROJECT="$${var.project_id}"
       DATASET="$${var.dataset_id}"
       MODEL="$${var.model_name}"
-      SQL_FILE="$${var.training_query_path}"
-      FEATURES_FILE="$${var.ml_training_features_path}"
       STATE_FILE="$${local_file.bqml_state.filename}"
+      SQL_FILE="$${path.module}/../../scripts/ml_pipeline/create_bqml_model.sql"
+      FEATURES_FILE="$${path.module}/../../scripts/ml_pipeline/ml_training_features.sql"
 
       echo "==> Computing training query output hash..."
 
@@ -117,7 +116,7 @@ resource "null_resource" "bqml_model" {
         echo "    No retrain needed — model is up to date."
       fi
 
-      python3 -c "
+      python3 - << PYEOF
 import json
 d = {
     'sql_hash': '$${CURRENT_SQL_HASH}',
@@ -130,7 +129,7 @@ d = {
 }
 with open('$${STATE_FILE}', 'w') as f:
     json.dump(d, f)
-"
+PYEOF
 
       echo "    State file updated."
     EOF
@@ -144,8 +143,8 @@ with open('$${STATE_FILE}', 'w') as f:
       PROJECT="$${var.project_id}"
       DATASET="$${var.dataset_id}"
       MODEL="$${var.model_name}"
-      SQL_FILE="$${var.training_query_path}"
       STATE_FILE="$${local_file.bqml_state.filename}"
+      SQL_FILE="$${path.module}/../../scripts/ml_pipeline/create_bqml_model.sql"
 
       RETRAIN_NEEDED=$(python3 -c "import json; print(json.load(open('$${STATE_FILE}'))['retrain_needed'])" 2>/dev/null || echo "yes")
 
@@ -160,9 +159,8 @@ with open('$${STATE_FILE}', 'w') as f:
         bq rm -f "$${PROJECT}:$${DATASET}.$${MODEL}"
       fi
 
-      echo "==> Substituting dataset in training SQL..."
-      # Hardcode dataset in sed replacement (avoid nested interpolation issues)
-      SQL_CONTENT=$(cat "$${SQL_FILE}" | sed "s/DUMMY_DATASET_PLACEHOLDER/$${DATASET}/g")
+      echo "==> Substituting dataset placeholder in training SQL..."
+      SQL_CONTENT=$(sed "s/DUMMY_DATASET_PLACEHOLDER/$${DATASET}/g" "$${SQL_FILE}")
 
       echo "==> Registering BigQuery ML model..."
       echo "$${SQL_CONTENT}" | bq query --nouse_legacy_sql --use_legacy_sql=false --dataset_id="$${DATASET}"
