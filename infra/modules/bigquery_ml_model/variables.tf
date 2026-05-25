@@ -47,21 +47,3 @@ variable "labels" {
   type        = map(string)
   default     = {}
 }
-
-# =============================================================================
-# Output: model reference for downstream use
-# =============================================================================
-output "model_reference" {
-  description = "Full model reference: project.dataset.model_name"
-  value       = "${var.project_id}.${var.dataset_id}.${var.model_name}"
-}
-
-output "model_name" {
-  description = "Model name"
-  value       = var.model_name
-}
-
-output "dataset_id" {
-  description = "Dataset ID"
-  value       = var.dataset_id
-}
