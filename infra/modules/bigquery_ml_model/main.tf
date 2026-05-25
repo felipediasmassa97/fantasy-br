@@ -3,8 +3,8 @@
 #
 # Manages the BigQuery ML model lifecycle via `bq` CLI.
 # Terraform CANNOT create BigQuery ML models natively — use null_resource +
-# local-exec with doubledollar ($$) escaping for all shell variable references
-# inside heredocs, so Terraform passes them through literally to the shell.
+# local-exec with environment variables for config (avoids all interpolation
+# complexity in command strings).
 #
 # RETRAIN TRIGGERS (checked at runtime in pre-step):
 #   1. training SQL content changes
@@ -69,107 +69,28 @@ resource "null_resource" "bqml_model" {
   ]
 
   # ── Pre-step: compute hash of training query output ──────────────────────
-  # $$ = literal $ to shell (Terraform passes through without interpolation)
   provisioner "local-exec" {
-    command = <<-EOF
-      set -euo pipefail
-
-      PROJECT="$${var.project_id}"
-      DATASET="$${var.dataset_id}"
-      MODEL="$${var.model_name}"
-      STATE_FILE="$${local_file.bqml_state.filename}"
-      SQL_FILE="$${path.module}/../../../scripts/ml_pipeline/create_bqml_model.sql"
-      FEATURES_FILE="$${path.module}/../../../scripts/ml_pipeline/ml_training_features.sql"
-
-      echo "==> Computing training query output hash..."
-
-      FEATURES_SQL=$(sed -n '/WITH/,/training_data AS (/p' "$${SQL_FILE}" | head -n -1)
-
-      RESULT_HASH=$(bq query --nouse_legacy_sql --use_legacy_sql=false \
-        --format=json \
-        --max_rows=100000 \
-        "SELECT * FROM ($${FEATURES_SQL}) ORDER BY 1,2" 2>/dev/null \
-        | sha256sum | cut -d' ' -f1)
-
-      echo "    Result hash: $${RESULT_HASH}"
-
-      PREV_SQL_HASH=$(python3 -c "import json; d=json.load(open('$${STATE_FILE}')); print(d.get('sql_hash','none'))")
-      PREV_FEATURES_HASH=$(python3 -c "import json; d=json.load(open('$${STATE_FILE}')); print(d.get('features_hash','none'))")
-      PREV_RESULT_HASH=$(python3 -c "import json; d=json.load(open('$${STATE_FILE}')); print(d.get('result_hash','none'))")
-
-      CURRENT_SQL_HASH=$(sha256sum "$${SQL_FILE}" | cut -d' ' -f1)
-      CURRENT_FEATURES_HASH=$(sha256sum "$${FEATURES_FILE}" | cut -d' ' -f1)
-
-      SQL_CHANGED=$([ "$${PREV_SQL_HASH}" != "$${CURRENT_SQL_HASH}" ] && echo "yes" || echo "no")
-      FEATURES_CHANGED=$([ "$${PREV_FEATURES_HASH}" != "$${CURRENT_FEATURES_HASH}" ] && echo "yes" || echo "no")
-      RESULT_CHANGED=$([ "$${PREV_RESULT_HASH}" != "$${RESULT_HASH}" ] && echo "yes" || echo "no")
-
-      echo "    SQL changed: $${SQL_CHANGED}"
-      echo "    Features changed: $${FEATURES_CHANGED}"
-      echo "    Result changed: $${RESULT_CHANGED}"
-
-      RETRAIN_NEEDED="no"
-      if [ "$${SQL_CHANGED}" == "yes" ] || [ "$${FEATURES_CHANGED}" == "yes" ] || [ "$${RESULT_CHANGED}" == "yes" ]; then
-        RETRAIN_NEEDED="yes"
-        echo "    Retrain will be triggered."
-      else
-        echo "    No retrain needed — model is up to date."
-      fi
-
-      python3 - << PYEOF
-import json
-d = {
-    'sql_hash': '$${CURRENT_SQL_HASH}',
-    'features_hash': '$${CURRENT_FEATURES_HASH}',
-    'result_hash': '$${RESULT_HASH}',
-    'retrain_needed': '$${RETRAIN_NEEDED}',
-    'project_id': '$${PROJECT}',
-    'dataset_id': '$${DATASET}',
-    'model_name': '$${MODEL}'
-}
-with open('$${STATE_FILE}', 'w') as f:
-    json.dump(d, f)
-PYEOF
-
-      echo "    State file updated."
-    EOF
+    command = "bash ${path.module}/../../../scripts/ml_pipeline/bqml_prestep.sh"
+    environment = {
+      TF_PROJECT_ID    = var.project_id
+      TF_DATASET        = var.dataset_id
+      TF_MODEL          = var.model_name
+      TF_SQL_FILE       = "${path.module}/../../../scripts/ml_pipeline/create_bqml_model.sql"
+      TF_FEATURES_FILE  = "${path.module}/../../../scripts/ml_pipeline/ml_training_features.sql"
+      TF_STATE_FILE     = local_file.bqml_state.filename
+    }
   }
 
   # ── Main step: run CREATE MODEL ──────────────────────────────────────────
   provisioner "local-exec" {
-    command = <<-EOF
-      set -euo pipefail
-
-      PROJECT="$${var.project_id}"
-      DATASET="$${var.dataset_id}"
-      MODEL="$${var.model_name}"
-      STATE_FILE="$${local_file.bqml_state.filename}"
-      SQL_FILE="$${path.module}/../../scripts/ml_pipeline/create_bqml_model.sql"
-
-      RETRAIN_NEEDED=$(python3 -c "import json; print(json.load(open('$${STATE_FILE}'))['retrain_needed'])" 2>/dev/null || echo "yes")
-
-      if [ "$${RETRAIN_NEEDED}" != "yes" ]; then
-        echo "    No retrain needed — skipping CREATE MODEL."
-        exit 0
-      fi
-
-      echo "==> Checking if BigQuery ML model '$${MODEL}' exists..."
-      if bq ls "$${PROJECT}:$${DATASET}.$${MODEL}" > /dev/null 2>&1; then
-        echo "    Model exists — deleting old version for clean retrain..."
-        bq rm -f "$${PROJECT}:$${DATASET}.$${MODEL}"
-      fi
-
-      echo "==> Substituting dataset placeholder in training SQL..."
-      SQL_CONTENT=$(sed "s/DUMMY_DATASET_PLACEHOLDER/$${DATASET}/g" "$${SQL_FILE}")
-
-      echo "==> Registering BigQuery ML model..."
-      echo "$${SQL_CONTENT}" | bq query --nouse_legacy_sql --use_legacy_sql=false --dataset_id="$${DATASET}"
-
-      echo "==> Verifying model registration..."
-      bq show -model "$${PROJECT}:$${DATASET}.$${MODEL}"
-
-      echo "    Model '$${MODEL}' registered successfully."
-    EOF
+    command = "bash ${path.module}/../../../scripts/ml_pipeline/bqml_create_model.sh"
+    environment = {
+      TF_PROJECT_ID    = var.project_id
+      TF_DATASET        = var.dataset_id
+      TF_MODEL          = var.model_name
+      TF_SQL_FILE       = "${path.module}/../../../scripts/ml_pipeline/create_bqml_model.sql"
+      TF_STATE_FILE     = local_file.bqml_state.filename
+    }
   }
 }
 
@@ -183,7 +104,10 @@ resource "null_resource" "bqml_model_destroy" {
 
   provisioner "local-exec" {
     when    = destroy
-    command = "bash ${path.module}/scripts/bqml_destroy.sh"
+    command = "bash ${path.module}/../../../scripts/ml_pipeline/bqml_destroy.sh"
+    environment = {
+      TF_STATE_FILE = local_file.bqml_state.filename
+    }
   }
 }
 
