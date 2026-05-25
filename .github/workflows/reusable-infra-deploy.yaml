@@ -31,6 +31,9 @@ jobs:
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
+      - name: Install bq CLI
+        run: gcloud components install bq -q
+
       - name: Create Terraform state bucket if not exists
         run: |
           BUCKET_NAME="fantasy-br-tfstate-${{ inputs.environment }}"
@@ -72,4 +75,14 @@ jobs:
       - name: Terraform Apply
         if: steps.plan.outputs.do_apply == 'true'
         working-directory: infra/envs/${{ inputs.environment }}
-        run: terraform apply tfplan -auto-approve
+        run: terraform apply -auto-approve
+
+      - name: Terraform Output (model reference)
+        if: steps.plan.outputs.do_apply == 'true'
+        working-directory: infra/envs/${{ inputs.environment }}
+        run: |
+          echo "### BigQuery ML Model" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          terraform output model_reference >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "✅ BigQuery ML model registered at: $(terraform output -raw model_reference)" >> $GITHUB_STEP_SUMMARY

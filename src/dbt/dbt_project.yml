@@ -23,6 +23,10 @@ seeds:
         position: string
         club: string
 
+vars:
+  bqml_project: fantasy-br
+  bqml_dataset: fdmdev_fantasy_br  # override per environment in profiles
+
 models:
   fantasy_br:
     staging:
