@@ -34,9 +34,6 @@ jobs:
       - name: Install bq CLI
         run: gcloud components install bq -q
 
-      - name: Verify bq CLI
-        run: bq query --help > /dev/null 2>&1 && echo "bq CLI ready"
-
       - name: Create Terraform state bucket if not exists
         run: |
           BUCKET_NAME="fantasy-br-tfstate-${{ inputs.environment }}"
