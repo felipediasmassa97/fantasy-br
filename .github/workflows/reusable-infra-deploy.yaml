@@ -32,7 +32,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Install bq CLI
-        run: gcloud components install bq-cli -q
+        run: gcloud components install bq -q
 
       - name: Verify bq CLI
         run: bq --version
