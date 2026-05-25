@@ -74,7 +74,7 @@ resource "null_resource" "bqml_model" {
     command = <<-EOF
       set -euo pipefail
 
-      # $${...} is escaped — Terraform outputs the literal ${...} for shell
+      # Use double-dollar to get literal $ for shell variables
       PROJECT="$${var.project_id}"
       DATASET="$${var.dataset_id}"
       MODEL="$${var.model_name}"
