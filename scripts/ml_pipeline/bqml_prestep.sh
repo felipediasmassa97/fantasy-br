@@ -23,8 +23,8 @@ if [ ! -f "${STATE_FILE}" ]; then
 fi
 
 # Extract features SQL via dedicated helper script
-FEATURES_SQL=$(python3 "${path.module}/../../../scripts/ml_pipeline/extract_features.py" \
-  "${FEATURES_FILE}" "${DATASET}")
+SCRIPT_DIR=$(cd "${path.module}/../../../scripts/ml_pipeline" && pwd)
+FEATURES_SQL=$(python3 "${SCRIPT_DIR}/extract_features.py" "${FEATURES_FILE}" "${DATASET}")
 
 echo "    Built features SQL: ${#FEATURES_SQL} chars"
 
