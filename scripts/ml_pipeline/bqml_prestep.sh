@@ -1,6 +1,6 @@
 #!/bin/bash
 # Pre-step: compute hash of training query output and decide if retrain is needed.
-# Uses the features SQL directly (from ml_training_features.sql) — not the CREATE MODEL file.
+# Builds full training features SQL from ml_training_features.sql.
 
 set -euo pipefail
 
@@ -25,16 +25,20 @@ if [ ! -f "${STATE_FILE}" ]; then
   exit 1
 fi
 
-# Extract features SQL: from line after "WITH" to before "training_data AS"
-# sed: find WITH line number, find "training_data AS (" line number,
-#       print lines between them (+ 1 to include the closing paren line)
-# Then remove the last line (the "training_data AS (" line itself)
-START_LINE=$(grep -n "^WITH$" "${FEATURES_FILE}" | head -1 | cut -d: -f1)
-END_LINE=$(grep -n "^training_data AS ($" "${FEATURES_FILE}" | head -1 | cut -d: -f1)
-FEATURES_SQL=$(sed -n "${START_LINE},$((END_LINE - 1))p" "${FEATURES_FILE}")
+# Extract the full features SQL:
+# 1. WITH block: from "WITH" line to just before "training_data AS ("
+# 2. training_data AS block: from "training_data AS (" to end of file (includes final SELECT)
+WITH_LINE=$(grep -n "^WITH$" "${FEATURES_FILE}" | head -1 | cut -d: -f1)
+TD_START=$(grep -n "training_data AS (" "${FEATURES_FILE}" | head -1 | cut -d: -f1)
+WITH_BLOCK=$(sed -n "${WITH_LINE},$((TD_START - 1))p" "${FEATURES_FILE}")
+TD_BLOCK=$(tail -n +"${TD_START}" "${FEATURES_FILE}")
+FEATURES_SQL="${WITH_BLOCK}${TD_BLOCK}"
+
+echo "    Built features SQL: ${#FEATURES_SQL} chars"
 
 # Replace hardcoded dataset with actual dataset in all model references
 FEATURES_SQL=$(echo "${FEATURES_SQL}" | sed "s/fdmdev_fantasy_br/${DATASET}/g")
+
 echo "    Running features query for hash computation..."
 set +e
 BQ_OUTPUT=$(bq query --nouse_legacy_sql --use_legacy_sql=false \
@@ -46,7 +50,7 @@ set -e
 
 if [ ${BQ_EXIT} -ne 0 ]; then
   echo "ERROR: bq query failed with exit code ${BQ_EXIT}"
-  echo "Output: ${BQ_OUTPUT:0:500}"
+  echo "Output: ${BQ_OUTPUT:0:1000}"
   exit 1
 fi
 
