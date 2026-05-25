@@ -2,17 +2,14 @@
 # BigQuery ML Model — xgb_points_prediction
 #
 # Manages the BigQuery ML model lifecycle via `bq` CLI.
+# Terraform CANNOT create BigQuery ML models natively — use null_resource +
+# local-exec with `$${...}` escaping to prevent Terraform from interpolating
+# shell variables before the shell sees them.
 #
-# Terraform CANNOT create BigQuery ML models natively.
-# Instead we use null_resource + local-exec to run CREATE MODEL DDL.
-#
-# RETRAIN TRIGGERS (checked at runtime in pre-step provisioner):
-#   1. training SQL content changes  (sha256 of create_bqml_model.sql)
-#   2. features SQL content changed (sha256 of ml_training_features.sql)
+# RETRAIN TRIGGERS (checked at runtime in pre-step):
+#   1. training SQL content changes
+#   2. features SQL content changed
 #   3. training query OUTPUT changed (hash of query result set)
-#
-# ACTUAL APPLY logic: pre-step reads the state file; if retrain_needed=yes,
-# runs CREATE OR REPLACE MODEL.
 # =============================================================================
 
 terraform {
@@ -20,7 +17,7 @@ terraform {
 }
 
 # ────────────────────────────────────────────────────────────────────────────
-# Reference the existing dataset (must exist before null_resource runs)
+# Reference the existing dataset
 # ────────────────────────────────────────────────────────────────────────────
 data "google_bigquery_dataset" "existing_dataset" {
   dataset_id = var.dataset_id
@@ -42,7 +39,7 @@ EOF
 }
 
 # ────────────────────────────────────────────────────────────────────────────
-# Local file to persist training state and metadata for destroy provisioner
+# Local file to persist training state and config for destroy provisioner
 # ────────────────────────────────────────────────────────────────────────────
 resource "local_file" "bqml_state" {
   filename = "/tmp/bqml_model_state.json"
@@ -58,12 +55,9 @@ resource "local_file" "bqml_state" {
 
 # ────────────────────────────────────────────────────────────────────────────
 # Null resource: CREATE OR REPLACE MODEL
-#
-# Trigger on SQL file changes (actual retrain check is in pre-step).
 # ────────────────────────────────────────────────────────────────────────────
 resource "null_resource" "bqml_model" {
   triggers = {
-    # Trigger on SQL content changes — pre-step decides if retrain is needed
     training_sql_content = filemd5(var.training_query_path)
     features_sql_content = filemd5(var.ml_training_features_path)
   }
@@ -75,46 +69,48 @@ resource "null_resource" "bqml_model" {
   ]
 
   # ── Pre-step: compute hash of training query output ──────────────────────
+  # $${VAR} escapes Terraform interpolation — shell sees ${VAR} at runtime
   provisioner "local-exec" {
     command = <<-EOF
       set -euo pipefail
 
-      TF_PROJECT_ID="${var.project_id}"
-      TF_DATASET="${var.dataset_id}"
-      TF_MODEL="${var.model_name}"
-      TF_SQL_FILE="${var.training_query_path}"
-      TF_FEATURES_FILE="${var.ml_training_features_path}"
-      STATE_FILE="/tmp/bqml_model_state.json"
+      # $${...} is escaped — Terraform outputs the literal ${...} for shell
+      PROJECT="$${var.project_id}"
+      DATASET="$${var.dataset_id}"
+      MODEL="$${var.model_name}"
+      SQL_FILE="$${var.training_query_path}"
+      FEATURES_FILE="$${var.ml_training_features_path}"
+      STATE_FILE="$${local_file.bqml_state.filename}"
 
       echo "==> Computing training query output hash..."
 
-      FEATURES_SQL=$(sed -n '/WITH/,/training_data AS (/p' "$TF_SQL_FILE" | head -n -1)
+      FEATURES_SQL=$(sed -n '/WITH/,/training_data AS (/p' "$${SQL_FILE}" | head -n -1)
 
       RESULT_HASH=$(bq query --nouse_legacy_sql --use_legacy_sql=false \
         --format=json \
         --max_rows=100000 \
-        "SELECT * FROM (${FEATURES_SQL}) ORDER BY 1,2" 2>/dev/null \
+        "SELECT * FROM ($${FEATURES_SQL}) ORDER BY 1,2" 2>/dev/null \
         | sha256sum | cut -d' ' -f1)
 
-      echo "    Result hash: ${RESULT_HASH}"
+      echo "    Result hash: $${RESULT_HASH}"
 
-      PREV_SQL_HASH=$(python3 -c "import json; d=json.load(open('${STATE_FILE}')); print(d.get('sql_hash','none'))")
-      PREV_FEATURES_HASH=$(python3 -c "import json; d=json.load(open('${STATE_FILE}')); print(d.get('features_hash','none'))")
-      PREV_RESULT_HASH=$(python3 -c "import json; d=json.load(open('${STATE_FILE}')); print(d.get('result_hash','none'))")
+      PREV_SQL_HASH=$(python3 -c "import json; d=json.load(open('$${STATE_FILE}')); print(d.get('sql_hash','none'))")
+      PREV_FEATURES_HASH=$(python3 -c "import json; d=json.load(open('$${STATE_FILE}')); print(d.get('features_hash','none'))")
+      PREV_RESULT_HASH=$(python3 -c "import json; d=json.load(open('$${STATE_FILE}')); print(d.get('result_hash','none'))")
 
-      CURRENT_SQL_HASH=$(sha256sum "$TF_SQL_FILE" | cut -d' ' -f1)
-      CURRENT_FEATURES_HASH=$(sha256sum "$TF_FEATURES_FILE" | cut -d' ' -f1)
+      CURRENT_SQL_HASH=$(sha256sum "$${SQL_FILE}" | cut -d' ' -f1)
+      CURRENT_FEATURES_HASH=$(sha256sum "$${FEATURES_FILE}" | cut -d' ' -f1)
 
-      SQL_CHANGED=$([ "${PREV_SQL_HASH}" != "${CURRENT_SQL_HASH}" ] && echo "yes" || echo "no")
-      FEATURES_CHANGED=$([ "${PREV_FEATURES_HASH}" != "${CURRENT_FEATURES_HASH}" ] && echo "yes" || echo "no")
-      RESULT_CHANGED=$([ "${PREV_RESULT_HASH}" != "${RESULT_HASH}" ] && echo "yes" || echo "no")
+      SQL_CHANGED=$([ "$${PREV_SQL_HASH}" != "$${CURRENT_SQL_HASH}" ] && echo "yes" || echo "no")
+      FEATURES_CHANGED=$([ "$${PREV_FEATURES_HASH}" != "$${CURRENT_FEATURES_HASH}" ] && echo "yes" || echo "no")
+      RESULT_CHANGED=$([ "$${PREV_RESULT_HASH}" != "$${RESULT_HASH}" ] && echo "yes" || echo "no")
 
-      echo "    SQL changed: ${SQL_CHANGED}"
-      echo "    Features changed: ${FEATURES_CHANGED}"
-      echo "    Result changed: ${RESULT_CHANGED}"
+      echo "    SQL changed: $${SQL_CHANGED}"
+      echo "    Features changed: $${FEATURES_CHANGED}"
+      echo "    Result changed: $${RESULT_CHANGED}"
 
       RETRAIN_NEEDED="no"
-      if [ "${SQL_CHANGED}" == "yes" ] || [ "${FEATURES_CHANGED}" == "yes" ] || [ "${RESULT_CHANGED}" == "yes" ]; then
+      if [ "$${SQL_CHANGED}" == "yes" ] || [ "$${FEATURES_CHANGED}" == "yes" ] || [ "$${RESULT_CHANGED}" == "yes" ]; then
         RETRAIN_NEEDED="yes"
         echo "    Retrain will be triggered."
       else
@@ -124,17 +120,17 @@ resource "null_resource" "bqml_model" {
       python3 -c "
 import json
 d = {
-    'sql_hash': '${CURRENT_SQL_HASH}',
-    'features_hash': '${CURRENT_FEATURES_HASH}',
-    'result_hash': '${RESULT_HASH}',
-    'retrain_needed': '${RETRAIN_NEEDED}',
-    'project_id': '${TF_PROJECT_ID}',
-    'dataset_id': '${TF_DATASET}',
-    'model_name': '${TF_MODEL}'
+    'sql_hash': '$${CURRENT_SQL_HASH}',
+    'features_hash': '$${CURRENT_FEATURES_HASH}',
+    'result_hash': '$${RESULT_HASH}',
+    'retrain_needed': '$${RETRAIN_NEEDED}',
+    'project_id': '$${PROJECT}',
+    'dataset_id': '$${DATASET}',
+    'model_name': '$${MODEL}'
 }
-with open('${STATE_FILE}', 'w') as f:
+with open('$${STATE_FILE}', 'w') as f:
     json.dump(d, f)
-      "
+"
 
       echo "    State file updated."
     EOF
@@ -145,43 +141,42 @@ with open('${STATE_FILE}', 'w') as f:
     command = <<-EOF
       set -euo pipefail
 
-      TF_PROJECT_ID="${var.project_id}"
-      TF_DATASET="${var.dataset_id}"
-      TF_MODEL="${var.model_name}"
-      TF_SQL_FILE="${var.training_query_path}"
-      STATE_FILE="/tmp/bqml_model_state.json"
+      PROJECT="$${var.project_id}"
+      DATASET="$${var.dataset_id}"
+      MODEL="$${var.model_name}"
+      SQL_FILE="$${var.training_query_path}"
+      STATE_FILE="$${local_file.bqml_state.filename}"
 
-      RETRAIN_NEEDED=$(python3 -c "import json; print(json.load(open('${STATE_FILE}'))['retrain_needed'])" 2>/dev/null || echo "yes")
+      RETRAIN_NEEDED=$(python3 -c "import json; print(json.load(open('$${STATE_FILE}'))['retrain_needed'])" 2>/dev/null || echo "yes")
 
-      if [ "${RETRAIN_NEEDED}" != "yes" ]; then
+      if [ "$${RETRAIN_NEEDED}" != "yes" ]; then
         echo "    No retrain needed — skipping CREATE MODEL."
         exit 0
       fi
 
-      echo "==> Checking if BigQuery ML model '${TF_MODEL}' exists..."
-      if bq ls "${TF_PROJECT_ID}:${TF_DATASET}.${TF_MODEL}" > /dev/null 2>&1; then
+      echo "==> Checking if BigQuery ML model '$${MODEL}' exists..."
+      if bq ls "$${PROJECT}:$${DATASET}.$${MODEL}" > /dev/null 2>&1; then
         echo "    Model exists — deleting old version for clean retrain..."
-        bq rm -f "${TF_PROJECT_ID}:${TF_DATASET}.${TF_MODEL}"
+        bq rm -f "$${PROJECT}:$${DATASET}.$${MODEL}"
       fi
 
-      echo "==> Substituting \${DATASET} in training SQL..."
-      sed_cmd="s/\\\${DATASET}/${TF_DATASET}/g"
-      SQL_CONTENT=$(cat "${TF_SQL_FILE}" | sed "${sed_cmd}")
+      echo "==> Substituting dataset in training SQL..."
+      sed_cmd="s/\\\${DATASET}/$${DATASET}/g"
+      SQL_CONTENT=$(cat "$${SQL_FILE}" | sed "$${sed_cmd}")
 
       echo "==> Registering BigQuery ML model..."
-      echo "${SQL_CONTENT}" | bq query --nouse_legacy_sql --use_legacy_sql=false --dataset_id="${TF_DATASET}"
+      echo "$${SQL_CONTENT}" | bq query --nouse_legacy_sql --use_legacy_sql=false --dataset_id="$${DATASET}"
 
       echo "==> Verifying model registration..."
-      bq show -model "${TF_PROJECT_ID}:${TF_DATASET}.${TF_MODEL}"
+      bq show -model "$${PROJECT}:$${DATASET}.$${MODEL}"
 
-      echo "    ✅ Model '${TF_MODEL}' registered successfully."
+      echo "    Model '$${MODEL}' registered successfully."
     EOF
   }
 }
 
 # ────────────────────────────────────────────────────────────────────────────
-# Separate null resource for destroy — no var.* references, no heredoc issues.
-# Reads config from state file at runtime.
+# Destroy provisioner: separate null resource (no var.* references allowed)
 # ────────────────────────────────────────────────────────────────────────────
 resource "null_resource" "bqml_model_destroy" {
   triggers = {
