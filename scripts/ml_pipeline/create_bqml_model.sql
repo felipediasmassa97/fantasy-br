@@ -1,13 +1,13 @@
 -- =============================================================================
 -- BigQuery ML Model: xgb_points_prediction
 -- Type: BOOSTED_TREE_REGRESSOR (XGBoost)
--- Dataset: fdmdev_fantasy_br  -- Reference only; actual dataset set via ${DATASET}
+-- Dataset: fdmdev_fantasy_br  -- Reference only; actual dataset set via DUMMY_DATASET_PLACEHOLDER
 -- =============================================================================
 -- This model predicts player fantasy points for a given round.
 -- Training data uses features computed up to round R-2 to predict pts_round for round R.
 -- =============================================================================
 
-CREATE OR REPLACE MODEL `${DATASET}.xgb_points_prediction`
+CREATE OR REPLACE MODEL `DUMMY_DATASET_PLACEHOLDER.xgb_points_prediction`
 OPTIONS(
     model_type = 'BOOSTED_TREE_REGRESSOR',
     booster_type = 'GBTREE',
@@ -35,7 +35,7 @@ base_player_rounds AS (
         pl.round_id,
         pl.pts_round AS target_pts_round,
         pl.is_home AS is_home_game
-    FROM `${DATASET}.int_players` pl
+    FROM `DUMMY_DATASET_PLACEHOLDER.int_players` pl
     WHERE pl.pts_round IS NOT NULL
       AND pl.round_id >= 3
 ),
@@ -46,7 +46,7 @@ feat_baseline AS (
         b.as_of_round_id + 2 AS round_id,
         b.baseline_pts,
         b.player_pts_avg_this_season
-    FROM `${DATASET}.int_baseline` b
+    FROM `DUMMY_DATASET_PLACEHOLDER.int_baseline` b
     INNER JOIN base_player_rounds br
         ON b.player_id = br.player_id
        AND b.as_of_round_id + 2 = br.round_id
@@ -58,7 +58,7 @@ feat_ewm_form AS (
         e.round_id AS as_of_round_id,
         e.ewm_pts,
         e.form_multiplier
-    FROM `${DATASET}.int_ewm_form` e
+    FROM `DUMMY_DATASET_PLACEHOLDER.int_ewm_form` e
     INNER JOIN base_player_rounds br
         ON e.player_id = br.player_id
        AND e.round_id + 2 = br.round_id
@@ -70,7 +70,7 @@ feat_mpap AS (
         m.as_of_round_id + 2 AS round_id,
         m.mpap_ratio,
         m.mpap_multiplier
-    FROM `${DATASET}.int_map_score` m
+    FROM `DUMMY_DATASET_PLACEHOLDER.int_map_score` m
     INNER JOIN base_player_rounds br
         ON m.player_id = br.player_id
        AND m.as_of_round_id + 2 = br.round_id
@@ -81,7 +81,7 @@ feat_pts_allowed AS (
         r.player_id,
         r.as_of_round_id + 2 AS round_id,
         r.pts_allowed_this
-    FROM `${DATASET}.int_regression` r
+    FROM `DUMMY_DATASET_PLACEHOLDER.int_regression` r
     INNER JOIN base_player_rounds br
         ON r.player_id = br.player_id
        AND r.as_of_round_id + 2 = br.round_id
@@ -94,7 +94,7 @@ feat_distribution AS (
         d.bust_rate,
         d.boom_rate,
         d.dist_pts_avg
-    FROM `${DATASET}.int_distribution_stats` d
+    FROM `DUMMY_DATASET_PLACEHOLDER.int_distribution_stats` d
     INNER JOIN base_player_rounds br
         ON d.player_id = br.player_id
        AND d.as_of_round_id + 2 = br.round_id
@@ -105,7 +105,7 @@ feat_home_away AS (
         h.player_id,
         h.as_of_round_id + 2 AS round_id,
         h.home_away_delta
-    FROM `${DATASET}.int_home_away` h
+    FROM `DUMMY_DATASET_PLACEHOLDER.int_home_away` h
     INNER JOIN base_player_rounds br
         ON h.player_id = br.player_id
        AND h.as_of_round_id + 2 = br.round_id
@@ -119,7 +119,7 @@ feat_availability AS (
             COUNTIF(pl.pts_round IS NOT NULL),
             COUNT(*)
         ) AS availability_this_season
-    FROM `${DATASET}.int_players` pl
+    FROM `DUMMY_DATASET_PLACEHOLDER.int_players` pl
     INNER JOIN base_player_rounds br
         ON pl.player_id = br.player_id
        AND pl.round_id <= br.round_id - 2
@@ -134,7 +134,7 @@ feat_scout AS (
         avg_scout_a,
         avg_scout_ff,
         avg_scout_fs
-    FROM `${DATASET}.int_players`
+    FROM `DUMMY_DATASET_PLACEHOLDER.int_players`
 ),
 
 feat_position AS (
@@ -149,7 +149,7 @@ feat_position AS (
             WHEN 'AT' THEN 4
             ELSE 3
         END AS position_enc
-    FROM `${DATASET}.int_players`
+    FROM `DUMMY_DATASET_PLACEHOLDER.int_players`
 ),
 
 feat_par AS (
@@ -157,7 +157,7 @@ feat_par AS (
         r.player_id,
         r.as_of_round_id + 2 AS round_id,
         r.replacement_level
-    FROM `${DATASET}.int_replacement_levels` r
+    FROM `DUMMY_DATASET_PLACEHOLDER.int_replacement_levels` r
     INNER JOIN base_player_rounds br
         ON r.player_id = br.player_id
        AND r.as_of_round_id + 2 = br.round_id

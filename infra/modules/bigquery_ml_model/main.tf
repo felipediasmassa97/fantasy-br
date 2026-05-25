@@ -161,8 +161,8 @@ with open('$${STATE_FILE}', 'w') as f:
       fi
 
       echo "==> Substituting dataset in training SQL..."
-      sed_cmd="s/\\\${DATASET}/$${DATASET}/g"
-      SQL_CONTENT=$(cat "$${SQL_FILE}" | sed "$${sed_cmd}")
+      # Hardcode dataset in sed replacement (avoid nested interpolation issues)
+      SQL_CONTENT=$(cat "$${SQL_FILE}" | sed "s/DUMMY_DATASET_PLACEHOLDER/$${DATASET}/g")
 
       echo "==> Registering BigQuery ML model..."
       echo "$${SQL_CONTENT}" | bq query --nouse_legacy_sql --use_legacy_sql=false --dataset_id="$${DATASET}"
