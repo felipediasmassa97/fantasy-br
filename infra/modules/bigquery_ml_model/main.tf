@@ -99,14 +99,14 @@ resource "null_resource" "bqml_model" {
 # ────────────────────────────────────────────────────────────────────────────
 resource "null_resource" "bqml_model_destroy" {
   triggers = {
-    filename = local_file.bqml_state.filename
+    always = timestamp()
   }
 
   provisioner "local-exec" {
     when    = destroy
     command = "bash ${path.module}/../../../scripts/ml_pipeline/bqml_destroy.sh"
     environment = {
-      TF_STATE_FILE = local_file.bqml_state.filename
+      TF_STATE_FILE = "/tmp/bqml_model_state.json"
     }
   }
 }
