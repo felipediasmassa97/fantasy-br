@@ -180,28 +180,28 @@ with open('${STATE_FILE}', 'w') as f:
 
 # ────────────────────────────────────────────────────────────────────────────
 # Separate null resource for destroy — avoids Terraform destroy-provisioner
-# parse errors (no var.* references anywhere in this resource)
+# parse errors. All values read from the state file at runtime.
 # ────────────────────────────────────────────────────────────────────────────
 resource "null_resource" "bqml_model_destroy" {
   triggers = {
-    # Always run on destroy (uuid forces recreate on destroy)
-    always = uuidv4()
+    # Changing any trigger causes the resource to be recreated (i.e. run on destroy)
+    filename = local_file.bqml_state.filename
   }
 
   provisioner "local-exec" {
     when = destroy
-    command = <<-EOF
+    command = <<'EOF'
       set -euo pipefail
       STATE_FILE="/tmp/bqml_model_state.json"
       if [ -f "${STATE_FILE}" ]; then
         PROJECT=$(python3 -c "import json; print(json.load(open('${STATE_FILE}'))['project_id'])" 2>/dev/null)
         DATASET=$(python3 -c "import json; print(json.load(open('${STATE_FILE}'))['dataset_id'])" 2>/dev/null)
         MODEL=$(python3 -c "import json; print(json.load(open('${STATE_FILE}'))['model_name'])" 2>/dev/null)
-        echo "==> Dropping BigQuery ML model '${MODEL}' from ${PROJECT}:${DATASET}..."
+        echo "==> Dropping BigQuery ML model from ${PROJECT}:${DATASET}..."
         bq rm -f "${PROJECT}:${DATASET}.${MODEL}" || true
-        echo "    ✅ Model dropped."
+        echo "    Done."
       else
-        echo "    State file not found — assuming model already gone."
+        echo "    State file not found — assuming already gone."
       fi
     EOF
   }
