@@ -75,7 +75,7 @@ jobs:
       - name: Terraform Apply
         if: steps.plan.outputs.do_apply == 'true'
         working-directory: infra/envs/${{ inputs.environment }}
-        run: terraform apply tfplan -auto-approve
+        run: terraform apply -auto-approve
 
       - name: Terraform Output (model reference)
         if: steps.plan.outputs.do_apply == 'true'
