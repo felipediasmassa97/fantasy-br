@@ -6,26 +6,25 @@
 # Terraform CANNOT create BigQuery ML models natively.
 # Instead we use null_resource + local-exec to run CREATE MODEL DDL.
 #
-# RETRAIN TRIGGERS (any of):
-#   1. training SQL content changes  (filemd5 of create_bqml_model.sql)
-#   2. features SQL content changed (filemd5 of ml_training_features.sql)
+# RETRAIN TRIGGERS (checked at runtime in pre-step provisioner):
+#   1. training SQL content changes  (sha256 of create_bqml_model.sql)
+#   2. features SQL content changed (sha256 of ml_training_features.sql)
 #   3. training query OUTPUT changed (hash of query result set)
 #
-# TWO NULL RESOURCES (avoids Terraform destroy-provisioner parse errors):
-#   - bqml_model:     create/update the model (triggers on SQL/data changes)
-#   - bqml_model_destroy: destroy the model (no var references, pure shell)
+# ACTUAL APPLY logic: pre-step reads the state file; if retrain_needed=yes,
+# runs CREATE OR REPLACE MODEL.
 # =============================================================================
 
 terraform {
   required_version = ">= 1.0"
 }
 
-data "terraform_remote_state" "infra" {
-  backend = "gcs"
-  config = {
-    bucket = "fantasy-br-tfstate-${var.environment}"
-    prefix = "envs/${var.environment}"
-  }
+# ────────────────────────────────────────────────────────────────────────────
+# Reference the existing dataset (must exist before null_resource runs)
+# ────────────────────────────────────────────────────────────────────────────
+data "google_bigquery_dataset" "existing_dataset" {
+  dataset_id = var.dataset_id
+  project    = var.project_id
 }
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -43,7 +42,7 @@ EOF
 }
 
 # ────────────────────────────────────────────────────────────────────────────
-# Local file to persist training state
+# Local file to persist training state and metadata for destroy provisioner
 # ────────────────────────────────────────────────────────────────────────────
 resource "local_file" "bqml_state" {
   filename = "/tmp/bqml_model_state.json"
@@ -59,17 +58,19 @@ resource "local_file" "bqml_state" {
 
 # ────────────────────────────────────────────────────────────────────────────
 # Null resource: CREATE OR REPLACE MODEL
+#
+# Trigger on SQL file changes (actual retrain check is in pre-step).
 # ────────────────────────────────────────────────────────────────────────────
 resource "null_resource" "bqml_model" {
   triggers = {
+    # Trigger on SQL content changes — pre-step decides if retrain is needed
     training_sql_content = filemd5(var.training_query_path)
     features_sql_content = filemd5(var.ml_training_features_path)
-    state_file_content   = filemd5("/tmp/bqml_model_state.json")
   }
 
   depends_on = [
     data.external.validate_bq,
-    google_bigquery_dataset.existing_dataset,
+    data.google_bigquery_dataset.existing_dataset,
     local_file.bqml_state,
   ]
 
@@ -179,12 +180,11 @@ with open('${STATE_FILE}', 'w') as f:
 }
 
 # ────────────────────────────────────────────────────────────────────────────
-# Separate null resource for destroy — avoids Terraform destroy-provisioner
-# parse errors. All values read from the state file at runtime.
+# Separate null resource for destroy — no var.* references, no heredoc issues.
+# Reads config from state file at runtime.
 # ────────────────────────────────────────────────────────────────────────────
 resource "null_resource" "bqml_model_destroy" {
   triggers = {
-    # Changing any trigger causes the resource to be recreated (i.e. run on destroy)
     filename = local_file.bqml_state.filename
   }
 
@@ -192,14 +192,6 @@ resource "null_resource" "bqml_model_destroy" {
     when    = destroy
     command = "bash ${path.module}/scripts/bqml_destroy.sh"
   }
-}
-
-# ────────────────────────────────────────────────────────────────────────────
-# Reference the existing dataset
-# ────────────────────────────────────────────────────────────────────────────
-data "google_bigquery_dataset" "existing_dataset" {
-  dataset_id = var.dataset_id
-  project    = var.project_id
 }
 
 # ────────────────────────────────────────────────────────────────────────────
