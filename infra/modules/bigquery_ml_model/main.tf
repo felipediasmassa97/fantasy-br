@@ -8,11 +8,13 @@
 #
 # RETRAIN TRIGGERS (any of):
 #   1. training SQL content changes      (filemd5 of create_bqml_model.sql)
-#   2. features SQL content changes     (filemd5 of ml_training_features.sql)
-#   3. training query OUTPUT changes    (hash of query result set)
+#   2. features SQL content changed     (filemd5 of ml_training_features.sql)
+#   3. training query OUTPUT changed    (hash of query result set)
 #      → computed at apply time by pre-step provisioner, stored in /tmp/bqml_state.json
 #      → null_resource trigger includes filemd5 of the state file
 #
+# NOTE: The destroy provisioner reads dataset/project from the local state file
+# to avoid referencing Terraform variables (which are unavailable during destroy).
 # =============================================================================
 
 terraform {
@@ -50,24 +52,20 @@ resource "local_file" "bqml_state" {
   content  = jsonencode({
     sql_hash      = filemd5(var.training_query_path)
     features_hash = filemd5(var.ml_training_features_path)
-    result_hash   = "none"  # will be updated by provisioner
+    result_hash   = "none"
+    project_id    = var.project_id
+    dataset_id    = var.dataset_id
+    model_name    = var.model_name
   })
 }
 
 # ────────────────────────────────────────────────────────────────────────────
 # Null resource: CREATE OR REPLACE MODEL
-#
-# Trigger condition: any of
-#   - training SQL content changed
-#   - features SQL content changed
-#   - training query output changed (detected via state file hash)
 # ────────────────────────────────────────────────────────────────────────────
 resource "null_resource" "bqml_model" {
-  # Re-train when SQL content changes OR when training query result changes
   triggers = {
     training_sql_content = filemd5(var.training_query_path)
     features_sql_content = filemd5(var.ml_training_features_path)
-    # Include the state file hash — updated by provisioner when result changes
     state_file_content   = filemd5("/tmp/bqml_model_state.json")
   }
 
@@ -78,22 +76,16 @@ resource "null_resource" "bqml_model" {
   ]
 
   # ── Pre-step: compute hash of training query output ──────────────────────
-  # Runs the training query and stores the output hash in the state file.
-  # If output hasn't changed since last run, no retrain needed.
-  # ─────────────────────────────────────────────────────────────────────────
   provisioner "local-exec" {
     command = <<-EOF
       set -euo pipefail
 
-      PROJECT="${var.project_id}"
-      DATASET="${var.dataset_id}"
       STATE_FILE="/tmp/bqml_model_state.json"
       FEATURES_FILE="${var.ml_training_features_path}"
 
       echo "==> Computing training query output hash..."
 
       # Extract inline features query from the training SQL
-      # The features SQL is inlined inside create_bqml_model.sql as a CTE
       FEATURES_SQL=$(sed -n '/WITH/,/training_data AS (/p' "${var.training_query_path}" | head -n -1)
 
       # Run the features query and compute sha256 of the result set
@@ -105,17 +97,15 @@ resource "null_resource" "bqml_model" {
 
       echo "    Result hash: ${RESULT_HASH}"
 
-      # Load previous state
       PREV_SQL_HASH=$(python3 -c "import json; d=json.load(open('${STATE_FILE}')); print(d.get('sql_hash','none'))")
       PREV_FEATURES_HASH=$(python3 -c "import json; d=json.load(open('${STATE_FILE}')); print(d.get('features_hash','none'))")
       PREV_RESULT_HASH=$(python3 -c "import json; d=json.load(open('${STATE_FILE}')); print(d.get('result_hash','none'))")
 
-      CURRENT_SQL_HASH="${var.training_query_path}"
-      CURRENT_SQL_HASH=$(sha256sum "${CURRENT_SQL_HASH}" | cut -d' ' -f1)
+      CURRENT_SQL_HASH=$(sha256sum "${var.training_query_path}" | cut -d' ' -f1)
+      CURRENT_FEATURES_HASH=$(sha256sum "${FEATURES_FILE}" | cut -d' ' -f1)
 
-      # Check if retrain is needed
       SQL_CHANGED=$([ "${PREV_SQL_HASH}" != "${CURRENT_SQL_HASH}" ] && echo "yes" || echo "no")
-      FEATURES_CHANGED=$([ "${PREV_FEATURES_HASH}" != "$(sha256sum ${FEATURES_FILE} | cut -d' ' -f1)" ] && echo "yes" || echo "no")
+      FEATURES_CHANGED=$([ "${PREV_FEATURES_HASH}" != "${CURRENT_FEATURES_HASH}" ] && echo "yes" || echo "no")
       RESULT_CHANGED=$([ "${PREV_RESULT_HASH}" != "${RESULT_HASH}" ] && echo "yes" || echo "no")
 
       echo "    SQL changed: ${SQL_CHANGED}"
@@ -130,17 +120,19 @@ resource "null_resource" "bqml_model" {
         echo "    No retrain needed — model is up to date."
       fi
 
-      # Write updated state
       python3 -c "
-      import json
-      d = {
-        'sql_hash': '${CURRENT_SQL_HASH}',
-        'features_hash': '$(sha256sum ${FEATURES_FILE} | cut -d' ' -f1)',
-        'result_hash': '${RESULT_HASH}',
-        'retrain_needed': '${RETRAIN_NEEDED}'
-      }
-      with open('${STATE_FILE}', 'w') as f:
-        json.dump(d, f)
+import json
+d = {
+    'sql_hash': '${CURRENT_SQL_HASH}',
+    'features_hash': '${CURRENT_FEATURES_HASH}',
+    'result_hash': '${RESULT_HASH}',
+    'retrain_needed': '${RETRAIN_NEEDED}',
+    'project_id': '${var.project_id}',
+    'dataset_id': '${var.dataset_id}',
+    'model_name': '${var.model_name}'
+}
+with open('${STATE_FILE}', 'w') as f:
+    json.dump(d, f)
       "
 
       echo "    State file updated."
@@ -148,9 +140,6 @@ resource "null_resource" "bqml_model" {
   }
 
   # ── Main step: run CREATE MODEL ──────────────────────────────────────────
-  # Only executes when trigger fires (SQL changed, features changed, or result changed).
-  # Checks retrain_needed flag from state file before running CREATE MODEL.
-  # ─────────────────────────────────────────────────────────────────────────
   provisioner "local-exec" {
     command = <<-EOF
       set -euo pipefail
@@ -161,7 +150,6 @@ resource "null_resource" "bqml_model" {
       SQL_FILE="${var.training_query_path}"
       STATE_FILE="/tmp/bqml_model_state.json"
 
-      # Check if retrain is actually needed
       RETRAIN_NEEDED=$(python3 -c "import json; print(json.load(open('${STATE_FILE}'))['retrain_needed'])" 2>/dev/null || echo "yes")
 
       if [ "${RETRAIN_NEEDED}" != "yes" ]; then
@@ -176,7 +164,6 @@ resource "null_resource" "bqml_model" {
       fi
 
       echo "==> Substituting \${DATASET} in training SQL..."
-      # The SQL file uses \${DATASET} as a placeholder; substitute with actual dataset_id
       sed_cmd="s/\\\${DATASET}/${DATASET}/g"
       SQL_CONTENT=$(cat "${SQL_FILE}" | sed "${sed_cmd}")
 
@@ -190,15 +177,24 @@ resource "null_resource" "bqml_model" {
     EOF
   }
 
-  # ── Destroy: drop the model on `terraform destroy` ───────────────────────
+  # ── Destroy: drop the model on `terraform destroy` ─────────────────────
+  # Reads project/dataset from state file (vars unavailable during destroy).
+  # ─────────────────────────────────────────────────────────────────────────
   provisioner "local-exec" {
     when   = destroy
     command = <<-EOF
       set -euo pipefail
-      PROJECT="${var.project_id}"
-      DATASET="${var.dataset_id}"
-      MODEL="${var.model_name}"
-      echo "==> Dropping BigQuery ML model '${MODEL}'..."
+      STATE_FILE="/tmp/bqml_model_state.json"
+      if [ -f "${STATE_FILE}" ]; then
+        PROJECT=$(python3 -c "import json; print(json.load(open('${STATE_FILE}'))['project_id'])" 2>/dev/null)
+        DATASET=$(python3 -c "import json; print(json.load(open('${STATE_FILE}'))['dataset_id'])" 2>/dev/null)
+        MODEL=$(python3 -c "import json; print(json.load(open('${STATE_FILE}'))['model_name'])" 2>/dev/null)
+      fi
+      # Fallback if state file is missing (e.g. first destroy)
+      PROJECT="${PROJECT:-${var.project_id}}"
+      DATASET="${DATASET:-${var.dataset_id}}"
+      MODEL="${MODEL:-${var.model_name}}"
+      echo "==> Dropping BigQuery ML model '${MODEL}' from ${PROJECT}:${DATASET}..."
       bq rm -f "${PROJECT}:${DATASET}.${MODEL}" || true
       echo "    ✅ Model dropped."
     EOF
@@ -221,12 +217,12 @@ output "model_reference" {
   value       = "${var.project_id}.${var.dataset_id}.${var.model_name}"
 }
 
-output "model_exists" {
-  description = "Whether the model exists after apply"
-  value       = "true"
+output "model_name" {
+  description = "BigQuery ML model name"
+  value       = var.model_name
 }
 
-output "training_triggered" {
-  description = "Whether the null_resource will trigger re-training"
-  value       = null_resource.bqml_model.triggers.training_sql_content != "" ? "yes" : "no"
+output "dataset_id" {
+  description = "BigQuery dataset ID"
+  value       = var.dataset_id
 }
