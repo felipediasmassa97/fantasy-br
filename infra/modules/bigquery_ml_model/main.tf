@@ -44,8 +44,8 @@ EOF
 resource "local_file" "bqml_state" {
   filename = "/tmp/bqml_model_state.json"
   content  = jsonencode({
-    sql_hash      = filemd5("${path.module}/../../scripts/ml_pipeline/create_bqml_model.sql")
-    features_hash = filemd5("${path.module}/../../scripts/ml_pipeline/ml_training_features.sql")
+    sql_hash      = filemd5("${path.module}/../../../scripts/ml_pipeline/create_bqml_model.sql")
+    features_hash = filemd5("${path.module}/../../../scripts/ml_pipeline/ml_training_features.sql")
     result_hash   = "none"
     project_id    = var.project_id
     dataset_id    = var.dataset_id
@@ -58,8 +58,8 @@ resource "local_file" "bqml_state" {
 # ────────────────────────────────────────────────────────────────────────────
 resource "null_resource" "bqml_model" {
   triggers = {
-    training_sql_content = filemd5("${path.module}/../../scripts/ml_pipeline/create_bqml_model.sql")
-    features_sql_content = filemd5("${path.module}/../../scripts/ml_pipeline/ml_training_features.sql")
+    training_sql_content = filemd5("${path.module}/../../../scripts/ml_pipeline/create_bqml_model.sql")
+    features_sql_content = filemd5("${path.module}/../../../scripts/ml_pipeline/ml_training_features.sql")
   }
 
   depends_on = [
@@ -78,8 +78,8 @@ resource "null_resource" "bqml_model" {
       DATASET="$${var.dataset_id}"
       MODEL="$${var.model_name}"
       STATE_FILE="$${local_file.bqml_state.filename}"
-      SQL_FILE="$${path.module}/../../scripts/ml_pipeline/create_bqml_model.sql"
-      FEATURES_FILE="$${path.module}/../../scripts/ml_pipeline/ml_training_features.sql"
+      SQL_FILE="$${path.module}/../../../scripts/ml_pipeline/create_bqml_model.sql"
+      FEATURES_FILE="$${path.module}/../../../scripts/ml_pipeline/ml_training_features.sql"
 
       echo "==> Computing training query output hash..."
 
